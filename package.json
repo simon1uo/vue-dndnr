@@ -1,0 +1,62 @@
+{
+  "name": "vue-dndnr",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Vue 3 Draggable, Droppable, and Resizable Component Library",
+  "author": "simon1uo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simon1uo/vue-dndnr.git"
+  },
+  "keywords": [
+    "vue",
+    "draggable",
+    "droppable",
+    "resizable",
+    "vue3"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/vue-dndnr.es.js",
+      "require": "./dist/vue-dndnr.umd.js"
+    }
+  },
+  "main": "./dist/vue-dndnr.umd.js",
+  "module": "./dist/vue-dndnr.es.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite --host",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "build-only": "vite build",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^4.12.0",
+    "@tsconfig/node22": "^22.0.1",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vitejs/plugin-vue-jsx": "^4.1.2",
+    "@vue/tsconfig": "^0.7.0",
+    "eslint": "^9.24.0",
+    "npm-run-all2": "^7.0.2",
+    "terser": "^5.39.0",
+    "typescript": "~5.8.0",
+    "vite": "^6.2.4",
+    "vite-plugin-dts": "^4.5.3",
+    "vite-plugin-vue-devtools": "^7.7.2",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.8"
+  }
+}

@@ -1,0 +1,18 @@
+# Source
+src
+public
+examples
+
+# Config files
+.eslintrc
+.prettierrc
+tsconfig*.json
+vite.config.ts
+vitest.config.ts
+
+# Dev files
+node_modules
+.vscode
+.idea
+*.log
+coverage
