@@ -2,6 +2,9 @@
  * Vue DNDNR - Vue 3 Draggable, Droppable, and Resizable Component Library
  */
 
+// Export components
+export * from './components'
+
 // Export hooks
 export * from './hooks'
 
@@ -10,6 +13,3 @@ export * from './types'
 
 // Export utils
 export * from './utils'
-
-// Export components (to be implemented)
-// export * from './components';

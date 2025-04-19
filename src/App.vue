@@ -1,47 +1,57 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { BasicExample } from './components/examples'
+import ThemeToggle from './components/ThemeToggle.vue'
+import { provideDndContext } from './hooks'
+
+provideDndContext()
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125">
+  <div class="container bg-background text-text transition-colors duration-300">
+    <ThemeToggle />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
+    <header>
+      <h1 class="text-heading">
+        Vue DNDNR
+      </h1>
+      <p class="text-text-light">
+        Vue 3 Draggable, Droppable, and Resizable Component Library
+      </p>
+    </header>
 
-  <main>
-    <TheWelcome />
-  </main>
+    <main>
+      <BasicExample />
+    </main>
+  </div>
 </template>
 
 <style scoped>
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
 header {
-  line-height: 1.5;
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+p {
+  font-size: 1.2rem;
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+main {
+  width: 100%;
 }
 </style>
