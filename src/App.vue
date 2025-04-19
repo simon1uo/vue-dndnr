@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { BasicExample } from './components/examples'
+import { ref } from 'vue'
+import { DraggableExample, ResizableExample } from './components/examples'
 import ThemeToggle from './components/ThemeToggle.vue'
 import { provideDndContext } from './hooks'
 
 provideDndContext()
+
+const activeTab = ref('draggable')
 </script>
 
 <template>
@@ -20,7 +23,19 @@ provideDndContext()
     </header>
 
     <main>
-      <BasicExample />
+      <div class="tabs">
+        <button class="tab-button" :class="[{ active: activeTab === 'draggable' }]" @click="activeTab = 'draggable'">
+          Draggable
+        </button>
+        <button class="tab-button" :class="[{ active: activeTab === 'resizable' }]" @click="activeTab = 'resizable'">
+          Resizable
+        </button>
+      </div>
+
+      <div class="tab-content">
+        <DraggableExample v-if="activeTab === 'draggable'" />
+        <ResizableExample v-if="activeTab === 'resizable'" />
+      </div>
     </main>
   </div>
 </template>
@@ -53,5 +68,46 @@ p {
 
 main {
   width: 100%;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-light, #718096);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  color: var(--text-color, #2d3748);
+}
+
+.tab-button.active {
+  color: var(--primary-color, #4299e1);
+  border-bottom-color: var(--primary-color, #4299e1);
+}
+
+.tab-content {
+  padding: 1rem 0;
+}
+
+.dark .tabs {
+  --border-color: #2d3748;
+}
+
+.dark .tab-button {
+  --text-light: #a0aec0;
+  --text-color: #e2e8f0;
+  --primary-color: #63b3ed;
 }
 </style>

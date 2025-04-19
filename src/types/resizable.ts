@@ -54,6 +54,24 @@ export interface ResizableOptions {
    * Whether resizing is disabled
    */
   disabled?: boolean
+
+  /**
+   * Pointer types to respond to
+   * @default ['mouse', 'touch', 'pen']
+   */
+  pointerTypes?: string[]
+
+  /**
+   * Whether to prevent default browser behavior during resize
+   * @default true
+   */
+  preventDefault?: boolean
+
+  /**
+   * Whether to stop event propagation during resize
+   * @default false
+   */
+  stopPropagation?: boolean
 }
 
 export interface ResizableEvents {

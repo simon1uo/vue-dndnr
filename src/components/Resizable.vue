@@ -1,92 +1,54 @@
 <script setup lang="ts">
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useResizable } from '../hooks'
 
 // Define props
-const props = defineProps<{
-  /**
-   * Initial size of the resizable element
-   */
-  initialSize?: Size
-
-  /**
-   * Minimum width of the resizable element
-   */
+const props = withDefaults(defineProps<{
+  /** The size of the resizable element */
+  size?: Size
+  /** The v-model value for the size */
+  modelValue?: Size
+  /** The minimum width of the resizable element */
   minWidth?: number
-
-  /**
-   * Minimum height of the resizable element
-   */
+  /** The minimum height of the resizable element */
   minHeight?: number
-
-  /**
-   * Maximum width of the resizable element
-   */
+  /** The maximum width of the resizable element */
   maxWidth?: number
-
-  /**
-   * Maximum height of the resizable element
-   */
+  /** The maximum height of the resizable element */
   maxHeight?: number
-
-  /**
-   * Grid to snap to during resizing [x, y]
-   */
+  /** The grid to snap to while resizing */
   grid?: [number, number]
-
-  /**
-   * Whether to maintain aspect ratio during resizing
-   */
+  /** Whether to maintain aspect ratio during resizing */
   lockAspectRatio?: boolean
-
-  /**
-   * Which resize handles to enable
-   */
+  /** Which resize handles to enable */
   handles?: ResizeHandle[]
-
-  /**
-   * Whether resizing is disabled
-   */
+  /** Whether resizing is disabled */
   disabled?: boolean
-
-  /**
-   * CSS class to apply to the resizable element
-   */
+  /** The CSS class to apply to the resizable element */
   class?: string
-
-  /**
-   * CSS style to apply to the resizable element
-   */
+  /** The CSS class to apply when resizing */
+  resizingClass?: string
+  /** The CSS style to apply to the resizable element */
   style?: Record<string, string>
-}>()
+}>(), {
+  size: undefined,
+  modelValue: undefined,
+  lockAspectRatio: false,
+  disabled: false,
+  resizingClass: 'resizing',
+})
 
-// Define emits
 const emit = defineEmits<{
-  /**
-   * Emitted when resizing starts
-   */
-  (e: 'resizeStart', event: MouseEvent | TouchEvent, handle: ResizeHandle): void
-
-  /**
-   * Emitted during resizing
-   */
-  (e: 'resize', event: MouseEvent | TouchEvent, handle: ResizeHandle): void
-
-  /**
-   * Emitted when resizing ends
-   */
-  (e: 'resizeEnd', event: MouseEvent | TouchEvent, handle: ResizeHandle): void
-
-  /**
-   * Emitted when size changes
-   */
-  (e: 'update:size', size: Size): void
+  'update:size': [size: Size]
+  'update:modelValue': [size: Size]
+  'resizeStart': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
+  'resize': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
+  'resizeEnd': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
 }>()
 
-// Create options for useResizable
-const options = computed<ResizableOptions>(() => ({
-  initialSize: props.initialSize,
+const resizableOptions = computed<ResizableOptions>(() => ({
+  initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
   minWidth: props.minWidth,
   minHeight: props.minHeight,
   maxWidth: props.maxWidth,
@@ -97,41 +59,78 @@ const options = computed<ResizableOptions>(() => ({
   disabled: props.disabled,
 }))
 
-// Use the resizable hook
-const { size, position, isResizing, elementRef, activeHandle, onResizeStart } = useResizable(options.value)
+const {
+  size: currentSize,
+  isResizing,
+  style: resizableStyle,
+  elementRef,
+  setSize,
+  onResizeStart,
+} = useResizable(resizableOptions.value)
 
-// Custom event handlers
+watch(
+  () => props.size,
+  (newSize) => {
+    if (newSize && !isResizing.value) {
+      setSize(newSize)
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.modelValue,
+  (newSize) => {
+    if (newSize && !isResizing.value) {
+      setSize(newSize)
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  currentSize,
+  (newSize) => {
+    emit('update:size', newSize)
+    emit('update:modelValue', newSize)
+  },
+  { deep: true },
+)
+
+// Track active handle for event handlers
+let activeHandle: ResizeHandle | null = null
+
 function handleResizeStart(event: MouseEvent | TouchEvent, handle: ResizeHandle) {
-  emit('resizeStart', event, handle)
+  activeHandle = handle
   onResizeStart(event, handle)
+  emit('resizeStart', event, handle)
 }
 
-function handleResize(event: MouseEvent | TouchEvent, handle: ResizeHandle) {
-  emit('resize', event, handle)
-  emit('update:size', size.value)
-}
-
-function handleResizeEnd(event: MouseEvent | TouchEvent, handle: ResizeHandle) {
-  emit('resizeEnd', event, handle)
-}
-
-// Computed styles
-const resizableStyle = computed(() => {
-  return {
-    position: 'relative',
-    width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
-    height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
-    ...props.style,
+function handleResize(event: MouseEvent | TouchEvent) {
+  if (isResizing.value && activeHandle) {
+    emit('resize', event, activeHandle)
   }
+}
+
+function handleResizeEnd(event: MouseEvent | TouchEvent) {
+  if (isResizing.value && activeHandle) {
+    emit('resizeEnd', event, activeHandle)
+    activeHandle = null
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('mousemove', handleResize as EventListener)
+  window.addEventListener('mouseup', handleResizeEnd as EventListener)
+  window.addEventListener('touchmove', handleResize as EventListener)
+  window.addEventListener('touchend', handleResizeEnd as EventListener)
 })
 
-// Computed classes
-const resizableClass = computed(() => {
-  return {
-    'vue-resizable': true,
-    'vue-resizable--resizing': isResizing.value,
-    ...(props.class ? { [props.class]: true } : {}),
-  }
+onUnmounted(() => {
+  window.removeEventListener('mousemove', handleResize as EventListener)
+  window.removeEventListener('mouseup', handleResizeEnd as EventListener)
+  window.removeEventListener('touchmove', handleResize as EventListener)
+  window.removeEventListener('touchend', handleResizeEnd as EventListener)
 })
 
 // Handle positions
@@ -147,16 +146,28 @@ const handlePositions = {
 }
 
 // Get handles to render
-const handlesToRender = computed(() => {
+const handlesToRender = computed<ResizeHandle[]>(() => {
   return props.handles || ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
+})
+
+const combinedClass = computed(() => {
+  const classes = ['resizable']
+
+  if (props.class) {
+    classes.push(props.class)
+  }
+
+  if (isResizing.value && props.resizingClass) {
+    classes.push(props.resizingClass)
+  }
+
+  return classes.join(' ')
 })
 </script>
 
 <template>
   <div
-    ref="elementRef"
-    :class="resizableClass"
-    :style="resizableStyle"
+    ref="elementRef" :class="combinedClass" :style="resizableStyle"
   >
     <slot />
 
@@ -164,7 +175,7 @@ const handlesToRender = computed(() => {
     <div
       v-for="handle in handlesToRender"
       :key="handle"
-      :class="`vue-resizable-handle vue-resizable-handle-${handle}`"
+      :class="`resizable-handle resizable-handle-${handle}`"
       :style="handlePositions[handle]"
       @mousedown="(e) => handleResizeStart(e, handle)"
       @touchstart="(e) => handleResizeStart(e, handle)"
@@ -173,16 +184,18 @@ const handlesToRender = computed(() => {
 </template>
 
 <style scoped>
-.vue-resizable {
+.resizable {
   box-sizing: border-box;
   position: relative;
-}
-
-.vue-resizable--resizing {
+  touch-action: none;
   user-select: none;
 }
 
-.vue-resizable-handle {
+.resizable.resizing { 
+  z-index: 1;
+}
+
+.resizable-handle {
   position: absolute;
   width: 10px;
   height: 10px;
@@ -191,7 +204,7 @@ const handlesToRender = computed(() => {
   z-index: 1;
 }
 
-.vue-resizable-handle:hover {
+.resizable-handle:hover {
   background-color: #3182ce;
 }
 </style>

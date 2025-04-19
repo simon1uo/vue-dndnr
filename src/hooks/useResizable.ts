@@ -1,12 +1,9 @@
-/**
- * Hook for adding resizable functionality to an element
- */
-
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   addPassiveEventListener,
   applyAspectRatioLock,
+  applyGrid,
   applyMinMaxConstraints,
   calculateSize,
   getElementSize,
@@ -24,6 +21,9 @@ export function useResizable(options: ResizableOptions = {}) {
     lockAspectRatio = false,
     handles = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
     disabled = false,
+    pointerTypes = ['mouse', 'touch', 'pen'],
+    preventDefault = true,
+    stopPropagation = false,
   } = options
 
   // State
@@ -32,62 +32,93 @@ export function useResizable(options: ResizableOptions = {}) {
   const isResizing = ref(false)
   const elementRef = ref<HTMLElement | null>(null)
   const activeHandle = ref<ResizeHandle | null>(null)
+  const startEvent = ref<MouseEvent | TouchEvent | null>(null)
 
   // Internal state
-  let startSize: Size = { ...initialSize }
-  let startPosition = { x: 0, y: 0 }
-  let offsetX = 0
-  let offsetY = 0
+  const startSize = ref<Size>({ ...initialSize })
+  const startPosition = ref({ x: 0, y: 0 })
+
+  // Computed style
+  const style = computed(() => {
+    return {
+      position: 'relative' as const,
+      width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
+      height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
+      userSelect: 'none' as const,
+    }
+  })
+
+  // Filter events based on options
+  const filterEvent = (event: MouseEvent | TouchEvent): boolean => {
+    // Check if resizing is disabled
+    if (disabled)
+      return false
+
+    // Check pointer type
+    if (event instanceof MouseEvent) {
+      if (!pointerTypes.includes('mouse'))
+        return false
+    }
+    else if (event instanceof TouchEvent) {
+      if (!pointerTypes.includes('touch'))
+        return false
+    }
+
+    return true
+  }
+
+  // Handle event options
+  const handleEvent = (event: MouseEvent | TouchEvent) => {
+    if (preventDefault)
+      event.preventDefault()
+    if (stopPropagation)
+      event.stopPropagation()
+  }
 
   // Event handlers
   const onResizeStart = (event: MouseEvent | TouchEvent, handle: ResizeHandle) => {
-    if (disabled || !handles.includes(handle))
+    if (!filterEvent(event) || !handles.includes(handle) || !elementRef.value)
       return
 
-    event.preventDefault()
-
-    // Store the current size as the start size
-    startSize = { ...size.value }
-    startPosition = { ...position.value }
-
-    // Calculate the offset from the mouse/touch position
-    if (event instanceof MouseEvent) {
-      offsetX = event.clientX
-      offsetY = event.clientY
-    }
-    else {
-      offsetX = event.touches[0].clientX
-      offsetY = event.touches[0].clientY
-    }
-
+    // Store the start event, size and position
+    startEvent.value = event
+    startSize.value = { ...size.value }
+    startPosition.value = { ...position.value }
     isResizing.value = true
     activeHandle.value = handle
 
-    // Add event listeners for resize and resizeEnd
-    addPassiveEventListener(window, 'mousemove', onResize)
-    addPassiveEventListener(window, 'touchmove', onResize, { passive: false })
-    addPassiveEventListener(window, 'mouseup', onResizeEnd)
-    addPassiveEventListener(window, 'touchend', onResizeEnd)
+    // Handle the event
+    handleEvent(event)
   }
 
   const onResize = (event: MouseEvent | TouchEvent) => {
-    if (!isResizing.value || !activeHandle.value)
+    if (!isResizing.value || !activeHandle.value || !startEvent.value || !elementRef.value)
       return
-
-    event.preventDefault()
 
     // Calculate the new size and position
     const { size: newSize, position: newPosition } = calculateSize(
       event,
-      startSize,
+      startSize.value,
       activeHandle.value,
-      startPosition,
-      { x: offsetX, y: offsetY },
+      startPosition.value,
+      {
+        x: startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as TouchEvent).touches[0].clientX,
+        y: startEvent.value instanceof MouseEvent ? startEvent.value.clientY : (startEvent.value as TouchEvent).touches[0].clientY,
+      },
     )
+
+    // Apply grid snapping if specified
+    let snappedSize = newSize
+    if (grid) {
+      snappedSize = {
+        width: typeof newSize.width === 'number' ? applyGrid({ x: newSize.width, y: 0 }, grid).x : newSize.width,
+        height: typeof newSize.height === 'number' ? applyGrid({ x: 0, y: newSize.height }, grid).y : newSize.height,
+      }
+    }
 
     // Apply min/max constraints
     let constrainedSize = applyMinMaxConstraints(
-      newSize,
+      snappedSize,
       minWidth,
       minHeight,
       maxWidth,
@@ -98,7 +129,7 @@ export function useResizable(options: ResizableOptions = {}) {
     if (lockAspectRatio) {
       constrainedSize = applyAspectRatioLock(
         constrainedSize,
-        startSize,
+        startSize.value,
         lockAspectRatio,
       )
     }
@@ -106,20 +137,24 @@ export function useResizable(options: ResizableOptions = {}) {
     // Update the size and position
     size.value = constrainedSize
     position.value = newPosition
+
+    // Handle the event
+    handleEvent(event)
   }
 
-  const onResizeEnd = () => {
+  const onResizeEnd = (event: MouseEvent | TouchEvent) => {
+    if (!isResizing.value)
+      return
+
     isResizing.value = false
     activeHandle.value = null
+    startEvent.value = null
 
-    // Remove event listeners
-    removeEventListener(window, 'mousemove', onResize)
-    removeEventListener(window, 'touchmove', onResize)
-    removeEventListener(window, 'mouseup', onResizeEnd)
-    removeEventListener(window, 'touchend', onResizeEnd)
+    // Handle the event
+    handleEvent(event)
   }
 
-  // Setup and cleanup
+  // Set up event listeners
   onMounted(() => {
     if (elementRef.value) {
       // Initialize size if set to auto
@@ -130,20 +165,29 @@ export function useResizable(options: ResizableOptions = {}) {
           height: size.value.height === 'auto' ? elementSize.height : size.value.height,
         }
       }
+
+      // Add global event listeners for resize and resizeEnd
+      addPassiveEventListener(window, 'mousemove', onResize as EventListener, { passive: !preventDefault })
+      addPassiveEventListener(window, 'touchmove', onResize as EventListener, { passive: !preventDefault })
+      addPassiveEventListener(window, 'mouseup', onResizeEnd as EventListener, { passive: !preventDefault })
+      addPassiveEventListener(window, 'touchend', onResizeEnd as EventListener, { passive: !preventDefault })
+      addPassiveEventListener(window, 'touchcancel', onResizeEnd as EventListener, { passive: !preventDefault })
     }
   })
 
+  // Clean up event listeners
   onUnmounted(() => {
     // Remove window event listeners
-    removeEventListener(window, 'mousemove', onResize)
-    removeEventListener(window, 'touchmove', onResize)
-    removeEventListener(window, 'mouseup', onResizeEnd)
-    removeEventListener(window, 'touchend', onResizeEnd)
+    removeEventListener(window, 'mousemove', onResize as EventListener)
+    removeEventListener(window, 'touchmove', onResize as EventListener)
+    removeEventListener(window, 'mouseup', onResizeEnd as EventListener)
+    removeEventListener(window, 'touchend', onResizeEnd as EventListener)
+    removeEventListener(window, 'touchcancel', onResizeEnd as EventListener)
   })
 
-  // Methods
+  // Public methods
   const setSize = (newSize: Size) => {
-    size.value = newSize
+    size.value = { ...newSize }
   }
 
   // Return values and methods
@@ -151,9 +195,14 @@ export function useResizable(options: ResizableOptions = {}) {
     size,
     position,
     isResizing,
+    style,
     elementRef,
     activeHandle,
     setSize,
     onResizeStart,
+    onResize,
+    onResizeEnd,
   }
 }
+
+export default useResizable
