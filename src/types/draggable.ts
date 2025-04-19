@@ -7,25 +7,27 @@ export interface Position {
   y: number
 }
 
+export type PointerType = 'mouse' | 'touch' | 'pen'
+
 export interface DraggableOptions {
   /**
-   * Initial position of the draggable element
+   * Initial position of the element
    */
   initialPosition?: Position
 
   /**
-   * Bounds for the draggable element
-   * Can be an HTMLElement, 'parent', or an object with left, top, right, bottom values
+   * Element or selector to use as bounds for the draggable element
    */
   bounds?: HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }
 
   /**
-   * Grid to snap to during dragging [x, y]
+   * Grid size for snapping during drag [x, y]
    */
   grid?: [number, number]
 
   /**
-   * Axis constraint for dragging: 'x', 'y', or 'both'
+   * Axis to drag on
+   * @default 'both'
    */
   axis?: 'x' | 'y' | 'both'
 
@@ -35,40 +37,44 @@ export interface DraggableOptions {
   handle?: string
 
   /**
-   * CSS selector for elements that should cancel dragging
+   * CSS selector for elements that should not trigger drag
    */
   cancel?: string
 
   /**
-   * Scale factor for nested transformations
+   * Scale factor for the draggable element (useful for transformed parents)
+   * @default 1
    */
   scale?: number
 
   /**
    * Whether dragging is disabled
+   * @default false
    */
   disabled?: boolean
-}
-
-export interface DraggableEvents {
-  /**
-   * Emitted when dragging starts
-   */
-  onDragStart?: (event: MouseEvent | TouchEvent) => void
 
   /**
-   * Emitted during dragging
+   * Pointer types that listen to
+   * @default ['mouse', 'touch', 'pen']
    */
-  onDrag?: (event: MouseEvent | TouchEvent) => void
+  pointerTypes?: PointerType[]
 
   /**
-   * Emitted when dragging ends
+   * Whether to prevent default events
+   * @default true
    */
-  onDragEnd?: (event: MouseEvent | TouchEvent) => void
+  preventDefault?: boolean
+
+  /**
+   * Whether to stop event propagation
+   * @default false
+   */
+  stopPropagation?: boolean
 }
 
 export interface DraggableElement {
   id: string
   element: HTMLElement
-  options: DraggableOptions
+  position: Position
+  isDragging: boolean
 }

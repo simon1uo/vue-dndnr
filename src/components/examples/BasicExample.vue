@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Draggable, DraggableResizable, Droppable, Resizable } from '../'
+import { DraggableResizable, Droppable, Resizable } from '../'
 import TabContainer from '../TabContainer.vue'
+import DraggableExample from './DraggableExample.vue'
 
 const position = ref({ x: 50, y: 50 })
 const size = ref({ width: 200, height: 150 })
@@ -24,26 +25,12 @@ function handleDrop() {
 
 <template>
   <div class="example-container">
-    <h2 class="text-heading text-2xl font-bold mb-6">
-      Vue DNDNR Components Example
-    </h2>
-
-    <TabContainer
-      v-model:active-tab="activeTab"
-      :tabs="tabs"
-    >
+    <TabContainer v-model:active-tab="activeTab" :tabs="tabs">
       <template #default="{ activeTab }">
         <!-- Draggable Tab -->
         <div v-if="activeTab === 'draggable'" class="component-section">
-          <div class="component-demo bg-background border border-dashed border-border rounded">
-            <Draggable
-              v-model:position="position"
-              bounds="parent"
-              class="demo-box draggable-box"
-            >
-              Drag me!
-            </Draggable>
-          </div>
+          <DraggableExample />
+
           <div class="component-description mt-4">
             <p>The Draggable component allows elements to be moved around within a container.</p>
           </div>
@@ -52,10 +39,7 @@ function handleDrop() {
         <!-- Droppable Tab -->
         <div v-if="activeTab === 'droppable'" class="component-section">
           <div class="component-demo bg-background border border-dashed border-border rounded">
-            <Droppable
-              class="demo-box droppable-box"
-              @drop="handleDrop"
-            >
+            <Droppable class="demo-box droppable-box" @drop="handleDrop">
               <div v-if="isDropped" class="dropped-indicator">
                 Item dropped here!
               </div>
@@ -72,12 +56,7 @@ function handleDrop() {
         <!-- Resizable Tab -->
         <div v-if="activeTab === 'resizable'" class="component-section">
           <div class="component-demo bg-background border border-dashed border-border rounded">
-            <Resizable
-              v-model:size="size"
-              :min-width="100"
-              :min-height="100"
-              class="demo-box resizable-box"
-            >
+            <Resizable v-model:size="size" :min-width="100" :min-height="100" class="demo-box resizable-box">
               Resize me!
             </Resizable>
           </div>
@@ -90,18 +69,17 @@ function handleDrop() {
         <div v-if="activeTab === 'draggable-resizable'" class="component-section">
           <div class="component-demo bg-background border border-dashed border-border rounded">
             <DraggableResizable
-              v-model:position="combinedPosition"
-              v-model:size="combinedSize"
-              bounds="parent"
-              :min-width="100"
-              :min-height="100"
-              class="demo-box combined-box"
+              v-model:position="combinedPosition" v-model:size="combinedSize" bounds="parent"
+              :min-width="100" :min-height="100" class="demo-box combined-box"
             >
               Drag and resize me!
             </DraggableResizable>
           </div>
           <div class="component-description mt-4">
-            <p>The DraggableResizable component combines both draggable and resizable functionality in a single component.</p>
+            <p>
+              The DraggableResizable component combines both draggable and resizable functionality in a single
+              component.
+            </p>
           </div>
         </div>
       </template>
@@ -124,10 +102,6 @@ function handleDrop() {
 .component-demo {
   position: relative;
   height: 400px;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .component-description {

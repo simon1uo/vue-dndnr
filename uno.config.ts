@@ -43,5 +43,6 @@ export default defineConfig({
     'card': 'bg-background-soft rounded-lg p-4 shadow-md',
     'card-hover': 'hover:shadow-lg transition-shadow duration-300',
     'input': 'border border-border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary',
+    'draggable-box': 'rounded shadow-lg',
   },
 })

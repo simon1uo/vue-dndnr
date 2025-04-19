@@ -1,88 +1,51 @@
 <script setup lang="ts">
-import type { DraggableOptions } from '../types'
-import { computed, ref } from 'vue'
+import type { DraggableOptions, Position } from '../types'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useDraggable } from '../hooks'
 
 // Define props
-const props = defineProps<{
-  /**
-   * Initial position of the draggable element
-   */
-  initialPosition?: { x: number, y: number }
-
-  /**
-   * Bounds for the draggable element
-   * Can be an HTMLElement, 'parent', or an object with left, top, right, bottom values
-   */
+const props = withDefaults(defineProps<{
+  /** The position of the draggable element */
+  position?: Position
+  /** The v-model value for the position */
+  modelValue?: Position
+  /** The boundaries for the draggable element */
   bounds?: HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }
-
-  /**
-   * Grid to snap to during dragging [x, y]
-   */
+  /** The grid to snap to while dragging */
   grid?: [number, number]
-
-  /**
-   * Axis constraint for dragging: 'x', 'y', or 'both'
-   */
+  /** The axis to restrict movement to */
   axis?: 'x' | 'y' | 'both'
-
-  /**
-   * CSS selector for the drag handle
-   */
+  /** The selector for the drag handle */
   handle?: string
-
-  /**
-   * CSS selector for elements that should cancel dragging
-   */
+  /** The selector for elements that cancel dragging */
   cancel?: string
-
-  /**
-   * Scale factor for nested transformations
-   */
+  /** The scale factor for the draggable element */
   scale?: number
-
-  /**
-   * Whether dragging is disabled
-   */
+  /** Whether dragging is disabled */
   disabled?: boolean
-
-  /**
-   * CSS class to apply to the draggable element
-   */
+  /** The CSS class to apply to the draggable element */
   class?: string
+  /** The CSS class to apply when dragging */
+  draggingClass?: string
+}>(), {
+  position: undefined,
+  modelValue: undefined,
+  axis: 'both',
+  scale: 1,
+  disabled: false,
+  draggingClass: 'dragging',
+})
 
-  /**
-   * CSS style to apply to the draggable element
-   */
-  style?: Record<string, string>
-}>()
-
-// Define emits
 const emit = defineEmits<{
-  /**
-   * Emitted when dragging starts
-   */
-  (e: 'dragStart', event: MouseEvent | TouchEvent): void
-
-  /**
-   * Emitted during dragging
-   */
-  (e: 'drag', event: MouseEvent | TouchEvent): void
-
-  /**
-   * Emitted when dragging ends
-   */
-  (e: 'dragEnd', event: MouseEvent | TouchEvent): void
-
-  /**
-   * Emitted when position changes
-   */
-  (e: 'update:position', position: { x: number, y: number }): void
+  'update:position': [position: Position]
+  'update:modelValue': [position: Position]
+  'dragStart': [event: MouseEvent | TouchEvent]
+  'drag': [event: MouseEvent | TouchEvent]
+  'dragEnd': [event: MouseEvent | TouchEvent]
 }>()
 
-// Create options for useDraggable
-const options = computed<DraggableOptions>(() => ({
-  initialPosition: props.initialPosition,
+const draggableOptions = computed<DraggableOptions>(() => ({
+  initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
   bounds: props.bounds,
   grid: props.grid,
   axis: props.axis,
@@ -92,78 +55,105 @@ const options = computed<DraggableOptions>(() => ({
   disabled: props.disabled,
 }))
 
-// Use the draggable hook
-const { position, isDragging, elementRef } = useDraggable(options.value)
+const {
+  position,
+  isDragging,
+  style: draggableStyle,
+  elementRef,
+  setPosition,
+  onDragStart,
+} = useDraggable(draggableOptions.value)
 
-// Watch for position changes and emit update event
-const originalOnDragStart = ref<((event: MouseEvent | TouchEvent) => void) | null>(null)
-const originalOnDrag = ref<((event: MouseEvent | TouchEvent) => void) | null>(null)
-const originalOnDragEnd = ref<((event: MouseEvent | TouchEvent) => void) | null>(null)
+watch(
+  () => props.position,
+  (newPosition) => {
+    if (newPosition && !isDragging.value) {
+      setPosition(newPosition)
+    }
+  },
+  { deep: true },
+)
 
-// Custom event handlers that emit events
-function onDragStart(event: MouseEvent | TouchEvent) {
+watch(
+  () => props.modelValue,
+  (newPosition) => {
+    if (newPosition && !isDragging.value) {
+      setPosition(newPosition)
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  position,
+  (newPosition) => {
+    emit('update:position', newPosition)
+    emit('update:modelValue', newPosition)
+  },
+  { deep: true },
+)
+
+function handleDragStart(event: MouseEvent | TouchEvent) {
+  onDragStart(event)
   emit('dragStart', event)
-  if (originalOnDragStart.value) {
-    originalOnDragStart.value(event)
-  }
 }
 
-function onDrag(event: MouseEvent | TouchEvent) {
+function handleDrag(event: MouseEvent | TouchEvent) {
   emit('drag', event)
-  emit('update:position', position.value)
-  if (originalOnDrag.value) {
-    originalOnDrag.value(event)
-  }
 }
 
-function onDragEnd(event: MouseEvent | TouchEvent) {
+function handleDragEnd(event: MouseEvent | TouchEvent) {
   emit('dragEnd', event)
-  if (originalOnDragEnd.value) {
-    originalOnDragEnd.value(event)
-  }
 }
 
-// Computed styles
-const draggableStyle = computed(() => {
-  return {
-    position: 'absolute',
-    left: `${position.value.x}px`,
-    top: `${position.value.y}px`,
-    cursor: isDragging.value ? 'grabbing' : 'grab',
-    userSelect: 'none',
-    ...props.style,
-  }
+onMounted(() => {
+  window.addEventListener('mousemove', handleDrag)
+  window.addEventListener('mouseup', handleDragEnd)
+  window.addEventListener('touchmove', handleDrag)
+  window.addEventListener('touchend', handleDragEnd)
 })
 
-// Computed classes
-const draggableClass = computed(() => {
-  return {
-    'vue-draggable': true,
-    'vue-draggable--dragging': isDragging.value,
-    ...(props.class ? { [props.class]: true } : {}),
+onUnmounted(() => {
+  window.removeEventListener('mousemove', handleDrag)
+  window.removeEventListener('mouseup', handleDragEnd)
+  window.removeEventListener('touchmove', handleDrag)
+  window.removeEventListener('touchend', handleDragEnd)
+})
+
+const combinedClass = computed(() => {
+  const classes = ['draggable']
+
+  if (props.class) {
+    classes.push(props.class)
   }
+
+  if (isDragging.value && props.draggingClass) {
+    classes.push(props.draggingClass)
+  }
+
+  return classes.join(' ')
 })
 </script>
 
 <template>
   <div
-    ref="elementRef"
-    :class="draggableClass"
-    :style="draggableStyle"
-    @mousedown="onDragStart"
-    @touchstart="onDragStart"
+    ref="elementRef" :class="combinedClass" :style="draggableStyle" @mousedown="handleDragStart"
+    @touchstart="handleDragStart"
   >
     <slot />
   </div>
 </template>
 
 <style scoped>
-.vue-draggable {
+.draggable {
+  position: absolute;
   touch-action: none;
+  user-select: none;
 }
 
-.vue-draggable--dragging {
+.draggable.dragging {
   opacity: 0.8;
   z-index: 1;
+  cursor: grabbing;
 }
 </style>
