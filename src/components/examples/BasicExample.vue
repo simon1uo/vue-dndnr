@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Draggable, DraggableResizable, Droppable, Resizable } from '../'
+import TabContainer from '../TabContainer.vue'
 
 const position = ref({ x: 50, y: 50 })
 const size = ref({ width: 200, height: 150 })
 const combinedPosition = ref({ x: 300, y: 50 })
 const combinedSize = ref({ width: 200, height: 150 })
 const isDropped = ref(false)
+const activeTab = ref('draggable')
+
+const tabs = [
+  { id: 'draggable', label: 'Draggable' },
+  { id: 'droppable', label: 'Droppable' },
+  { id: 'resizable', label: 'Resizable' },
+  { id: 'draggable-resizable', label: 'Draggable & Resizable' },
+]
 
 function handleDrop() {
   isDropped.value = true
@@ -19,75 +28,84 @@ function handleDrop() {
       Vue DNDNR Components Example
     </h2>
 
-    <div class="components-grid">
-      <div class="component-section card card-hover">
-        <h3 class="text-heading text-xl font-semibold mb-4">
-          Draggable Component
-        </h3>
-        <div class="component-demo bg-background border border-dashed border-border rounded">
-          <Draggable
-            v-model:position="position"
-            bounds="parent"
-            class="demo-box draggable-box"
-          >
-            Drag me!
-          </Draggable>
+    <TabContainer
+      v-model:active-tab="activeTab"
+      :tabs="tabs"
+    >
+      <template #default="{ activeTab }">
+        <!-- Draggable Tab -->
+        <div v-if="activeTab === 'draggable'" class="component-section">
+          <div class="component-demo bg-background border border-dashed border-border rounded">
+            <Draggable
+              v-model:position="position"
+              bounds="parent"
+              class="demo-box draggable-box"
+            >
+              Drag me!
+            </Draggable>
+          </div>
+          <div class="component-description mt-4">
+            <p>The Draggable component allows elements to be moved around within a container.</p>
+          </div>
         </div>
-      </div>
 
-      <div class="component-section card card-hover">
-        <h3 class="text-heading text-xl font-semibold mb-4">
-          Droppable Component
-        </h3>
-        <div class="component-demo bg-background border border-dashed border-border rounded">
-          <Droppable
-            class="demo-box droppable-box"
-            @drop="handleDrop"
-          >
-            <div v-if="isDropped" class="dropped-indicator">
-              Item dropped here!
-            </div>
-            <div v-else>
-              Drop here
-            </div>
-          </Droppable>
+        <!-- Droppable Tab -->
+        <div v-if="activeTab === 'droppable'" class="component-section">
+          <div class="component-demo bg-background border border-dashed border-border rounded">
+            <Droppable
+              class="demo-box droppable-box"
+              @drop="handleDrop"
+            >
+              <div v-if="isDropped" class="dropped-indicator">
+                Item dropped here!
+              </div>
+              <div v-else>
+                Drop here
+              </div>
+            </Droppable>
+          </div>
+          <div class="component-description mt-4">
+            <p>The Droppable component creates a target area where draggable elements can be dropped.</p>
+          </div>
         </div>
-      </div>
 
-      <div class="component-section card card-hover">
-        <h3 class="text-heading text-xl font-semibold mb-4">
-          Resizable Component
-        </h3>
-        <div class="component-demo bg-background border border-dashed border-border rounded">
-          <Resizable
-            v-model:size="size"
-            :min-width="100"
-            :min-height="100"
-            class="demo-box resizable-box"
-          >
-            Resize me!
-          </Resizable>
+        <!-- Resizable Tab -->
+        <div v-if="activeTab === 'resizable'" class="component-section">
+          <div class="component-demo bg-background border border-dashed border-border rounded">
+            <Resizable
+              v-model:size="size"
+              :min-width="100"
+              :min-height="100"
+              class="demo-box resizable-box"
+            >
+              Resize me!
+            </Resizable>
+          </div>
+          <div class="component-description mt-4">
+            <p>The Resizable component allows elements to be resized using handles on the edges and corners.</p>
+          </div>
         </div>
-      </div>
 
-      <div class="component-section card card-hover">
-        <h3 class="text-heading text-xl font-semibold mb-4">
-          DraggableResizable Component
-        </h3>
-        <div class="component-demo bg-background border border-dashed border-border rounded">
-          <DraggableResizable
-            v-model:position="combinedPosition"
-            v-model:size="combinedSize"
-            bounds="parent"
-            :min-width="100"
-            :min-height="100"
-            class="demo-box combined-box"
-          >
-            Drag and resize me!
-          </DraggableResizable>
+        <!-- DraggableResizable Tab -->
+        <div v-if="activeTab === 'draggable-resizable'" class="component-section">
+          <div class="component-demo bg-background border border-dashed border-border rounded">
+            <DraggableResizable
+              v-model:position="combinedPosition"
+              v-model:size="combinedSize"
+              bounds="parent"
+              :min-width="100"
+              :min-height="100"
+              class="demo-box combined-box"
+            >
+              Drag and resize me!
+            </DraggableResizable>
+          </div>
+          <div class="component-description mt-4">
+            <p>The DraggableResizable component combines both draggable and resizable functionality in a single component.</p>
+          </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </TabContainer>
   </div>
 </template>
 
@@ -99,21 +117,22 @@ function handleDrop() {
   margin: 0 auto;
 }
 
-.components-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
-}
-
 .component-section {
   transition: all 0.3s ease;
 }
 
 .component-demo {
   position: relative;
-  height: 300px;
-  margin-top: 16px;
+  height: 400px;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.component-description {
+  color: var(--color-text-light);
+  line-height: 1.6;
 }
 
 .demo-box {
@@ -128,27 +147,27 @@ function handleDrop() {
 }
 
 .draggable-box {
-  background-color: var(--draggable-bg);
-  border: 2px solid var(--draggable-border);
+  background-color: var(--draggable-bg, #e6f7ff);
+  border: 2px solid var(--draggable-border, #1890ff);
   width: 150px;
   height: 100px;
 }
 
 .droppable-box {
-  background-color: var(--droppable-bg);
-  border: 2px solid var(--droppable-border);
-  width: 100%;
-  height: 100%;
+  background-color: var(--droppable-bg, #f6ffed);
+  border: 2px solid var(--droppable-border, #52c41a);
+  width: 80%;
+  height: 80%;
 }
 
 .resizable-box {
-  background-color: var(--resizable-bg);
-  border: 2px solid var(--resizable-border);
+  background-color: var(--resizable-bg, #fff7e6);
+  border: 2px solid var(--resizable-border, #fa8c16);
 }
 
 .combined-box {
-  background-color: var(--combined-bg);
-  border: 2px solid var(--combined-border);
+  background-color: var(--combined-bg, #f9f0ff);
+  border: 2px solid var(--combined-border, #722ed1);
 }
 
 .dropped-indicator {
@@ -158,5 +177,25 @@ function handleDrop() {
 
 .dark .demo-box {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .draggable-box {
+  --draggable-bg: rgba(24, 144, 255, 0.1);
+  --draggable-border: #1890ff;
+}
+
+.dark .droppable-box {
+  --droppable-bg: rgba(82, 196, 26, 0.1);
+  --droppable-border: #52c41a;
+}
+
+.dark .resizable-box {
+  --resizable-bg: rgba(250, 140, 22, 0.1);
+  --resizable-border: #fa8c16;
+}
+
+.dark .combined-box {
+  --combined-bg: rgba(114, 46, 209, 0.1);
+  --combined-border: #722ed1;
 }
 </style>
