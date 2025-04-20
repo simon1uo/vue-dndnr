@@ -170,9 +170,11 @@ const combinedClass = computed(() => {
     <slot />
 
     <!-- Resize handles -->
-    <div v-for="handle in handlesToRender" :key="handle" :class="`resizable-handle resizable-handle-${handle}`"
+    <div
+      v-for="handle in handlesToRender" :key="handle" :class="`resizable-handle resizable-handle-${handle}`"
       :style="handlePositions[handle]" @mousedown="(e) => handleResizeStart(e, handle)"
-      @touchstart="(e) => handleResizeStart(e, handle)" />
+      @touchstart="(e) => handleResizeStart(e, handle)"
+    />
   </div>
 </template>
 

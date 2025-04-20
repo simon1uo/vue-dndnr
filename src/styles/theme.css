@@ -3,17 +3,17 @@
   --color-primary: #4299e1;
   --color-primary-light: #63b3ed;
   --color-primary-dark: #3182ce;
-  
+
   --color-secondary: #9f7aea;
   --color-secondary-light: #b794f4;
   --color-secondary-dark: #805ad5;
-  
+
   --color-background: #ffffff;
   --color-background-soft: #f8fafc;
   --color-background-mute: #f1f5f9;
-  
+
   --color-border: #e2e8f0;
-  
+
   --color-text: #334155;
   --color-text-light: #64748b;
   --color-heading: #1e293b;
@@ -24,17 +24,17 @@ html.dark {
   --color-primary: #3b82f6;
   --color-primary-light: #60a5fa;
   --color-primary-dark: #2563eb;
-  
+
   --color-secondary: #8b5cf6;
   --color-secondary-light: #a78bfa;
   --color-secondary-dark: #7c3aed;
-  
+
   --color-background: #1e1e2e;
   --color-background-soft: #2a2b3c;
   --color-background-mute: #313244;
-  
+
   --color-border: #45475a;
-  
+
   --color-text: #cdd6f4;
   --color-text-light: #a6adc8;
   --color-heading: #f8f8f2;
@@ -50,16 +50,11 @@ html.transitioning * {
   /* Draggable component */
   --draggable-bg: var(--color-primary-light);
   --draggable-border: var(--color-primary);
-  
-  /* Droppable component */
-  --droppable-bg: var(--color-background-soft);
-  --droppable-border: var(--color-border);
-  --droppable-active-bg: var(--color-background-mute);
-  
+
   /* Resizable component */
   --resizable-bg: var(--color-secondary-light);
   --resizable-border: var(--color-secondary);
-  
+
   /* Combined component */
   --combined-bg: var(--color-secondary-light);
   --combined-border: var(--color-secondary);
@@ -69,14 +64,10 @@ html.dark {
   /* Component-specific dark theme variables */
   --draggable-bg: var(--color-primary-dark);
   --draggable-border: var(--color-primary);
-  
-  --droppable-bg: var(--color-background-soft);
-  --droppable-border: var(--color-border);
-  --droppable-active-bg: var(--color-background-mute);
-  
+
   --resizable-bg: var(--color-secondary-dark);
   --resizable-border: var(--color-secondary);
-  
+
   --combined-bg: var(--color-secondary-dark);
   --combined-border: var(--color-secondary);
 }

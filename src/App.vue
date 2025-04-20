@@ -17,9 +17,6 @@ const activeTab = ref('draggable')
       <h1 class="text-heading">
         Vue DNDNR
       </h1>
-      <p class="text-text-light">
-        Vue 3 Draggable, Droppable, and Resizable Component Library
-      </p>
     </header>
 
     <main>
@@ -30,8 +27,10 @@ const activeTab = ref('draggable')
         <button class="tab-button" :class="[{ active: activeTab === 'resizable' }]" @click="activeTab = 'resizable'">
           Resizable
         </button>
-        <button class="tab-button" :class="[{ active: activeTab === 'draggable-resizable' }]"
-          @click="activeTab = 'draggable-resizable'">
+        <button
+          class="tab-button" :class="[{ active: activeTab === 'draggable-resizable' }]"
+          @click="activeTab = 'draggable-resizable'"
+        >
           Draggable & Resizable
         </button>
       </div>

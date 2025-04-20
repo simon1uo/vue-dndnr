@@ -41,11 +41,11 @@ export function getElementSize(element: HTMLElement): { width: number, height: n
 export function matchesSelector(element: HTMLElement, selector: string): boolean {
   const matchesMethod
     = element.matches
-    || (element as any).matchesSelector
-    || (element as any).msMatchesSelector
-    || (element as any).mozMatchesSelector
-    || (element as any).webkitMatchesSelector
-    || (element as any).oMatchesSelector
+      || (element as any).matchesSelector
+      || (element as any).msMatchesSelector
+      || (element as any).mozMatchesSelector
+      || (element as any).webkitMatchesSelector
+      || (element as any).oMatchesSelector
 
   return matchesMethod.call(element, selector)
 }

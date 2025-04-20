@@ -3,42 +3,30 @@
  */
 
 import type { InjectionKey } from 'vue'
-import type { DraggableElement, DroppableElement } from '../types'
+import type { DraggableElement } from '../types'
 import { inject, provide, ref } from 'vue'
 
 // Create a symbol for the injection key
 export const DndContextKey: InjectionKey<ReturnType<typeof useDndContext>> = Symbol('DndContext')
 
 export function useDndContext() {
-  // Create maps to store draggable and droppable elements
+  // Create map to store draggable elements
   const draggableElements = ref<Map<string, DraggableElement>>(new Map())
-  const droppableElements = ref<Map<string, DroppableElement>>(new Map())
 
   // Methods for registration and communication
   const registerDraggable = (id: string, element: DraggableElement) => {
     draggableElements.value.set(id, element)
   }
 
-  const registerDroppable = (id: string, element: DroppableElement) => {
-    droppableElements.value.set(id, element)
-  }
-
   const unregisterDraggable = (id: string) => {
     draggableElements.value.delete(id)
-  }
-
-  const unregisterDroppable = (id: string) => {
-    droppableElements.value.delete(id)
   }
 
   // Return context
   return {
     draggableElements,
-    droppableElements,
     registerDraggable,
-    registerDroppable,
     unregisterDraggable,
-    unregisterDroppable,
   }
 }
 

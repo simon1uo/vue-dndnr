@@ -238,15 +238,19 @@ const combinedClass = computed(() => {
 </script>
 
 <template>
-  <Draggable v-model:position="currentPosition" :bounds="props.bounds" :grid="props.grid" :axis="props.axis"
+  <Draggable
+    v-model:position="currentPosition" :bounds="props.bounds" :grid="props.grid" :axis="props.axis"
     :handle="props.handle" cancel=".resizable-handle" :scale="props.scale" :disabled="props.dragDisabled || isResizing"
     :class="combinedClass" :style="props.style" @drag-start="onDragStart" @drag="onDrag" @drag-end="onDragEnd"
-    @update:position="onPositionUpdate">
-    <Resizable v-model:size="currentSize" :min-width="props.minWidth" :min-height="props.minHeight"
+    @update:position="onPositionUpdate"
+  >
+    <Resizable
+      v-model:size="currentSize" :min-width="props.minWidth" :min-height="props.minHeight"
       :max-width="props.maxWidth" :max-height="props.maxHeight" :grid="props.grid"
       :lock-aspect-ratio="props.lockAspectRatio" :handles="props.handles" :disabled="props.resizeDisabled"
       class="resizable-inner" @resize-start="onResizeStart" @resize="onResize" @resize-end="onResizeEnd"
-      @update:size="onSizeUpdate">
+      @update:size="onSizeUpdate"
+    >
       <slot />
     </Resizable>
   </Draggable>

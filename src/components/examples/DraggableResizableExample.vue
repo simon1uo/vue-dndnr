@@ -70,9 +70,11 @@ function onResizeEnd() {
     <!-- Container for draggable-resizable elements -->
     <div ref="containerRef" class="relative h-600px bg-background border border-dashed border-border rounded p-4 mb-8">
       <!-- Basic example -->
-      <DraggableResizable v-model:position="position" v-model:size="size" bounds="parent"
+      <DraggableResizable
+        v-model:position="position" v-model:size="size" bounds="parent"
         class="example-box bg-blue-100 dark:bg-blue-800" @drag-start="onDragStart" @drag="onDrag" @drag-end="onDragEnd"
-        @resize-start="onResizeStart" @resize="onResize" @resize-end="onResizeEnd">
+        @resize-start="onResizeStart" @resize="onResize" @resize-end="onResizeEnd"
+      >
         <div class="p-4 flex items-center justify-center h-full">
           <div class="text-center">
             <div class="text-lg font-medium">
@@ -89,8 +91,10 @@ function onResizeEnd() {
       </DraggableResizable>
 
       <!-- Grid snapping example -->
-      <DraggableResizable v-model:position="gridPosition" v-model:size="gridSize" bounds="parent" :grid="[20, 20]"
-        class="example-box bg-amber-100 dark:bg-amber-800">
+      <DraggableResizable
+        v-model:position="gridPosition" v-model:size="gridSize" bounds="parent" :grid="[20, 20]"
+        class="example-box bg-amber-100 dark:bg-amber-800"
+      >
         <div class="p-4 flex items-center justify-center h-full">
           <div class="text-center">
             <div class="text-lg font-medium">
@@ -107,9 +111,11 @@ function onResizeEnd() {
       </DraggableResizable>
 
       <!-- Constrained example -->
-      <DraggableResizable v-model:position="constrainedPosition" v-model:size="constrainedSize" bounds="parent"
+      <DraggableResizable
+        v-model:position="constrainedPosition" v-model:size="constrainedSize" bounds="parent"
         :min-width="100" :min-height="100" :max-width="300" :max-height="200"
-        class="example-box bg-green-100 dark:bg-green-800">
+        class="example-box bg-green-100 dark:bg-green-800"
+      >
         <div class="p-4 flex items-center justify-center h-full">
           <div class="text-center">
             <div class="text-lg font-medium">
@@ -126,8 +132,10 @@ function onResizeEnd() {
       </DraggableResizable>
 
       <!-- Aspect ratio example -->
-      <DraggableResizable v-model:position="aspectRatioPosition" v-model:size="aspectRatioSize" bounds="parent"
-        :lock-aspect-ratio="true" class="example-box bg-purple-100 dark:bg-purple-800">
+      <DraggableResizable
+        v-model:position="aspectRatioPosition" v-model:size="aspectRatioSize" bounds="parent"
+        :lock-aspect-ratio="true" class="example-box bg-purple-100 dark:bg-purple-800"
+      >
         <div class="p-4 flex items-center justify-center h-full">
           <div class="text-center">
             <div class="text-lg font-medium">
@@ -141,8 +149,10 @@ function onResizeEnd() {
       </DraggableResizable>
 
       <!-- Handle example -->
-      <DraggableResizable v-model:position="handlePosition" v-model:size="handleSize" bounds="parent"
-        handle=".drag-handle" class="example-box bg-red-100 dark:bg-red-800">
+      <DraggableResizable
+        v-model:position="handlePosition" v-model:size="handleSize" bounds="parent"
+        handle=".drag-handle" class="example-box bg-red-100 dark:bg-red-800"
+      >
         <div class="p-4 flex items-center justify-center h-full">
           <div class="text-center">
             <div class="text-lg font-medium">
@@ -153,7 +163,8 @@ function onResizeEnd() {
             </div>
           </div>
           <div
-            class="drag-handle bg-gray-300 dark:bg-gray-700 rounded-full w-8 h-8 absolute top-2 right-2 cursor-grab flex items-center justify-center">
+            class="drag-handle bg-gray-300 dark:bg-gray-700 rounded-full w-8 h-8 absolute top-2 right-2 cursor-grab flex items-center justify-center"
+          >
             👋
           </div>
         </div>
