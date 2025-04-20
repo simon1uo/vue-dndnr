@@ -166,20 +166,13 @@ const combinedClass = computed(() => {
 </script>
 
 <template>
-  <div
-    ref="elementRef" :class="combinedClass" :style="resizableStyle"
-  >
+  <div ref="elementRef" :class="combinedClass" :style="resizableStyle">
     <slot />
 
     <!-- Resize handles -->
-    <div
-      v-for="handle in handlesToRender"
-      :key="handle"
-      :class="`resizable-handle resizable-handle-${handle}`"
-      :style="handlePositions[handle]"
-      @mousedown="(e) => handleResizeStart(e, handle)"
-      @touchstart="(e) => handleResizeStart(e, handle)"
-    />
+    <div v-for="handle in handlesToRender" :key="handle" :class="`resizable-handle resizable-handle-${handle}`"
+      :style="handlePositions[handle]" @mousedown="(e) => handleResizeStart(e, handle)"
+      @touchstart="(e) => handleResizeStart(e, handle)" />
   </div>
 </template>
 
@@ -191,7 +184,7 @@ const combinedClass = computed(() => {
   user-select: none;
 }
 
-.resizable.resizing { 
+.resizable.resizing {
   z-index: 1;
 }
 

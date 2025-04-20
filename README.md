@@ -5,8 +5,8 @@ Vue DNDNR is a Vue 3 component library for draggable, droppable, and resizable e
 ## Features
 
 - **Draggable**: Elements that can be moved around the screen
-- **Droppable**: Target areas where draggable elements can be dropped
 - **Resizable**: Elements that can be resized from different handles
+- **Droppable**: Target areas where draggable elements can be dropped
 - **Combined functionality**: Elements that can be both dragged and resized
 - **TypeScript hooks**: Custom hooks for implementing drag-and-drop functionality
 - **Customizable styling**: Support for custom styling and theming

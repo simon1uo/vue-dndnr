@@ -68,10 +68,8 @@ function handleDrop() {
         <!-- DraggableResizable Tab -->
         <div v-if="activeTab === 'draggable-resizable'" class="component-section">
           <div class="component-demo bg-background border border-dashed border-border rounded">
-            <DraggableResizable
-              v-model:position="combinedPosition" v-model:size="combinedSize" bounds="parent"
-              :min-width="100" :min-height="100" class="demo-box combined-box"
-            >
+            <DraggableResizable v-model:position="combinedPosition" v-model:size="combinedSize" bounds="parent"
+              :min-width="100" :min-height="100" class="demo-box combined-box">
               Drag and resize me!
             </DraggableResizable>
           </div>
