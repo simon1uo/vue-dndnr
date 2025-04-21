@@ -72,21 +72,25 @@ export interface ResizableOptions {
    * @default false
    */
   stopPropagation?: boolean
-}
-
-export interface ResizableEvents {
-  /**
-   * Emitted when resizing starts
-   */
-  onResizeStart?: (event: MouseEvent | TouchEvent, handle: ResizeHandle) => void
 
   /**
-   * Emitted during resizing
+   * Called when resizing starts
+   * @param size Current size of the element
+   * @param event The mouse or touch event
    */
-  onResize?: (event: MouseEvent | TouchEvent, handle: ResizeHandle) => void
+  onResizeStart?: (size: Size, event: MouseEvent | TouchEvent) => void
 
   /**
-   * Emitted when resizing ends
+   * Called during resizing
+   * @param size Current size of the element
+   * @param event The mouse or touch event
    */
-  onResizeEnd?: (event: MouseEvent | TouchEvent, handle: ResizeHandle) => void
+  onResize?: (size: Size, event: MouseEvent | TouchEvent) => void
+
+  /**
+   * Called when resizing ends
+   * @param size Final size of the element
+   * @param event The mouse or touch event
+   */
+  onResizeEnd?: (size: Size, event: MouseEvent | TouchEvent) => void
 }

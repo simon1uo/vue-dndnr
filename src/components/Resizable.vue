@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useResizable } from '../hooks'
 
 // Define props
@@ -31,6 +31,12 @@ const props = withDefaults(defineProps<{
   resizingClass?: string
   /** The CSS style to apply to the resizable element */
   style?: Record<string, string>
+  /** Callback when resizing starts */
+  onResizeStart?: (size: Size, event: MouseEvent | TouchEvent) => void
+  /** Callback during resizing */
+  onResize?: (size: Size, event: MouseEvent | TouchEvent) => void
+  /** Callback when resizing ends */
+  onResizeEnd?: (size: Size, event: MouseEvent | TouchEvent) => void
 }>(), {
   size: undefined,
   modelValue: undefined,
@@ -47,6 +53,13 @@ const emit = defineEmits<{
   'resizeEnd': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
 }>()
 
+// Create a ref for the element
+const elementRef = ref<HTMLElement | null>(null)
+
+// Track active handle for event handlers
+let activeHandle: ResizeHandle | null = null
+
+// Create resizable options with callbacks
 const resizableOptions = computed<ResizableOptions>(() => ({
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
   minWidth: props.minWidth,
@@ -57,11 +70,31 @@ const resizableOptions = computed<ResizableOptions>(() => ({
   lockAspectRatio: props.lockAspectRatio,
   handles: props.handles,
   disabled: props.disabled,
+  onResizeStart: (size, event) => {
+    if (activeHandle) {
+      emit('resizeStart', event, activeHandle)
+      if (props.onResizeStart)
+        props.onResizeStart(size, event)
+    }
+  },
+  onResize: (size, event) => {
+    if (activeHandle) {
+      emit('resize', event, activeHandle)
+      if (props.onResize)
+        props.onResize(size, event)
+    }
+  },
+  onResizeEnd: (size, event) => {
+    if (activeHandle) {
+      emit('resizeEnd', event, activeHandle)
+      if (props.onResizeEnd)
+        props.onResizeEnd(size, event)
+      activeHandle = null
+    }
+  },
 }))
 
-// Create a ref for the element
-const elementRef = ref<HTMLElement | null>(null)
-
+// Initialize with options
 const {
   size: currentSize,
   isResizing,
@@ -69,6 +102,16 @@ const {
   setSize,
   onResizeStart,
 } = useResizable(elementRef, resizableOptions.value)
+
+// Update the hook when options change
+watch(
+  resizableOptions,
+  () => {
+    // The hook will automatically use the updated options for new resize operations
+    // We don't need to do anything here
+  },
+  { deep: true },
+)
 
 watch(
   () => props.size,
@@ -99,41 +142,10 @@ watch(
   { deep: true },
 )
 
-// Track active handle for event handlers
-let activeHandle: ResizeHandle | null = null
-
 function handleResizeStart(event: MouseEvent | TouchEvent, handle: ResizeHandle) {
   activeHandle = handle
   onResizeStart(event, handle)
-  emit('resizeStart', event, handle)
 }
-
-function handleResize(event: MouseEvent | TouchEvent) {
-  if (isResizing.value && activeHandle) {
-    emit('resize', event, activeHandle)
-  }
-}
-
-function handleResizeEnd(event: MouseEvent | TouchEvent) {
-  if (isResizing.value && activeHandle) {
-    emit('resizeEnd', event, activeHandle)
-    activeHandle = null
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('mousemove', handleResize as EventListener)
-  window.addEventListener('mouseup', handleResizeEnd as EventListener)
-  window.addEventListener('touchmove', handleResize as EventListener)
-  window.addEventListener('touchend', handleResizeEnd as EventListener)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleResize as EventListener)
-  window.removeEventListener('mouseup', handleResizeEnd as EventListener)
-  window.removeEventListener('touchmove', handleResize as EventListener)
-  window.removeEventListener('touchend', handleResizeEnd as EventListener)
-})
 
 // Handle positions
 const handlePositions = {

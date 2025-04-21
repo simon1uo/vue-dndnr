@@ -25,6 +25,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
+    onResizeStart: onResizeStartCallback,
+    onResize: onResizeCallback,
+    onResizeEnd: onResizeEndCallback,
   } = options
 
   // State
@@ -88,6 +91,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     isResizing.value = true
     activeHandle.value = handle
 
+    // Call the callback if provided
+    if (onResizeStartCallback)
+      onResizeStartCallback(size.value, event)
+
     // Handle the event
     handleEvent(event)
   }
@@ -140,6 +147,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     size.value = constrainedSize
     position.value = newPosition
 
+    // Call the callback if provided
+    if (onResizeCallback)
+      onResizeCallback(size.value, event)
+
     // Handle the event
     handleEvent(event)
   }
@@ -151,6 +162,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     isResizing.value = false
     activeHandle.value = null
     startEvent.value = null
+
+    // Call the callback if provided
+    if (onResizeEndCallback)
+      onResizeEndCallback(size.value, event)
 
     // Handle the event
     handleEvent(event)
