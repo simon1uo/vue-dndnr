@@ -5,26 +5,24 @@ import { useDraggable } from '../../hooks'
 // Create a ref for the element to be draggable
 const elementRef = ref<HTMLElement | null>(null)
 
-// Use the draggable hook with the element ref
-const { position, isDragging, style } = useDraggable(elementRef, {
-  initialPosition: { x: 50, y: 50 },
-  grid: [20, 20],
-})
-
 // Track drag state for UI feedback
 const dragInfo = ref('')
 
-function onDragStart() {
-  dragInfo.value = 'Drag started'
-}
-
-function onDrag() {
-  dragInfo.value = `Dragging to: x: ${Math.round(position.value.x)}, y: ${Math.round(position.value.y)}`
-}
-
-function onDragEnd() {
-  dragInfo.value = 'Drag ended'
-}
+// Use the draggable hook with the element ref
+const { position, isDragging, style } = useDraggable(elementRef, {
+  initialPosition: { x: 50, y: 50 },
+  bounds: 'parent',
+  grid: [20, 20],
+  onDragStart: (pos, _event) => {
+    dragInfo.value = `Drag started at x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
+  },
+  onDrag: (pos, _event) => {
+    dragInfo.value = `Dragging to: x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
+  },
+  onDragEnd: (pos, _event) => {
+    dragInfo.value = `Drag ended at x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
+  },
+})
 </script>
 
 <template>
@@ -39,8 +37,6 @@ function onDragEnd() {
       <div
         ref="elementRef" :style="style"
         class="draggable-box bg-blue-100 dark:bg-blue-800 p-4 w-200px h-100px flex items-center justify-center"
-        @mousedown="onDragStart" @mousemove="onDrag" @mouseup="onDragEnd" @touchstart="onDragStart" @touchmove="onDrag"
-        @touchend="onDragEnd"
       >
         <span class="text-gray-800 dark:text-white font-medium">Drag Me (Hook Example)</span>
       </div>
@@ -53,6 +49,15 @@ function onDragEnd() {
 const { position, isDragging, style } = useDraggable(elementRef, {
   initialPosition: { x: 50, y: 50 },
   grid: [20, 20],
+  onDragStart: (pos, _event) => {
+    dragInfo.value = `Drag started at x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
+  },
+  onDrag: (pos, _event) => {
+    dragInfo.value = `Dragging to: x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
+  },
+  onDragEnd: (pos, _event) => {
+    dragInfo.value = `Drag ended at x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
+  }
 });
 </pre>
 

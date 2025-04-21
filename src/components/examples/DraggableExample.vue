@@ -27,19 +27,19 @@ const isDragging = ref(false)
 const dragInfo = ref('')
 
 // Handle drag events
-function onDragStart() {
+function onDragStart(pos: Position, _event: MouseEvent | TouchEvent) {
   isDragging.value = true
-  dragInfo.value = 'Drag started'
+  dragInfo.value = `Drag started at x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
 }
 
-function onDrag() {
+function onDrag(pos: Position, _event: MouseEvent | TouchEvent) {
   // Update the drag info with the current position
-  dragInfo.value = `Dragging to: x: ${Math.round(position.value.x)}, y: ${Math.round(position.value.y)}`
+  dragInfo.value = `Dragging to: x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
 }
 
-function onDragEnd() {
+function onDragEnd(pos: Position, _event: MouseEvent | TouchEvent) {
   isDragging.value = false
-  dragInfo.value = 'Drag ended'
+  dragInfo.value = `Drag ended at x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`
 }
 </script>
 
@@ -113,5 +113,7 @@ function onDragEnd() {
         </div>
       </Draggable>
     </div>
+
+    {{ dragInfo }}
   </div>
 </template>

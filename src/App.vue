@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { DraggableExample, DraggableResizableExample, ResizableExample } from './components/examples'
+import { DraggableExample, DraggableResizableExample, ResizableExample, UseDraggableHookExample } from './components/examples'
 import ThemeToggle from './components/ThemeToggle.vue'
 import { provideDndContext } from './hooks'
 
 provideDndContext()
 
-const activeTab = ref('draggable')
+const activeTab = ref('draggable-hook')
 </script>
 
 <template>
@@ -21,6 +21,9 @@ const activeTab = ref('draggable')
 
     <main>
       <div class="tabs">
+        <button class="tab-button" :class="[{ active: activeTab === 'draggable-hook' }]" @click="activeTab = 'draggable-hook'">
+          useDraggable Hook
+        </button>
         <button class="tab-button" :class="[{ active: activeTab === 'draggable' }]" @click="activeTab = 'draggable'">
           Draggable
         </button>
@@ -36,6 +39,7 @@ const activeTab = ref('draggable')
       </div>
 
       <div class="tab-content">
+        <UseDraggableHookExample v-if="activeTab === 'draggable-hook'" />
         <DraggableExample v-if="activeTab === 'draggable'" />
         <ResizableExample v-if="activeTab === 'resizable'" />
         <DraggableResizableExample v-if="activeTab === 'draggable-resizable'" />

@@ -71,6 +71,27 @@ export interface DraggableOptions {
    */
   stopPropagation?: boolean
 
+  /**
+   * Called when dragging starts
+   * @param position Current position of the element
+   * @param event The mouse or touch event
+   */
+  onDragStart?: (position: Position, event: MouseEvent | TouchEvent) => void
+
+  /**
+   * Called during dragging
+   * @param position Current position of the element
+   * @param event The mouse or touch event
+   */
+  onDrag?: (position: Position, event: MouseEvent | TouchEvent) => void
+
+  /**
+   * Called when dragging ends
+   * @param position Final position of the element
+   * @param event The mouse or touch event
+   */
+  onDragEnd?: (position: Position, event: MouseEvent | TouchEvent) => void
+
   exact?: boolean
 }
 

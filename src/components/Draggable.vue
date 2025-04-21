@@ -27,6 +27,12 @@ const props = withDefaults(defineProps<{
   class?: string
   /** The CSS class to apply when dragging */
   draggingClass?: string
+  /** Callback when dragging starts */
+  onDragStart?: (position: Position, event: MouseEvent | TouchEvent) => void
+  /** Callback during dragging */
+  onDrag?: (position: Position, event: MouseEvent | TouchEvent) => void
+  /** Callback when dragging ends */
+  onDragEnd?: (position: Position, event: MouseEvent | TouchEvent) => void
 }>(), {
   position: undefined,
   modelValue: undefined,
@@ -39,9 +45,9 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:position': [position: Position]
   'update:modelValue': [position: Position]
-  'dragStart': [event: MouseEvent | TouchEvent]
-  'drag': [event: MouseEvent | TouchEvent]
-  'dragEnd': [event: MouseEvent | TouchEvent]
+  'dragStart': [position: Position, event: MouseEvent | TouchEvent]
+  'drag': [position: Position, event: MouseEvent | TouchEvent]
+  'dragEnd': [position: Position, event: MouseEvent | TouchEvent]
 }>()
 
 const draggableOptions = computed<DraggableOptions>(() => ({
@@ -53,6 +59,21 @@ const draggableOptions = computed<DraggableOptions>(() => ({
   cancel: props.cancel,
   scale: props.scale,
   disabled: props.disabled,
+  onDragStart: (position, event) => {
+    emit('dragStart', position, event)
+    if (props.onDragStart)
+      props.onDragStart(position, event)
+  },
+  onDrag: (position, event) => {
+    emit('drag', position, event)
+    if (props.onDrag)
+      props.onDrag(position, event)
+  },
+  onDragEnd: (position, event) => {
+    emit('dragEnd', position, event)
+    if (props.onDragEnd)
+      props.onDragEnd(position, event)
+  },
 }))
 
 // Create a ref for the element
@@ -63,7 +84,6 @@ const {
   isDragging,
   style: draggableStyle,
   setPosition,
-  onDragStart,
 } = useDraggable(elementRef, draggableOptions.value)
 
 watch(
@@ -95,33 +115,6 @@ watch(
   { deep: true },
 )
 
-function handleDragStart(event: MouseEvent | TouchEvent) {
-  onDragStart(event)
-  emit('dragStart', event)
-}
-
-function handleDrag(event: MouseEvent | TouchEvent) {
-  emit('drag', event)
-}
-
-function handleDragEnd(event: MouseEvent | TouchEvent) {
-  emit('dragEnd', event)
-}
-
-onMounted(() => {
-  window.addEventListener('mousemove', handleDrag)
-  window.addEventListener('mouseup', handleDragEnd)
-  window.addEventListener('touchmove', handleDrag)
-  window.addEventListener('touchend', handleDragEnd)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleDrag)
-  window.removeEventListener('mouseup', handleDragEnd)
-  window.removeEventListener('touchmove', handleDrag)
-  window.removeEventListener('touchend', handleDragEnd)
-})
-
 const combinedClass = computed(() => {
   const classes = ['draggable']
 
@@ -138,10 +131,7 @@ const combinedClass = computed(() => {
 </script>
 
 <template>
-  <div
-    ref="elementRef" :class="combinedClass" :style="draggableStyle" @mousedown="handleDragStart"
-    @touchstart="handleDragStart"
-  >
+  <div ref="elementRef" :class="combinedClass" :style="draggableStyle">
     <slot />
   </div>
 </template>

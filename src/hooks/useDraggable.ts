@@ -27,6 +27,9 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
+    onDragStart: onDragStartCallback,
+    onDrag: onDragCallback,
+    onDragEnd: onDragEndCallback,
   } = options
 
   const position = ref<Position>({ ...initialPosition })
@@ -101,6 +104,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     // Handle the event
     handleEvent(event)
+
+    // Call the callback if provided
+    if (onDragStartCallback)
+      onDragStartCallback(position.value, event)
   }
 
   const onDrag = (event: MouseEvent | TouchEvent) => {
@@ -166,6 +173,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     // Handle the event
     handleEvent(event)
+
+    // Call the callback if provided
+    if (onDragCallback)
+      onDragCallback(position.value, event)
   }
 
   const onDragEnd = (event: MouseEvent | TouchEvent) => {
@@ -177,6 +188,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     // Handle the event
     handleEvent(event)
+
+    // Call the callback if provided
+    if (onDragEndCallback)
+      onDragEndCallback(position.value, event)
   }
 
   // Set up event listeners
