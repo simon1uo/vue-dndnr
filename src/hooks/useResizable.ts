@@ -6,7 +6,6 @@ import {
   applyAspectRatioLock,
   applyGrid,
   applyMinMaxConstraints,
-  calculateSize,
   getElementSize,
   removeEventListener,
 } from '../utils'
@@ -32,14 +31,12 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
   // State
   const size = ref<Size>({ ...initialSize })
-  const position = ref({ x: 0, y: 0 })
   const isResizing = ref(false)
   const activeHandle = ref<ResizeHandle | null>(null)
   const startEvent = ref<MouseEvent | TouchEvent | null>(null)
 
   // Internal state
   const startSize = ref<Size>({ ...initialSize })
-  const startPosition = ref({ x: 0, y: 0 })
 
   // Computed style
   const style = computed(() => {
@@ -84,10 +81,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!filterEvent(event) || !handles.includes(handle) || !el)
       return
 
-    // Store the start event, size and position
+    // Store the start event and size
     startEvent.value = event
     startSize.value = { ...size.value }
-    startPosition.value = { ...position.value }
     isResizing.value = true
     activeHandle.value = handle
 
@@ -104,17 +100,52 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
       return
 
-    // Calculate the new size and position
-    const { size: newSize, position: newPosition } = calculateSize(
-      event,
-      startSize.value,
-      activeHandle.value,
-      startPosition.value,
-      {
-        x: startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as TouchEvent).touches[0].clientX,
-        y: startEvent.value instanceof MouseEvent ? startEvent.value.clientY : (startEvent.value as TouchEvent).touches[0].clientY,
-      },
-    )
+    // Calculate the new size
+    const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
+    const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
+    const startClientX = startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as TouchEvent).touches[0].clientX
+    const startClientY = startEvent.value instanceof MouseEvent ? startEvent.value.clientY : (startEvent.value as TouchEvent).touches[0].clientY
+
+    const deltaX = clientX - startClientX
+    const deltaY = clientY - startClientY
+
+    let newSize: Size = { ...startSize.value }
+    let width = Number(startSize.value.width)
+    let height = Number(startSize.value.height)
+
+    // Handle different resize directions
+    switch (activeHandle.value) {
+      case 'e':
+        width = width + deltaX
+        break
+      case 'w':
+        width = width - deltaX
+        break
+      case 's':
+        height = height + deltaY
+        break
+      case 'n':
+        height = height - deltaY
+        break
+      case 'ne':
+        width = width + deltaX
+        height = height - deltaY
+        break
+      case 'nw':
+        width = width - deltaX
+        height = height - deltaY
+        break
+      case 'se':
+        width = width + deltaX
+        height = height + deltaY
+        break
+      case 'sw':
+        width = width - deltaX
+        height = height + deltaY
+        break
+    }
+
+    newSize = { width, height }
 
     // Apply grid snapping if specified
     let snappedSize = newSize
@@ -143,9 +174,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       )
     }
 
-    // Update the size and position
+    // Update the size
     size.value = constrainedSize
-    position.value = newPosition
 
     // Call the callback if provided
     if (onResizeCallback)
@@ -231,7 +261,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   // Return values and methods
   return {
     size,
-    position,
     isResizing,
     style,
     activeHandle,
