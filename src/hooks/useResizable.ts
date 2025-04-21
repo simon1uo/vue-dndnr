@@ -19,7 +19,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     maxHeight,
     grid,
     lockAspectRatio = false,
-    handles = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
+    handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
     disabled = false,
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
@@ -115,34 +115,43 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     // Handle different resize directions
     switch (activeHandle.value) {
-      case 'e':
+      case 'r':
+      case 'right':
         width = width + deltaX
         break
-      case 'w':
+      case 'l':
+      case 'left':
         width = width - deltaX
         break
-      case 's':
+      case 'b':
+      case 'bottom':
         height = height + deltaY
         break
-      case 'n':
+      case 't':
+      case 'top':
         height = height - deltaY
         break
-      case 'ne':
+      case 'tr':
+      case 'top-right':
         width = width + deltaX
         height = height - deltaY
         break
-      case 'nw':
+      case 'tl':
+      case 'top-left':
         width = width - deltaX
         height = height - deltaY
         break
-      case 'se':
+      case 'br':
+      case 'bottom-right':
         width = width + deltaX
         height = height + deltaY
         break
-      case 'sw':
+      case 'bl':
+      case 'bottom-left':
         width = width - deltaX
         height = height + deltaY
         break
+
     }
 
     newSize = { width, height }

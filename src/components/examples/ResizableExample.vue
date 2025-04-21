@@ -125,7 +125,7 @@ function onResizeEnd(event, handle) {
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
           <Resizable
-            :handles="['se', 'sw', 'ne', 'nw']"
+            :handles="['br', 'bl', 'tr', 'tl']"
             class="demo-resizable corners-only"
           >
             <div class="p-4 flex items-center justify-center h-full">

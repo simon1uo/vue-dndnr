@@ -149,19 +149,28 @@ function handleResizeStart(event: MouseEvent | TouchEvent, handle: ResizeHandle)
 
 // Handle positions
 const handlePositions = {
-  n: { top: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 'n-resize' },
-  s: { bottom: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 's-resize' },
-  e: { right: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'e-resize' },
-  w: { left: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'w-resize' },
-  ne: { top: '-5px', right: '-5px', cursor: 'ne-resize' },
-  nw: { top: '-5px', left: '-5px', cursor: 'nw-resize' },
-  se: { bottom: '-5px', right: '-5px', cursor: 'se-resize' },
-  sw: { bottom: '-5px', left: '-5px', cursor: 'sw-resize' },
+  't': { top: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 'n-resize' },
+  'b': { bottom: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 's-resize' },
+  'r': { right: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'e-resize' },
+  'l': { left: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'w-resize' },
+  'tr': { top: '-5px', right: '-5px', cursor: 'ne-resize' },
+  'tl': { top: '-5px', left: '-5px', cursor: 'nw-resize' },
+  'br': { bottom: '-5px', right: '-5px', cursor: 'se-resize' },
+  'bl': { bottom: '-5px', left: '-5px', cursor: 'sw-resize' },
+  // Support for full names
+  'top': { top: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 'n-resize' },
+  'bottom': { bottom: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 's-resize' },
+  'right': { right: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'e-resize' },
+  'left': { left: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'w-resize' },
+  'top-right': { top: '-5px', right: '-5px', cursor: 'ne-resize' },
+  'top-left': { top: '-5px', left: '-5px', cursor: 'nw-resize' },
+  'bottom-right': { bottom: '-5px', right: '-5px', cursor: 'se-resize' },
+  'bottom-left': { bottom: '-5px', left: '-5px', cursor: 'sw-resize' },
 }
 
 // Get handles to render
 const handlesToRender = computed<ResizeHandle[]>(() => {
-  return props.handles || ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
+  return props.handles || ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']
 })
 
 const combinedClass = computed(() => {
