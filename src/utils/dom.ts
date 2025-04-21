@@ -5,7 +5,7 @@
 /**
  * Get the computed position of an element
  */
-export function getElementPosition(element: HTMLElement): { x: number, y: number } {
+export function getElementPosition(element: HTMLElement | SVGElement): { x: number, y: number } {
   const style = window.getComputedStyle(element)
   const transform = style.transform
 
@@ -27,7 +27,7 @@ export function getElementPosition(element: HTMLElement): { x: number, y: number
 /**
  * Get the computed size of an element
  */
-export function getElementSize(element: HTMLElement): { width: number, height: number } {
+export function getElementSize(element: HTMLElement | SVGElement): { width: number, height: number } {
   const style = window.getComputedStyle(element)
   return {
     width: Number.parseInt(style.width || '0', 10),
@@ -38,7 +38,7 @@ export function getElementSize(element: HTMLElement): { width: number, height: n
 /**
  * Check if an element matches a selector
  */
-export function matchesSelector(element: HTMLElement, selector: string): boolean {
+export function matchesSelector(element: HTMLElement | SVGElement, selector: string): boolean {
   const matchesMethod
     = element.matches
       || (element as any).matchesSelector
@@ -53,13 +53,14 @@ export function matchesSelector(element: HTMLElement, selector: string): boolean
 /**
  * Check if an element or its parents match a selector
  */
-export function matchesSelectorAndParents(element: HTMLElement, selector: string): boolean {
-  let target: HTMLElement | null = element
+export function matchesSelectorAndParents(element: HTMLElement | SVGElement, selector: string): boolean {
+  // SVGElement doesn't have parentElement, but it has parentNode
+  let target: HTMLElement | SVGElement | null = element
 
   do {
     if (matchesSelector(target, selector))
       return true
-    target = target.parentElement
+    target = target.parentElement || (target.parentNode as HTMLElement | SVGElement | null)
   } while (target)
 
   return false
@@ -68,7 +69,7 @@ export function matchesSelectorAndParents(element: HTMLElement, selector: string
 /**
  * Get the bounds of an element
  */
-export function getElementBounds(element: HTMLElement): {
+export function getElementBounds(element: HTMLElement | SVGElement): {
   left: number
   top: number
   right: number
@@ -87,7 +88,7 @@ export function getElementBounds(element: HTMLElement): {
  * Add event listener with passive option when supported
  */
 export function addPassiveEventListener(
-  element: HTMLElement | Document | Window,
+  element: HTMLElement | SVGElement | Document | Window,
   eventName: string,
   handler: EventListenerOrEventListenerObject,
   options: boolean | AddEventListenerOptions = false,
@@ -99,7 +100,7 @@ export function addPassiveEventListener(
  * Remove event listener
  */
 export function removeEventListener(
-  element: HTMLElement | Document | Window,
+  element: HTMLElement | SVGElement | Document | Window,
   eventName: string,
   handler: EventListenerOrEventListenerObject,
   options: boolean | AddEventListenerOptions = false,

@@ -70,6 +70,8 @@ export interface DraggableOptions {
    * @default false
    */
   stopPropagation?: boolean
+
+  exact?: boolean
 }
 
 export interface DraggableElement {

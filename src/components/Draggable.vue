@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DraggableOptions, Position } from '../types'
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDraggable } from '../hooks'
 
 // Define props
@@ -55,14 +55,16 @@ const draggableOptions = computed<DraggableOptions>(() => ({
   disabled: props.disabled,
 }))
 
+// Create a ref for the element
+const elementRef = ref<HTMLElement | null>(null)
+
 const {
   position,
   isDragging,
   style: draggableStyle,
-  elementRef,
   setPosition,
   onDragStart,
-} = useDraggable(draggableOptions.value)
+} = useDraggable(elementRef, draggableOptions.value)
 
 watch(
   () => props.position,

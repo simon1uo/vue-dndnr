@@ -1,5 +1,6 @@
+import type { MaybeRefOrGetter } from 'vue'
 import type { DraggableOptions, Position } from '../types'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 import {
   addPassiveEventListener,
   applyAxisConstraint,
@@ -13,7 +14,7 @@ import {
   removeEventListener,
 } from '../utils'
 
-export function useDraggable(options: DraggableOptions = {}) {
+export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DraggableOptions = {}) {
   const {
     initialPosition = { x: 0, y: 0 },
     bounds,
@@ -31,7 +32,7 @@ export function useDraggable(options: DraggableOptions = {}) {
   const position = ref<Position>({ ...initialPosition })
   const startPosition = ref<Position>({ ...initialPosition })
   const isDragging = ref(false)
-  const elementRef = ref<HTMLElement | null>(null)
+  // Use the provided target element instead of creating a new ref
   const startEvent = ref<MouseEvent | TouchEvent | null>(null)
   const elementSize = ref<{ width: number, height: number }>({ width: 0, height: 0 })
 
@@ -61,9 +62,10 @@ export function useDraggable(options: DraggableOptions = {}) {
     }
 
     // Check if element has a handle and if the event target matches it
-    if (handle && elementRef.value) {
-      const target = event.target as HTMLElement
-      if (!matchesSelectorAndParents(target, handle))
+    const el = toValue(target)
+    if (handle && el) {
+      const eventTarget = event.target as HTMLElement
+      if (!matchesSelectorAndParents(eventTarget, handle))
         return false
     }
 
@@ -85,7 +87,8 @@ export function useDraggable(options: DraggableOptions = {}) {
   }
 
   const onDragStart = (event: MouseEvent | TouchEvent) => {
-    if (!filterEvent(event) || !elementRef.value)
+    const el = toValue(target)
+    if (!filterEvent(event) || !el)
       return
 
     // Store the start event and position
@@ -94,14 +97,15 @@ export function useDraggable(options: DraggableOptions = {}) {
     isDragging.value = true
 
     // Get element size for bounds calculation
-    elementSize.value = getElementSize(elementRef.value)
+    elementSize.value = getElementSize(el)
 
     // Handle the event
     handleEvent(event)
   }
 
   const onDrag = (event: MouseEvent | TouchEvent) => {
-    if (!isDragging.value || !startEvent.value || !elementRef.value)
+    const el = toValue(target)
+    if (!isDragging.value || !startEvent.value || !el)
       return
 
     // Calculate the new position
@@ -122,16 +126,17 @@ export function useDraggable(options: DraggableOptions = {}) {
     if (bounds) {
       let boundingElement: HTMLElement | null = null
 
-      if (bounds === 'parent' && elementRef.value.parentElement) {
-        boundingElement = elementRef.value.parentElement
+      const el = toValue(target)
+      if (bounds === 'parent' && el?.parentElement) {
+        boundingElement = el.parentElement
       }
       else if (bounds instanceof HTMLElement) {
         boundingElement = bounds
       }
 
-      if (boundingElement) {
+      if (boundingElement && el) {
         const boundingRect = getElementBounds(boundingElement)
-        const elementRect = getElementBounds(elementRef.value)
+        const elementRect = getElementBounds(el)
 
         newPosition = applyBounds(
           newPosition,
@@ -175,36 +180,58 @@ export function useDraggable(options: DraggableOptions = {}) {
   }
 
   // Set up event listeners
-  onMounted(() => {
-    if (elementRef.value) {
+  const setupEventListeners = () => {
+    const el = toValue(target)
+    if (el) {
       // Mouse events
-      addPassiveEventListener(elementRef.value, 'mousedown', onDragStart as EventListener, { passive: !preventDefault })
+      addPassiveEventListener(el, 'mousedown', onDragStart as EventListener, { passive: !preventDefault })
       addPassiveEventListener(window, 'mousemove', onDrag as EventListener, { passive: !preventDefault })
       addPassiveEventListener(window, 'mouseup', onDragEnd as EventListener, { passive: !preventDefault })
 
       // Touch events
-      addPassiveEventListener(elementRef.value, 'touchstart', onDragStart as EventListener, { passive: !preventDefault })
+      addPassiveEventListener(el, 'touchstart', onDragStart as EventListener, { passive: !preventDefault })
       addPassiveEventListener(window, 'touchmove', onDrag as EventListener, { passive: !preventDefault })
       addPassiveEventListener(window, 'touchend', onDragEnd as EventListener, { passive: !preventDefault })
       addPassiveEventListener(window, 'touchcancel', onDragEnd as EventListener, { passive: !preventDefault })
     }
-  })
+  }
+
+  onMounted(setupEventListeners)
 
   // Clean up event listeners
-  onUnmounted(() => {
-    if (elementRef.value) {
+  const cleanupEventListeners = () => {
+    const el = toValue(target)
+    if (el) {
       // Mouse events
-      removeEventListener(elementRef.value, 'mousedown', onDragStart as EventListener)
+      removeEventListener(el, 'mousedown', onDragStart as EventListener)
       removeEventListener(window, 'mousemove', onDrag as EventListener)
       removeEventListener(window, 'mouseup', onDragEnd as EventListener)
 
       // Touch events
-      removeEventListener(elementRef.value, 'touchstart', onDragStart as EventListener)
+      removeEventListener(el, 'touchstart', onDragStart as EventListener)
       removeEventListener(window, 'touchmove', onDrag as EventListener)
       removeEventListener(window, 'touchend', onDragEnd as EventListener)
       removeEventListener(window, 'touchcancel', onDragEnd as EventListener)
     }
-  })
+  }
+
+  onUnmounted(cleanupEventListeners)
+
+  // Watch for changes to the target element
+  watch(
+    () => toValue(target),
+    (newTarget, oldTarget) => {
+      if (oldTarget) {
+        // Clean up old listeners
+        cleanupEventListeners()
+      }
+      if (newTarget) {
+        // Set up new listeners
+        setupEventListeners()
+      }
+    },
+    { immediate: true },
+  )
 
   // Public methods
   const setPosition = (newPosition: Position) => {
@@ -215,7 +242,6 @@ export function useDraggable(options: DraggableOptions = {}) {
     position,
     isDragging,
     style,
-    elementRef,
     setPosition,
     onDragStart,
     onDrag,
