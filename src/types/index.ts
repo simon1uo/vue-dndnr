@@ -4,3 +4,4 @@
 
 export * from './draggable'
 export * from './resizable'
+export * from './dnr'
