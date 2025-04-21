@@ -113,12 +113,5 @@ function onDragEnd() {
         </div>
       </Draggable>
     </div>
-
-    <!-- Current Dragging Into -->
-    <div>
-      <p class="text-gray-800 dark:text-white font-medium">
-        Current Dragging: {{ dragInfo }}
-      </p>
-    </div>
   </div>
 </template>
