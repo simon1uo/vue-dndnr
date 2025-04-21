@@ -1,5 +1,6 @@
+import type { MaybeRefOrGetter } from 'vue'
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 import {
   addPassiveEventListener,
   applyAspectRatioLock,
@@ -10,7 +11,7 @@ import {
   removeEventListener,
 } from '../utils'
 
-export function useResizable(options: ResizableOptions = {}) {
+export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
   const {
     initialSize = { width: 'auto', height: 'auto' },
     minWidth,
@@ -30,7 +31,6 @@ export function useResizable(options: ResizableOptions = {}) {
   const size = ref<Size>({ ...initialSize })
   const position = ref({ x: 0, y: 0 })
   const isResizing = ref(false)
-  const elementRef = ref<HTMLElement | null>(null)
   const activeHandle = ref<ResizeHandle | null>(null)
   const startEvent = ref<MouseEvent | TouchEvent | null>(null)
 
@@ -77,7 +77,8 @@ export function useResizable(options: ResizableOptions = {}) {
 
   // Event handlers
   const onResizeStart = (event: MouseEvent | TouchEvent, handle: ResizeHandle) => {
-    if (!filterEvent(event) || !handles.includes(handle) || !elementRef.value)
+    const el = toValue(target)
+    if (!filterEvent(event) || !handles.includes(handle) || !el)
       return
 
     // Store the start event, size and position
@@ -92,7 +93,8 @@ export function useResizable(options: ResizableOptions = {}) {
   }
 
   const onResize = (event: MouseEvent | TouchEvent) => {
-    if (!isResizing.value || !activeHandle.value || !startEvent.value || !elementRef.value)
+    const el = toValue(target)
+    if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
       return
 
     // Calculate the new size and position
@@ -155,11 +157,12 @@ export function useResizable(options: ResizableOptions = {}) {
   }
 
   // Set up event listeners
-  onMounted(() => {
-    if (elementRef.value) {
+  const setupEventListeners = () => {
+    const el = toValue(target)
+    if (el) {
       // Initialize size if set to auto
       if (size.value.width === 'auto' || size.value.height === 'auto') {
-        const elementSize = getElementSize(elementRef.value)
+        const elementSize = getElementSize(el)
         size.value = {
           width: size.value.width === 'auto' ? elementSize.width : size.value.width,
           height: size.value.height === 'auto' ? elementSize.height : size.value.height,
@@ -173,17 +176,37 @@ export function useResizable(options: ResizableOptions = {}) {
       addPassiveEventListener(window, 'touchend', onResizeEnd as EventListener, { passive: !preventDefault })
       addPassiveEventListener(window, 'touchcancel', onResizeEnd as EventListener, { passive: !preventDefault })
     }
-  })
+  }
+
+  onMounted(setupEventListeners)
 
   // Clean up event listeners
-  onUnmounted(() => {
+  const cleanupEventListeners = () => {
     // Remove window event listeners
     removeEventListener(window, 'mousemove', onResize as EventListener)
     removeEventListener(window, 'touchmove', onResize as EventListener)
     removeEventListener(window, 'mouseup', onResizeEnd as EventListener)
     removeEventListener(window, 'touchend', onResizeEnd as EventListener)
     removeEventListener(window, 'touchcancel', onResizeEnd as EventListener)
-  })
+  }
+
+  onUnmounted(cleanupEventListeners)
+
+  // Watch for changes to the target element
+  watch(
+    () => toValue(target),
+    (newTarget, oldTarget) => {
+      if (oldTarget) {
+        // Clean up old listeners
+        cleanupEventListeners()
+      }
+      if (newTarget) {
+        // Set up new listeners
+        setupEventListeners()
+      }
+    },
+    { immediate: true },
+  )
 
   // Public methods
   const setSize = (newSize: Size) => {
@@ -196,7 +219,6 @@ export function useResizable(options: ResizableOptions = {}) {
     position,
     isResizing,
     style,
-    elementRef,
     activeHandle,
     setSize,
     onResizeStart,

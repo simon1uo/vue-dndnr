@@ -59,14 +59,16 @@ const resizableOptions = computed<ResizableOptions>(() => ({
   disabled: props.disabled,
 }))
 
+// Create a ref for the element
+const elementRef = ref<HTMLElement | null>(null)
+
 const {
   size: currentSize,
   isResizing,
   style: resizableStyle,
-  elementRef,
   setSize,
   onResizeStart,
-} = useResizable(resizableOptions.value)
+} = useResizable(elementRef, resizableOptions.value)
 
 watch(
   () => props.size,
