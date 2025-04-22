@@ -41,11 +41,11 @@ export function getElementSize(element: HTMLElement | SVGElement): { width: numb
 export function matchesSelector(element: HTMLElement | SVGElement, selector: string): boolean {
   const matchesMethod
     = element.matches
-      || (element as any).matchesSelector
-      || (element as any).msMatchesSelector
-      || (element as any).mozMatchesSelector
-      || (element as any).webkitMatchesSelector
-      || (element as any).oMatchesSelector
+    || (element as any).matchesSelector
+    || (element as any).msMatchesSelector
+    || (element as any).mozMatchesSelector
+    || (element as any).webkitMatchesSelector
+    || (element as any).oMatchesSelector
 
   return matchesMethod.call(element, selector)
 }
@@ -82,28 +82,4 @@ export function getElementBounds(element: HTMLElement | SVGElement): {
     right: rect.right,
     bottom: rect.bottom,
   }
-}
-
-/**
- * Add event listener with passive option when supported
- */
-export function addPassiveEventListener(
-  element: HTMLElement | SVGElement | Document | Window,
-  eventName: string,
-  handler: EventListenerOrEventListenerObject,
-  options: boolean | AddEventListenerOptions = false,
-): void {
-  element.addEventListener(eventName, handler, options)
-}
-
-/**
- * Remove event listener
- */
-export function removeEventListener(
-  element: HTMLElement | SVGElement | Document | Window,
-  eventName: string,
-  handler: EventListenerOrEventListenerObject,
-  options: boolean | AddEventListenerOptions = false,
-): void {
-  element.removeEventListener(eventName, handler, options)
 }

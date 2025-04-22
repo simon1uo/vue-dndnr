@@ -2,13 +2,12 @@ import type { MaybeRefOrGetter } from 'vue'
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
 import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 import {
-  addPassiveEventListener,
   applyAspectRatioLock,
   applyGrid,
   applyMinMaxConstraints,
   getElementSize,
-  removeEventListener,
 } from '../utils'
+import { useEventListener } from './useEventListener'
 
 export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
   const {
@@ -151,7 +150,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
         width = width - deltaX
         height = height + deltaY
         break
-
     }
 
     newSize = { width, height }
@@ -211,7 +209,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }
 
   // Set up event listeners
-  const setupEventListeners = () => {
+  const setupElementSize = () => {
     const el = toValue(target)
     if (el) {
       // Initialize size if set to auto
@@ -222,41 +220,18 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           height: size.value.height === 'auto' ? elementSize.height : size.value.height,
         }
       }
-
-      // Add global event listeners for resize and resizeEnd
-      addPassiveEventListener(window, 'mousemove', onResize as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'touchmove', onResize as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'mouseup', onResizeEnd as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'touchend', onResizeEnd as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'touchcancel', onResizeEnd as EventListener, { passive: !preventDefault })
     }
   }
 
-  onMounted(setupEventListeners)
-
-  // Clean up event listeners
-  const cleanupEventListeners = () => {
-    // Remove window event listeners
-    removeEventListener(window, 'mousemove', onResize as EventListener)
-    removeEventListener(window, 'touchmove', onResize as EventListener)
-    removeEventListener(window, 'mouseup', onResizeEnd as EventListener)
-    removeEventListener(window, 'touchend', onResizeEnd as EventListener)
-    removeEventListener(window, 'touchcancel', onResizeEnd as EventListener)
-  }
-
-  onUnmounted(cleanupEventListeners)
+  onMounted(setupElementSize)
 
   // Watch for changes to the target element
   watch(
     () => toValue(target),
-    (newTarget, oldTarget) => {
-      if (oldTarget) {
-        // Clean up old listeners
-        cleanupEventListeners()
-      }
+    (newTarget) => {
       if (newTarget) {
         // Set up new listeners
-        setupEventListeners()
+        setupElementSize()
       }
     },
     { immediate: true },
@@ -266,6 +241,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const setSize = (newSize: Size) => {
     size.value = { ...newSize }
   }
+
+  useEventListener(window, 'pointermove', onResize, {
+    passive: !preventDefault,
+  })
+  useEventListener(window, 'pointerup', onResizeEnd, {
+    passive: !preventDefault,
+  })
 
   // Return values and methods
   return {
