@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { MaybeRefOrGetter } from 'vue'
 import type { DnROptions, Position, ResizeHandle, Size } from '../types'
 import { computed, ref, watch } from 'vue'
 import { useDnR } from '../hooks'
@@ -14,7 +15,7 @@ const props = withDefaults(defineProps<{
   /** The v-model value for the size */
   sizeModel?: Size
   /** The boundaries for the draggable element */
-  bounds?: HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }
+  bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }>
   /** The grid to snap to while dragging */
   grid?: [number, number]
   /** The axis to restrict movement to */

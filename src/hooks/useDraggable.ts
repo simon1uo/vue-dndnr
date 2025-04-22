@@ -95,13 +95,14 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     if (bounds) {
       let boundingElement: HTMLElement | null = null
-
+      const boundsValue = toValue(bounds)
       const targetEl = toValue(target)
-      if (bounds === 'parent' && targetEl?.parentElement) {
+
+      if (boundsValue === 'parent' && targetEl?.parentElement) {
         boundingElement = targetEl.parentElement
       }
-      else if (bounds instanceof HTMLElement) {
-        boundingElement = bounds
+      else if (boundsValue instanceof HTMLElement) {
+        boundingElement = boundsValue
       }
 
       if (boundingElement && targetEl) {
@@ -122,10 +123,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           },
         )
       }
-      else if (typeof bounds === 'object') {
+      else if (typeof boundsValue === 'object') {
         newPosition = applyBounds(
           newPosition,
-          bounds,
+          boundsValue,
           elementSize.value,
         )
       }

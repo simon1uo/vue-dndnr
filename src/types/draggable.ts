@@ -16,7 +16,7 @@ export interface DraggableOptions {
   /**
    * Element or selector to use as bounds for the draggable element
    */
-  bounds?: HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }
+  bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }>
 
   /**
    * Grid size for snapping during drag [x, y]
