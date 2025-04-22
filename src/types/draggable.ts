@@ -1,6 +1,4 @@
-/**
- * Types for the draggable component
- */
+import type { MaybeRefOrGetter } from 'vue'
 
 export interface Position {
   x: number
@@ -32,14 +30,16 @@ export interface DraggableOptions {
   axis?: 'x' | 'y' | 'both'
 
   /**
-   * CSS selector for the drag handle
+   * Element for the drag handle
    */
-  handle?: string
+  handle?: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>
 
   /**
-   * CSS selector for elements that should not trigger drag
+   * Element to attach `pointermove` and `pointerup` events to.
+   *
+   * @default window
    */
-  cancel?: string
+  draggingElement?: MaybeRefOrGetter<HTMLElement | SVGElement | Window | Document | null | undefined>
 
   /**
    * Scale factor for the draggable element (useful for transformed parents)
@@ -72,27 +72,31 @@ export interface DraggableOptions {
   stopPropagation?: boolean
 
   /**
+   * Whether to dispatch events in capturing phase
+   * @default true
+   */
+  capture?: boolean
+
+  /**
    * Called when dragging starts
    * @param position Current position of the element
    * @param event The mouse or touch event
    */
-  onDragStart?: (position: Position, event: MouseEvent | TouchEvent) => void
+  onDragStart?: (position: Position, event: MouseEvent | TouchEvent) => void | boolean
 
   /**
    * Called during dragging
    * @param position Current position of the element
    * @param event The mouse or touch event
    */
-  onDrag?: (position: Position, event: MouseEvent | TouchEvent) => void
+  onDrag?: (position: Position, event: MouseEvent | TouchEvent) => void | boolean
 
   /**
    * Called when dragging ends
    * @param position Final position of the element
    * @param event The mouse or touch event
    */
-  onDragEnd?: (position: Position, event: MouseEvent | TouchEvent) => void
-
-  exact?: boolean
+  onDragEnd?: (position: Position, event: MouseEvent | TouchEvent) => void | boolean
 }
 
 export interface DraggableElement {

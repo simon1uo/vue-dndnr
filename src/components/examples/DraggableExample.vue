@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Position } from '@/types'
 import { ref } from 'vue'
 import Draggable from '../Draggable.vue'
 
@@ -18,6 +19,7 @@ const gridPosition = ref({ x: 400, y: 100 })
 
 // Handle example
 const handlePosition = ref({ x: 200, y: 100 })
+const handleRef = ref<HTMLElement | null>(null)
 
 // Unbounded example
 const unboundedPosition = ref({ x: 400, y: 0 })
@@ -93,17 +95,15 @@ function onDragEnd(pos: Position, _event: MouseEvent | TouchEvent) {
       </Draggable>
 
       <!-- Handle example -->
-      <Draggable
-        v-model:position="handlePosition" class="draggable-box bg-red-100 dark:bg-red-800 " bounds="parent"
-        handle=".handle"
-      >
-        <div class="p-4 w-200px h-100px flex items-center justify-center">
+      <Draggable v-model:position="handlePosition" bounds="parent" :handle="handleRef">
+        <div class="p-4 w-200px h-100px flex items-center justify-center draggable-box bg-red-100 dark:bg-red-800">
           <span class="text-gray-800 dark:text-white font-medium">Drag Handle</span>
-          <div
-            class="handle bg-gray-300 dark:bg-gray-700 rounded-full w-8 h-8 absolute top-2 right-2 cursor-grab flex items-center justify-center"
-          >
-            👋
-          </div>
+        </div>
+        <div
+          ref="handleRef"
+          class="bg-gray-300 dark:bg-gray-700 rounded-full w-8 h-8 absolute top-2 right-2 cursor-grab flex items-center justify-center"
+        >
+          👋
         </div>
       </Draggable>
 

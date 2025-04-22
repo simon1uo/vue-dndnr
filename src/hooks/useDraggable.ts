@@ -1,8 +1,7 @@
 import type { MaybeRefOrGetter } from 'vue'
-import type { DraggableOptions, Position } from '../types'
-import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
+import type { DraggableOptions, PointerType, Position } from '../types'
+import { computed, ref, toValue } from 'vue'
 import {
-  addPassiveEventListener,
   applyAxisConstraint,
   applyBounds,
   applyGrid,
@@ -10,18 +9,17 @@ import {
   calculatePosition,
   getElementBounds,
   getElementSize,
-  matchesSelectorAndParents,
-  removeEventListener,
 } from '../utils'
+import { useEventListener } from './useEventListener'
 
 export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DraggableOptions = {}) {
   const {
     initialPosition = { x: 0, y: 0 },
+    handle: draggingHandle = target,
+    draggingElement = window,
     bounds,
     grid,
     axis = 'both',
-    handle,
-    cancel,
     scale = 1,
     disabled = false,
     pointerTypes = ['mouse', 'touch', 'pen'],
@@ -35,8 +33,8 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const position = ref<Position>({ ...initialPosition })
   const startPosition = ref<Position>({ ...initialPosition })
   const isDragging = ref(false)
-  // Use the provided target element instead of creating a new ref
-  const startEvent = ref<MouseEvent | TouchEvent | null>(null)
+
+  const startEvent = ref<PointerEvent | null>(null)
   const elementSize = ref<{ width: number, height: number }>({ width: 0, height: 0 })
 
   const style = computed(() => {
@@ -49,73 +47,40 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
   })
 
-  const filterEvent = (event: MouseEvent | TouchEvent): boolean => {
-    // Check if dragging is disabled
+  const filterEvent = (event: PointerEvent): boolean => {
     if (disabled)
       return false
-
-    // Check pointer type
-    if (event instanceof MouseEvent) {
-      if (!pointerTypes.includes('mouse'))
-        return false
-    }
-    else if (event instanceof TouchEvent) {
-      if (!pointerTypes.includes('touch'))
-        return false
-    }
-
-    // Check if element has a handle and if the event target matches it
-    const el = toValue(target)
-    if (handle && el) {
-      const eventTarget = event.target as HTMLElement
-      if (!matchesSelectorAndParents(eventTarget, handle))
-        return false
-    }
-
-    // Check if event target matches cancel selector
-    if (cancel && event.target) {
-      const target = event.target as HTMLElement
-      if (matchesSelectorAndParents(target, cancel))
-        return false
-    }
-
+    if (pointerTypes)
+      return pointerTypes.includes(event.pointerType as PointerType)
     return true
   }
 
-  const handleEvent = (event: MouseEvent | TouchEvent) => {
+  const handleEvent = (event: PointerEvent) => {
     if (preventDefault)
       event.preventDefault()
     if (stopPropagation)
       event.stopPropagation()
   }
 
-  const onDragStart = (event: MouseEvent | TouchEvent) => {
-    const el = toValue(target)
-    if (!filterEvent(event) || !el)
+  const onDragStart = (event: PointerEvent) => {
+    const el = toValue(draggingHandle)
+    const targetEl = toValue(target)
+    if (!filterEvent(event) || !el || !targetEl)
       return
-
-    // Store the start event and position
     startEvent.value = event
     startPosition.value = { ...position.value }
+    if (onDragStartCallback?.(position.value, event) === false)
+      return
     isDragging.value = true
-
-    // Get element size for bounds calculation
-    elementSize.value = getElementSize(el)
-
-    // Handle the event
+    elementSize.value = getElementSize(targetEl)
     handleEvent(event)
-
-    // Call the callback if provided
-    if (onDragStartCallback)
-      onDragStartCallback(position.value, event)
   }
 
-  const onDrag = (event: MouseEvent | TouchEvent) => {
-    const el = toValue(target)
+  const onDrag = (event: PointerEvent) => {
+    const el = toValue(draggingHandle)
     if (!isDragging.value || !startEvent.value || !el)
       return
 
-    // Calculate the new position
     const eventPosition = calculatePosition(event, scale)
     const startEventPosition = calculatePosition(startEvent.value, scale)
     const delta = calculateDelta(startEventPosition, eventPosition)
@@ -125,25 +90,23 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       y: startPosition.value.y + delta.y,
     }
 
-    // Apply constraints
     newPosition = applyAxisConstraint(newPosition, axis, startPosition.value)
     newPosition = applyGrid(newPosition, grid)
 
-    // Apply bounds if specified
     if (bounds) {
       let boundingElement: HTMLElement | null = null
 
-      const el = toValue(target)
-      if (bounds === 'parent' && el?.parentElement) {
-        boundingElement = el.parentElement
+      const targetEl = toValue(target)
+      if (bounds === 'parent' && targetEl?.parentElement) {
+        boundingElement = targetEl.parentElement
       }
       else if (bounds instanceof HTMLElement) {
         boundingElement = bounds
       }
 
-      if (boundingElement && el) {
+      if (boundingElement && targetEl) {
         const boundingRect = getElementBounds(boundingElement)
-        const elementRect = getElementBounds(el)
+        const elementRect = getElementBounds(targetEl)
 
         newPosition = applyBounds(
           newPosition,
@@ -168,87 +131,33 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    // Update position
-    position.value = newPosition
-
-    // Handle the event
-    handleEvent(event)
-
-    // Call the callback if provided
-    if (onDragCallback)
-      onDragCallback(position.value, event)
-  }
-
-  const onDragEnd = (event: MouseEvent | TouchEvent) => {
-    if (!isDragging.value)
+    if (onDragCallback?.(position.value, event) === false)
       return
 
+    position.value = newPosition
+    handleEvent(event)
+  }
+
+  const onDragEnd = (event: PointerEvent) => {
+    if (!isDragging.value)
+      return
     isDragging.value = false
     startEvent.value = null
 
-    // Handle the event
+    if (onDragEndCallback?.(position.value, event) === false)
+      return
     handleEvent(event)
-
-    // Call the callback if provided
-    if (onDragEndCallback)
-      onDragEndCallback(position.value, event)
   }
 
-  // Set up event listeners
-  const setupEventListeners = () => {
-    const el = toValue(target)
-    if (el) {
-      // Mouse events
-      addPassiveEventListener(el, 'mousedown', onDragStart as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'mousemove', onDrag as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'mouseup', onDragEnd as EventListener, { passive: !preventDefault })
+  const config = ({
+    capture: options.capture ?? true,
+    passive: !preventDefault,
+  })
 
-      // Touch events
-      addPassiveEventListener(el, 'touchstart', onDragStart as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'touchmove', onDrag as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'touchend', onDragEnd as EventListener, { passive: !preventDefault })
-      addPassiveEventListener(window, 'touchcancel', onDragEnd as EventListener, { passive: !preventDefault })
-    }
-  }
+  useEventListener(draggingHandle, 'pointerdown', onDragStart, config)
+  useEventListener(draggingElement, 'pointermove', onDrag, config)
+  useEventListener(draggingElement, 'pointerup', onDragEnd, config)
 
-  onMounted(setupEventListeners)
-
-  // Clean up event listeners
-  const cleanupEventListeners = () => {
-    const el = toValue(target)
-    if (el) {
-      // Mouse events
-      removeEventListener(el, 'mousedown', onDragStart as EventListener)
-      removeEventListener(window, 'mousemove', onDrag as EventListener)
-      removeEventListener(window, 'mouseup', onDragEnd as EventListener)
-
-      // Touch events
-      removeEventListener(el, 'touchstart', onDragStart as EventListener)
-      removeEventListener(window, 'touchmove', onDrag as EventListener)
-      removeEventListener(window, 'touchend', onDragEnd as EventListener)
-      removeEventListener(window, 'touchcancel', onDragEnd as EventListener)
-    }
-  }
-
-  onUnmounted(cleanupEventListeners)
-
-  // Watch for changes to the target element
-  watch(
-    () => toValue(target),
-    (newTarget, oldTarget) => {
-      if (oldTarget) {
-        // Clean up old listeners
-        cleanupEventListeners()
-      }
-      if (newTarget) {
-        // Set up new listeners
-        setupEventListeners()
-      }
-    },
-    { immediate: true },
-  )
-
-  // Public methods
   const setPosition = (newPosition: Position) => {
     position.value = { ...newPosition }
   }

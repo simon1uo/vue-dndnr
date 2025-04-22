@@ -1,45 +1,24 @@
 <script setup lang="ts">
+import type { MaybeRefOrGetter } from 'vue'
 import type { DraggableOptions, Position } from '../types'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 import { useDraggable } from '../hooks'
 
-// Define props
-const props = withDefaults(defineProps<{
-  /** The position of the draggable element */
+interface DraggableProps extends DraggableOptions {
   position?: Position
-  /** The v-model value for the position */
   modelValue?: Position
-  /** The boundaries for the draggable element */
-  bounds?: HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }
-  /** The grid to snap to while dragging */
-  grid?: [number, number]
-  /** The axis to restrict movement to */
-  axis?: 'x' | 'y' | 'both'
-  /** The selector for the drag handle */
-  handle?: string
-  /** The selector for elements that cancel dragging */
-  cancel?: string
-  /** The scale factor for the draggable element */
-  scale?: number
-  /** Whether dragging is disabled */
-  disabled?: boolean
-  /** The CSS class to apply to the draggable element */
-  class?: string
-  /** The CSS class to apply when dragging */
-  draggingClass?: string
-  /** Callback when dragging starts */
-  onDragStart?: (position: Position, event: MouseEvent | TouchEvent) => void
-  /** Callback during dragging */
-  onDrag?: (position: Position, event: MouseEvent | TouchEvent) => void
-  /** Callback when dragging ends */
-  onDragEnd?: (position: Position, event: MouseEvent | TouchEvent) => void
-}>(), {
+
+  className?: string
+  draggingClassName?: string
+}
+
+const props = withDefaults(defineProps<DraggableProps>(), {
   position: undefined,
   modelValue: undefined,
   axis: 'both',
   scale: 1,
   disabled: false,
-  draggingClass: 'dragging',
+  draggingClassName: 'dragging',
 })
 
 const emit = defineEmits<{
@@ -50,15 +29,13 @@ const emit = defineEmits<{
   'dragEnd': [position: Position, event: MouseEvent | TouchEvent]
 }>()
 
+const targetRef = ref<HTMLElement | SVGElement | null | undefined>(null)
+const handle = computed(() => toValue(props.handle) ?? targetRef.value)
+
 const draggableOptions = computed<DraggableOptions>(() => ({
+  ...props,
+  handle,
   initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
-  bounds: props.bounds,
-  grid: props.grid,
-  axis: props.axis,
-  handle: props.handle,
-  cancel: props.cancel,
-  scale: props.scale,
-  disabled: props.disabled,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)
@@ -76,15 +53,12 @@ const draggableOptions = computed<DraggableOptions>(() => ({
   },
 }))
 
-// Create a ref for the element
-const elementRef = ref<HTMLElement | null>(null)
-
 const {
   position,
   isDragging,
   style: draggableStyle,
   setPosition,
-} = useDraggable(elementRef, draggableOptions.value)
+} = useDraggable(targetRef, draggableOptions.value)
 
 watch(
   () => props.position,
@@ -118,12 +92,12 @@ watch(
 const combinedClass = computed(() => {
   const classes = ['draggable']
 
-  if (props.class) {
-    classes.push(props.class)
+  if (props.className) {
+    classes.push(props.className)
   }
 
-  if (isDragging.value && props.draggingClass) {
-    classes.push(props.draggingClass)
+  if (isDragging.value && props.draggingClassName) {
+    classes.push(props.draggingClassName)
   }
 
   return classes.join(' ')
@@ -131,7 +105,7 @@ const combinedClass = computed(() => {
 </script>
 
 <template>
-  <div ref="elementRef" :class="combinedClass" :style="draggableStyle">
+  <div ref="targetRef" :class="combinedClass" :style="draggableStyle">
     <slot />
   </div>
 </template>
