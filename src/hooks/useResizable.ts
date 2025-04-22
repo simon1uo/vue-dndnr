@@ -23,6 +23,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
+    boundaryThreshold = 8, // New option for boundary detection threshold
     onResizeStart: onResizeStartCallback,
     onResize: onResizeCallback,
     onResizeEnd: onResizeEndCallback,
@@ -33,17 +34,53 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const isResizing = ref(false)
   const activeHandle = ref<ResizeHandle | null>(null)
   const startEvent = ref<MouseEvent | TouchEvent | null>(null)
+  const hoverHandle = ref<ResizeHandle | null>(null) // Track which boundary is being hovered
 
   // Internal state
   const startSize = ref<Size>({ ...initialSize })
 
+  // Helper function to get cursor style for a handle
+  const getCursorForHandle = (handle: ResizeHandle): string => {
+    switch (handle) {
+      case 't':
+      case 'top':
+        return 'n-resize'
+      case 'b':
+      case 'bottom':
+        return 's-resize'
+      case 'r':
+      case 'right':
+        return 'e-resize'
+      case 'l':
+      case 'left':
+        return 'w-resize'
+      case 'tr':
+      case 'top-right':
+        return 'ne-resize'
+      case 'tl':
+      case 'top-left':
+        return 'nw-resize'
+      case 'br':
+      case 'bottom-right':
+        return 'se-resize'
+      case 'bl':
+      case 'bottom-left':
+        return 'sw-resize'
+      default:
+        return 'default'
+    }
+  }
+
   // Computed style
   const style = computed(() => {
+    const cursorStyle = hoverHandle.value ? getCursorForHandle(hoverHandle.value) : 'default'
+
     return {
       position: 'relative' as const,
       width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
       height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
       userSelect: 'none' as const,
+      cursor: isResizing.value && activeHandle.value ? getCursorForHandle(activeHandle.value) : cursorStyle,
     }
   })
 
@@ -74,10 +111,86 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       event.stopPropagation()
   }
 
-  // Event handlers
-  const onResizeStart = (event: MouseEvent | TouchEvent, handle: ResizeHandle) => {
+  // Detect which boundary the cursor is near
+  const detectBoundary = (event: MouseEvent | TouchEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
+    const rect = element.getBoundingClientRect()
+    const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
+    const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
+
+    // Calculate distances to each edge
+    const distToTop = Math.abs(clientY - rect.top)
+    const distToBottom = Math.abs(clientY - rect.bottom)
+    const distToLeft = Math.abs(clientX - rect.left)
+    const distToRight = Math.abs(clientX - rect.right)
+
+    // Check if cursor is within the element bounds plus threshold
+    const isWithinX = clientX >= rect.left - boundaryThreshold && clientX <= rect.right + boundaryThreshold
+    const isWithinY = clientY >= rect.top - boundaryThreshold && clientY <= rect.bottom + boundaryThreshold
+
+    if (!isWithinX || !isWithinY) {
+      return null
+    }
+
+    // Check corners first (they have priority)
+    if (distToTop <= boundaryThreshold && distToLeft <= boundaryThreshold) {
+      return 'tl'
+    }
+    if (distToTop <= boundaryThreshold && distToRight <= boundaryThreshold) {
+      return 'tr'
+    }
+    if (distToBottom <= boundaryThreshold && distToLeft <= boundaryThreshold) {
+      return 'bl'
+    }
+    if (distToBottom <= boundaryThreshold && distToRight <= boundaryThreshold) {
+      return 'br'
+    }
+
+    // Then check edges
+    if (distToTop <= boundaryThreshold && isWithinX) {
+      return 't'
+    }
+    if (distToBottom <= boundaryThreshold && isWithinX) {
+      return 'b'
+    }
+    if (distToLeft <= boundaryThreshold && isWithinY) {
+      return 'l'
+    }
+    if (distToRight <= boundaryThreshold && isWithinY) {
+      return 'r'
+    }
+
+    return null
+  }
+
+  // Handle mouse move to detect boundaries
+  const onMouseMove = (event: MouseEvent | TouchEvent) => {
+    if (isResizing.value || !filterEvent(event)) {
+      return
+    }
+
     const el = toValue(target)
-    if (!filterEvent(event) || !handles.includes(handle) || !el)
+    if (!el) {
+      return
+    }
+
+    const detectedHandle = detectBoundary(event, el)
+
+    // Only update if the handle has changed to avoid unnecessary renders
+    if (detectedHandle !== hoverHandle.value) {
+      hoverHandle.value = detectedHandle
+    }
+  }
+
+  // Event handlers
+  const onResizeStart = (event: MouseEvent | TouchEvent) => {
+    const el = toValue(target)
+    if (!filterEvent(event) || !el)
+      return
+
+    // Detect which boundary we're near
+    const handle = detectBoundary(event, el)
+
+    if (!handle || !handles.includes(handle))
       return
 
     // Store the start event and size
@@ -220,6 +333,32 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           height: size.value.height === 'auto' ? elementSize.height : size.value.height,
         }
       }
+
+      // Add mouse move listener to the element for boundary detection
+      useEventListener(el, 'mousemove', onMouseMove, {
+        passive: !preventDefault,
+      })
+
+      // Add mousedown listener to start resizing
+      useEventListener(el, 'mousedown', onResizeStart, {
+        passive: !preventDefault,
+      })
+
+      // Add touch events for mobile
+      useEventListener(el, 'touchmove', onMouseMove, {
+        passive: !preventDefault,
+      })
+
+      useEventListener(el, 'touchstart', onResizeStart, {
+        passive: !preventDefault,
+      })
+
+      // Add mouseleave listener to reset hover state
+      useEventListener(el, 'mouseleave', () => {
+        hoverHandle.value = null
+      }, {
+        passive: true,
+      })
     }
   }
 
@@ -255,10 +394,12 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     isResizing,
     style,
     activeHandle,
+    hoverHandle,
     setSize,
     onResizeStart,
     onResize,
     onResizeEnd,
+    detectBoundary,
   }
 }
 

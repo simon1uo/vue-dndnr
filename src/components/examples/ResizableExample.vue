@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Resizable } from '../'
 
 const size = ref({ width: 200, height: 150 })
 const constrainedSize = ref({ width: 200, height: 150 })
 const aspectRatioSize = ref({ width: 200, height: 150 })
+const boundarySize = ref({ width: 200, height: 150 })
+const smallBoundarySize = ref({ width: 200, height: 150 })
+
+// Track hover handle for boundary examples
+const hoverHandle = ref(null)
+const activeHandle = ref(null)
 
 function onResizeStart(event, handle) {
   console.log(`Resize started with handle: ${handle}`)
+  activeHandle.value = handle
 }
 
 function onResize(event, handle) {
@@ -16,6 +23,30 @@ function onResize(event, handle) {
 
 function onResizeEnd(event, handle) {
   console.log(`Resize ended with handle: ${handle}`)
+  activeHandle.value = null
+}
+
+// Handle hover events for boundary examples
+function onHoverHandleChange(handle) {
+  hoverHandle.value = handle
+}
+
+// Format handle name for display
+const formatHandle = (handle) => {
+  if (!handle) return 'None'
+
+  const handleMap = {
+    't': 'Top',
+    'b': 'Bottom',
+    'r': 'Right',
+    'l': 'Left',
+    'tr': 'Top-Right',
+    'tl': 'Top-Left',
+    'br': 'Bottom-Right',
+    'bl': 'Bottom-Left',
+  }
+
+  return handleMap[handle] || handle
 }
 </script>
 
@@ -32,13 +63,8 @@ function onResizeEnd(event, handle) {
           Basic Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="size"
-            class="demo-resizable"
-            @resize-start="onResizeStart"
-            @resize="onResize"
-            @resize-end="onResizeEnd"
-          >
+          <Resizable v-model:size="size" class="demo-resizable" @resize-start="onResizeStart" @resize="onResize"
+            @resize-end="onResizeEnd">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -62,14 +88,8 @@ function onResizeEnd(event, handle) {
           Constrained Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="constrainedSize"
-            :min-width="100"
-            :min-height="100"
-            :max-width="300"
-            :max-height="250"
-            class="demo-resizable constrained"
-          >
+          <Resizable v-model:size="constrainedSize" :min-width="100" :min-height="100" :max-width="300"
+            :max-height="250" class="demo-resizable constrained">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -96,11 +116,7 @@ function onResizeEnd(event, handle) {
           Aspect Ratio Lock
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="aspectRatioSize"
-            :lock-aspect-ratio="true"
-            class="demo-resizable aspect-ratio"
-          >
+          <Resizable v-model:size="aspectRatioSize" :lock-aspect-ratio="true" class="demo-resizable aspect-ratio">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -118,30 +134,62 @@ function onResizeEnd(event, handle) {
         </div>
       </div>
 
-      <!-- Custom Handles Resizable -->
+      <!-- Default Boundary Threshold -->
       <div class="example-card">
         <h3 class="text-lg font-semibold mb-2">
-          Custom Handles
+          Boundary Resizing (Default)
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            :handles="['br', 'bl', 'tr', 'tl']"
-            class="demo-resizable corners-only"
-          >
+          <Resizable v-model:size="boundarySize" class="demo-resizable boundary" @resize-start="onResizeStart"
+            @resize="onResize" @resize-end="onResizeEnd" @hover-handle-change="onHoverHandleChange">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
-                  Corner Handles Only
+                  Boundary Resizing
                 </div>
                 <div class="text-sm text-text-light mt-2">
-                  Only corner handles are enabled
+                  Size: {{ Math.round(boundarySize.width) }}px × {{ Math.round(boundarySize.height) }}px
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  <div>Hover: <span class="font-medium">{{ formatHandle(hoverHandle) }}</span></div>
+                  <div>Active: <span class="font-medium">{{ formatHandle(activeHandle) }}</span></div>
                 </div>
               </div>
             </div>
           </Resizable>
         </div>
         <div class="mt-2 text-sm text-text-light">
-          This resizable only has corner handles enabled
+          Move your cursor to the edges to resize (default 8px threshold)
+        </div>
+      </div>
+
+      <!-- Small Boundary Threshold -->
+      <div class="example-card">
+        <h3 class="text-lg font-semibold mb-2">
+          Custom Boundary Threshold
+        </h3>
+        <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
+          <Resizable v-model:size="smallBoundarySize" :boundary-threshold="4"
+            :handles="['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']" class="demo-resizable small-boundary"
+            @hover-handle-change="onHoverHandleChange" @resize-start="onResizeStart" @resize-end="onResizeEnd">
+            <div class="p-4 flex items-center justify-center h-full">
+              <div class="text-center">
+                <div class="text-lg font-medium">
+                  Small Boundary (4px)
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  Size: {{ Math.round(smallBoundarySize.width) }}px × {{ Math.round(smallBoundarySize.height) }}px
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  <div>Hover: <span class="font-medium">{{ formatHandle(hoverHandle) }}</span></div>
+                  <div>Active: <span class="font-medium">{{ formatHandle(activeHandle) }}</span></div>
+                </div>
+              </div>
+            </div>
+          </Resizable>
+        </div>
+        <div class="mt-2 text-sm text-text-light">
+          This resizable has a smaller boundary threshold (4px instead of 8px)
         </div>
       </div>
     </div>
@@ -180,9 +228,14 @@ function onResizeEnd(event, handle) {
   border-color: var(--aspect-ratio-border, #722ed1);
 }
 
-.demo-resizable.corners-only {
-  background-color: var(--corners-bg, #f6ffed);
-  border-color: var(--corners-border, #52c41a);
+.demo-resizable.boundary {
+  background-color: var(--boundary-bg, #f6ffed);
+  border-color: var(--boundary-border, #52c41a);
+}
+
+.demo-resizable.small-boundary {
+  background-color: var(--small-boundary-bg, #fffbe6);
+  border-color: var(--small-boundary-border, #faad14);
 }
 
 .dark .demo-resizable {
@@ -192,8 +245,10 @@ function onResizeEnd(event, handle) {
   --constrained-border: #1890ff;
   --aspect-ratio-bg: rgba(114, 46, 209, 0.1);
   --aspect-ratio-border: #722ed1;
-  --corners-bg: rgba(82, 196, 26, 0.1);
-  --corners-border: #52c41a;
+  --boundary-bg: rgba(82, 196, 26, 0.1);
+  --boundary-border: #52c41a;
+  --small-boundary-bg: rgba(250, 173, 20, 0.1);
+  --small-boundary-border: #faad14;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 </style>

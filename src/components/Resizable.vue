@@ -25,6 +25,8 @@ const props = withDefaults(defineProps<{
   handles?: ResizeHandle[]
   /** Whether resizing is disabled */
   disabled?: boolean
+  /** Threshold in pixels for boundary detection */
+  boundaryThreshold?: number
   /** The CSS class to apply to the resizable element */
   class?: string
   /** The CSS class to apply when resizing */
@@ -51,6 +53,7 @@ const emit = defineEmits<{
   'resizeStart': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
   'resize': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
   'resizeEnd': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
+  'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
 // Create a ref for the element
@@ -70,6 +73,7 @@ const resizableOptions = computed<ResizableOptions>(() => ({
   lockAspectRatio: props.lockAspectRatio,
   handles: props.handles,
   disabled: props.disabled,
+  boundaryThreshold: props.boundaryThreshold,
   onResizeStart: (size, event) => {
     if (activeHandle) {
       emit('resizeStart', event, activeHandle)
@@ -100,8 +104,19 @@ const {
   isResizing,
   style: resizableStyle,
   setSize,
-  onResizeStart,
+  activeHandle: currentActiveHandle,
+  hoverHandle,
 } = useResizable(elementRef, resizableOptions.value)
+
+// Watch for active handle changes from the hook
+watch(currentActiveHandle, (newHandle) => {
+  activeHandle = newHandle
+})
+
+// Watch for hover handle changes and emit events
+watch(hoverHandle, (newHandle) => {
+  emit('hoverHandleChange', newHandle)
+})
 
 // Update the hook when options change
 watch(
@@ -142,36 +157,8 @@ watch(
   { deep: true },
 )
 
-function handleResizeStart(event: MouseEvent | TouchEvent, handle: ResizeHandle) {
-  activeHandle = handle
-  onResizeStart(event, handle)
-}
-
-// Handle positions
-const handlePositions = {
-  't': { top: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 'n-resize' },
-  'b': { bottom: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 's-resize' },
-  'r': { right: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'e-resize' },
-  'l': { left: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'w-resize' },
-  'tr': { top: '-5px', right: '-5px', cursor: 'ne-resize' },
-  'tl': { top: '-5px', left: '-5px', cursor: 'nw-resize' },
-  'br': { bottom: '-5px', right: '-5px', cursor: 'se-resize' },
-  'bl': { bottom: '-5px', left: '-5px', cursor: 'sw-resize' },
-  // Support for full names
-  'top': { top: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 'n-resize' },
-  'bottom': { bottom: '-5px', left: '50%', transform: 'translateX(-50%)', cursor: 's-resize' },
-  'right': { right: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'e-resize' },
-  'left': { left: '-5px', top: '50%', transform: 'translateY(-50%)', cursor: 'w-resize' },
-  'top-right': { top: '-5px', right: '-5px', cursor: 'ne-resize' },
-  'top-left': { top: '-5px', left: '-5px', cursor: 'nw-resize' },
-  'bottom-right': { bottom: '-5px', right: '-5px', cursor: 'se-resize' },
-  'bottom-left': { bottom: '-5px', left: '-5px', cursor: 'sw-resize' },
-}
-
-// Get handles to render
-const handlesToRender = computed<ResizeHandle[]>(() => {
-  return props.handles || ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']
-})
+// No longer need the handleResizeStart function or handle positions
+// as we're using boundary detection instead
 
 const combinedClass = computed(() => {
   const classes = ['resizable']
@@ -191,13 +178,6 @@ const combinedClass = computed(() => {
 <template>
   <div ref="elementRef" :class="combinedClass" :style="resizableStyle">
     <slot />
-
-    <!-- Resize handles -->
-    <div
-      v-for="handle in handlesToRender" :key="handle" :class="`resizable-handle resizable-handle-${handle}`"
-      :style="handlePositions[handle]" @mousedown="(e) => handleResizeStart(e, handle)"
-      @touchstart="(e) => handleResizeStart(e, handle)"
-    />
   </div>
 </template>
 
@@ -211,18 +191,5 @@ const combinedClass = computed(() => {
 
 .resizable.resizing {
   z-index: 1;
-}
-
-.resizable-handle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: #4299e1;
-  border-radius: 50%;
-  z-index: 1;
-}
-
-.resizable-handle:hover {
-  background-color: #3182ce;
 }
 </style>

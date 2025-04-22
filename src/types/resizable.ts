@@ -74,6 +74,12 @@ export interface ResizableOptions {
   stopPropagation?: boolean
 
   /**
+   * Threshold in pixels for boundary detection
+   * @default 8
+   */
+  boundaryThreshold?: number
+
+  /**
    * Called when resizing starts
    * @param size Current size of the element
    * @param event The mouse or touch event
