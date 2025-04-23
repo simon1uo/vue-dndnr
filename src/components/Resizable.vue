@@ -3,43 +3,16 @@ import type { ResizableOptions, ResizeHandle, Size } from '../types'
 import { computed, ref, watch } from 'vue'
 import { useResizable } from '../hooks'
 
-// Define props
-const props = withDefaults(defineProps<{
-  /** The size of the resizable element */
+interface ResizableProps extends ResizableOptions {
   size?: Size
-  /** The v-model value for the size */
   modelValue?: Size
-  /** The minimum width of the resizable element */
-  minWidth?: number
-  /** The minimum height of the resizable element */
-  minHeight?: number
-  /** The maximum width of the resizable element */
-  maxWidth?: number
-  /** The maximum height of the resizable element */
-  maxHeight?: number
-  /** The grid to snap to while resizing */
-  grid?: [number, number]
-  /** Whether to maintain aspect ratio during resizing */
-  lockAspectRatio?: boolean
-  /** Which resize handles to enable */
-  handles?: ResizeHandle[]
-  /** Whether resizing is disabled */
-  disabled?: boolean
-  /** Threshold in pixels for boundary detection */
-  boundaryThreshold?: number
-  /** The CSS class to apply to the resizable element */
+
   class?: string
-  /** The CSS class to apply when resizing */
   resizingClass?: string
-  /** The CSS style to apply to the resizable element */
   style?: Record<string, string>
-  /** Callback when resizing starts */
-  onResizeStart?: (size: Size, event: MouseEvent | TouchEvent) => void
-  /** Callback during resizing */
-  onResize?: (size: Size, event: MouseEvent | TouchEvent) => void
-  /** Callback when resizing ends */
-  onResizeEnd?: (size: Size, event: MouseEvent | TouchEvent) => void
-}>(), {
+}
+
+const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
   lockAspectRatio: false,
@@ -98,7 +71,6 @@ const resizableOptions = computed<ResizableOptions>(() => ({
   },
 }))
 
-// Initialize with options
 const {
   size: currentSize,
   isResizing,
@@ -108,12 +80,10 @@ const {
   hoverHandle,
 } = useResizable(elementRef, resizableOptions.value)
 
-// Watch for active handle changes from the hook
 watch(currentActiveHandle, (newHandle) => {
   activeHandle = newHandle
 })
 
-// Watch for hover handle changes and emit events
 watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)
 })
@@ -156,9 +126,6 @@ watch(
   },
   { deep: true },
 )
-
-// No longer need the handleResizeStart function or handle positions
-// as we're using boundary detection instead
 
 const combinedClass = computed(() => {
   const classes = ['resizable']
