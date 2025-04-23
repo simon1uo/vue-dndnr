@@ -18,6 +18,8 @@ export function applyMinMaxConstraints(
   let { width, height } = size
 
   if (typeof width === 'number') {
+    // Always ensure width is at least 0
+    width = Math.max(width, 0)
     if (minWidth !== undefined)
       width = Math.max(width, minWidth)
     if (maxWidth !== undefined)
@@ -25,6 +27,8 @@ export function applyMinMaxConstraints(
   }
 
   if (typeof height === 'number') {
+    // Always ensure height is at least 0
+    height = Math.max(height, 0)
     if (minHeight !== undefined)
       height = Math.max(height, minHeight)
     if (maxHeight !== undefined)

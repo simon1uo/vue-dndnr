@@ -1,12 +1,13 @@
 import type { MaybeRefOrGetter } from 'vue'
-import type { ResizableOptions, ResizeHandle, Size } from '../types'
+import type { Position, ResizableOptions, ResizeHandle, Size } from '../types'
 import { onMounted, ref, toValue, watch } from 'vue'
 import {
   applyAspectRatioLock,
   applyGrid,
   applyMinMaxConstraints,
-  getElementSize,
   getElementBounds,
+  getElementPosition,
+  getElementSize,
 } from '../utils'
 import { useEventListener } from './useEventListener'
 
@@ -33,13 +34,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
   // State
   const size = ref<Size>({ ...initialSize })
+  const position = ref<Position>({ x: 0, y: 0 })
   const isResizing = ref(false)
   const activeHandle = ref<ResizeHandle | null>(null)
   const startEvent = ref<MouseEvent | TouchEvent | null>(null)
   const hoverHandle = ref<ResizeHandle | null>(null) // Track which boundary is being hovered
+  const isAbsolutePositioned = ref(false)
 
   // Internal state
   const startSize = ref<Size>({ ...initialSize })
+  const startPosition = ref<Position>({ x: 0, y: 0 })
 
   // Helper function to get cursor style for a handle
   const getCursorForHandle = (handle: ResizeHandle): string => {
@@ -81,7 +85,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     const cursorStyle = hoverHandle.value ? getCursorForHandle(hoverHandle.value) : 'default'
 
-    el.style.position = 'relative'
+    // Don't change position style if it's already set to absolute
+    if (!isAbsolutePositioned.value) {
+      el.style.position = 'relative'
+    }
+    else {
+      // Update position for absolute positioned elements
+      el.style.left = `${position.value.x}px`
+      el.style.top = `${position.value.y}px`
+    }
+
     el.style.width = typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width
     el.style.height = typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height
     el.style.userSelect = 'none'
@@ -197,9 +210,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!handle || !handles.includes(handle))
       return
 
-    // Store the start event and size
+    // Store the start event, size and position
     startEvent.value = event
     startSize.value = { ...size.value }
+    startPosition.value = { ...position.value }
     isResizing.value = true
     activeHandle.value = handle
 
@@ -230,6 +244,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     let height = Number(startSize.value.height)
 
     // Handle different resize directions
+    // For absolute positioned elements, we need to update position as well
+    const newPosition = { ...startPosition.value }
+
     switch (activeHandle.value) {
       case 'r':
       case 'right':
@@ -238,6 +255,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       case 'l':
       case 'left':
         width = width - deltaX
+        if (isAbsolutePositioned.value) {
+          newPosition.x = startPosition.value.x + deltaX
+        }
         break
       case 'b':
       case 'bottom':
@@ -246,16 +266,26 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       case 't':
       case 'top':
         height = height - deltaY
+        if (isAbsolutePositioned.value) {
+          newPosition.y = startPosition.value.y + deltaY
+        }
         break
       case 'tr':
       case 'top-right':
         width = width + deltaX
         height = height - deltaY
+        if (isAbsolutePositioned.value) {
+          newPosition.y = startPosition.value.y + deltaY
+        }
         break
       case 'tl':
       case 'top-left':
         width = width - deltaX
         height = height - deltaY
+        if (isAbsolutePositioned.value) {
+          newPosition.x = startPosition.value.x + deltaX
+          newPosition.y = startPosition.value.y + deltaY
+        }
         break
       case 'br':
       case 'bottom-right':
@@ -266,7 +296,32 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       case 'bottom-left':
         width = width - deltaX
         height = height + deltaY
+        if (isAbsolutePositioned.value) {
+          newPosition.x = startPosition.value.x + deltaX
+        }
         break
+    }
+
+    // Ensure width and height are not negative
+    width = Math.max(0, width)
+    height = Math.max(0, height)
+
+    // Update position if element is absolutely positioned
+    // Only update position if the corresponding dimension is not zero
+    if (isAbsolutePositioned.value) {
+      const updatedPosition = { ...position.value }
+
+      // Only update x position if width is not zero and we're resizing from left side
+      if (width > 0 && ['l', 'left', 'tl', 'top-left', 'bl', 'bottom-left'].includes(activeHandle.value)) {
+        updatedPosition.x = newPosition.x
+      }
+
+      // Only update y position if height is not zero and we're resizing from top side
+      if (height > 0 && ['t', 'top', 'tl', 'top-left', 'tr', 'top-right'].includes(activeHandle.value)) {
+        updatedPosition.y = newPosition.y
+      }
+
+      position.value = updatedPosition
     }
 
     newSize = { width, height }
@@ -367,6 +422,17 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const setupElementSize = () => {
     const el = toValue(target)
     if (el) {
+      // Check if element is absolutely positioned
+      const computedStyle = window.getComputedStyle(el)
+      isAbsolutePositioned.value = computedStyle.position === 'absolute'
+
+      // If absolutely positioned, get the initial position
+      if (isAbsolutePositioned.value) {
+        const elementPosition = getElementPosition(el)
+        position.value = elementPosition
+        startPosition.value = { ...elementPosition }
+      }
+
       // Initialize size if set to auto
       if (size.value.width === 'auto' || size.value.height === 'auto') {
         const elementSize = getElementSize(el)
@@ -421,14 +487,19 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     { immediate: true },
   )
 
-  // Watch for changes to size or handle state to update styles
-  watch([size, hoverHandle, isResizing, activeHandle], () => {
+  // Watch for changes to size, position or handle state to update styles
+  watch([size, position, hoverHandle, isResizing, activeHandle], () => {
     applyStyles()
   }, { deep: true })
 
   // Public methods
   const setSize = (newSize: Size) => {
     size.value = { ...newSize }
+    applyStyles()
+  }
+
+  const setPosition = (newPosition: Position) => {
+    position.value = { ...newPosition }
     applyStyles()
   }
 
@@ -442,10 +513,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   // Return values and methods
   return {
     size,
+    position,
     isResizing,
     activeHandle,
     hoverHandle,
+    isAbsolutePositioned,
     setSize,
+    setPosition,
     onResizeStart,
     onResize,
     onResizeEnd,

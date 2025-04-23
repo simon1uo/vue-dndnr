@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Size } from '../../types'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Resizable } from '../'
 import { useResizable } from '../../hooks'
 
@@ -9,6 +9,10 @@ const constrainedSize = ref({ width: 200, height: 150 })
 const aspectRatioSize = ref({ width: 200, height: 150 })
 const boundarySize = ref({ width: 200, height: 150 })
 const smallBoundarySize = ref({ width: 200, height: 150 })
+
+// For absolute positioned example
+const absoluteSize = ref({ width: 200, height: 150 })
+const absolutePosition = ref({ x: 50, y: 50 })
 
 // For pure hook example
 const hookExampleRef = ref<HTMLElement | null>(null)
@@ -21,15 +25,15 @@ const activeHandle = ref<string | null>(null)
 // Event handlers for Resizable component
 // These handlers match the component's emit signature
 function onResizeStart(_size: Size, _event: MouseEvent | TouchEvent) {
-  console.log('onResizeStart', _size);
+  console.log('onResizeStart', _size)
 }
 
 function onResize(_size: Size, _event: MouseEvent | TouchEvent) {
-  console.log('onResize', _size);
+  console.log('onResize', _size)
 }
 
 function onResizeEnd(_size: Size, _event: MouseEvent | TouchEvent) {
-  console.log('onResizeEnd', _size);
+  console.log('onResizeEnd', _size)
 }
 
 // Handle hover events for boundary examples
@@ -96,8 +100,8 @@ onMounted(() => {
           Basic Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable v-model:size="size" class="demo-resizable" @resize-start="onResizeStart" @resize="onResize"
-            @resize-end="onResizeEnd" :bounds="'parent'">
+          <Resizable v-model:size="size" class="demo-resizable" bounds="parent" @resize-start="onResizeStart"
+            @resize="onResize" @resize-end="onResizeEnd">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -252,6 +256,34 @@ onMounted(() => {
           This example uses the useResizable hook directly without the Resizable component
         </div>
       </div>
+
+      <!-- Absolute Positioned Resizable -->
+      <div class="example-card">
+        <h3 class="text-lg font-semibold mb-2">
+          Absolute Positioned Resizable
+        </h3>
+        <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
+          <Resizable v-model:size="absoluteSize" v-model:position="absolutePosition" bounds="parent"
+            class="demo-resizable absolute-positioned">
+            <div class="p-4 flex items-center justify-center h-full">
+              <div class="text-center">
+                <div class="text-lg font-medium">
+                  Absolute Positioned
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  Size: {{ Math.round(absoluteSize.width) }}px × {{ Math.round(absoluteSize.height) }}px
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  Position: {{ Math.round(absolutePosition.x) }}px, {{ Math.round(absolutePosition.y) }}px
+                </div>
+              </div>
+            </div>
+          </Resizable>
+        </div>
+        <div class="mt-2 text-sm text-text-light">
+          This resizable has absolute positioning and updates position when resizing from top or left edges
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -303,6 +335,12 @@ onMounted(() => {
   border-color: var(--hook-example-border, #13c2c2);
 }
 
+.demo-resizable.absolute-positioned {
+  position: absolute;
+  background-color: var(--absolute-bg, #fff0f6);
+  border-color: var(--absolute-border, #eb2f96);
+}
+
 .dark .demo-resizable {
   --resizable-bg: rgba(250, 140, 22, 0.1);
   --resizable-border: #fa8c16;
@@ -316,6 +354,8 @@ onMounted(() => {
   --small-boundary-border: #faad14;
   --hook-example-bg: rgba(19, 194, 194, 0.1);
   --hook-example-border: #13c2c2;
+  --absolute-bg: rgba(235, 47, 150, 0.1);
+  --absolute-border: #eb2f96;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 </style>

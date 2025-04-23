@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import type { ResizableOptions, ResizeHandle, Size } from '../types'
+import type { Position, ResizableOptions, ResizeHandle, Size } from '../types'
 import { computed, ref, watch } from 'vue'
 import { useResizable } from '../hooks'
 
 interface ResizableProps extends ResizableOptions {
   size?: Size
   modelValue?: Size
+  position?: Position
+  positionModel?: Position
 }
 
 const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
+  position: undefined,
+  positionModel: undefined,
   lockAspectRatio: false,
-  disabled: false, 
+  disabled: false,
 })
 
 const emit = defineEmits<{
   'update:size': [size: Size]
   'update:modelValue': [size: Size]
+  'update:position': [position: Position]
+  'update:positionModel': [position: Position]
   'resizeStart': [size: Size, event: MouseEvent | TouchEvent]
   'resize': [size: Size, event: MouseEvent | TouchEvent]
   'resizeEnd': [size: Size, event: MouseEvent | TouchEvent]
@@ -60,8 +66,11 @@ const resizableOptions = computed<ResizableOptions>(() => ({
 
 const {
   size: currentSize,
+  position: currentPosition,
   isResizing,
+  isAbsolutePositioned,
   setSize,
+  setPosition,
   activeHandle: currentActiveHandle,
   hoverHandle,
 } = useResizable(elementRef, resizableOptions.value)
@@ -100,6 +109,37 @@ watch(
   (newSize) => {
     emit('update:size', newSize)
     emit('update:modelValue', newSize)
+  },
+  { deep: true },
+)
+
+watch(
+  currentPosition,
+  (newPosition) => {
+    if (isAbsolutePositioned.value) {
+      emit('update:position', newPosition)
+      emit('update:positionModel', newPosition)
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.position,
+  (newPosition) => {
+    if (newPosition && !isResizing.value && isAbsolutePositioned.value) {
+      setPosition(newPosition)
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.positionModel,
+  (newPosition) => {
+    if (newPosition && !isResizing.value && isAbsolutePositioned.value) {
+      setPosition(newPosition)
+    }
   },
   { deep: true },
 )
