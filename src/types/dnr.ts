@@ -2,8 +2,8 @@
  * Types for the DnR (Drag and Resize) component
  */
 
-import type { DraggableOptions, Position } from './draggable'
-import type { ResizableOptions, Size } from './resizable'
+import type { DraggableOptions } from './draggable'
+import type { ResizableOptions } from './resizable'
 
 /**
  * Combined options for DnR (Drag and Resize)

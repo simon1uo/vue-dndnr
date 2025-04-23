@@ -3,7 +3,6 @@
  */
 
 import type { Size } from '../types'
-import type { ResizeHandle } from '../types/resizable'
 
 /**
  * Apply min/max constraints to a size

@@ -83,7 +83,6 @@ watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)
 })
 
-
 watch(
   () => props.size,
   (newSize) => {

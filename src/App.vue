@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { DraggableExample, ResizableExample, DnRExample, UseDraggableHookExample } from './components/examples'
+import { DnRExample, DraggableExample, ResizableExample, UseDraggableHookExample } from './components/examples'
 import ThemeToggle from './components/ThemeToggle.vue'
 import { provideDndContext } from './hooks'
 

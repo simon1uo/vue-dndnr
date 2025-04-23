@@ -3,7 +3,7 @@
  */
 
 import type { MaybeRefOrGetter } from 'vue'
-import { computed, getCurrentScope, onMounted, onScopeDispose, onUnmounted, toValue, watch } from 'vue'
+import { getCurrentScope, onScopeDispose, toValue, watch } from 'vue'
 
 function tryOnScopeDispose(fn: () => void) {
   if (getCurrentScope()) {
