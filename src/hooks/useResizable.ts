@@ -311,14 +311,34 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (isAbsolutePositioned.value) {
       const updatedPosition = { ...position.value }
 
-      // Only update x position if width is not zero and we're resizing from left side
+      // Handle left-side resizing
       if (width > 0 && ['l', 'left', 'tl', 'top-left', 'bl', 'bottom-left'].includes(activeHandle.value)) {
-        updatedPosition.x = newPosition.x
+        // Prevent negative x position
+        const constrainedX = Math.max(0, newPosition.x)
+        updatedPosition.x = constrainedX
+
+        // If position was constrained, adjust width to maintain the right edge position
+        if (constrainedX > newPosition.x) {
+          // Calculate how much the position was adjusted
+          const positionAdjustment = constrainedX - newPosition.x
+          // Increase width by the same amount to maintain right edge position
+          width += positionAdjustment
+        }
       }
 
-      // Only update y position if height is not zero and we're resizing from top side
+      // Handle top-side resizing
       if (height > 0 && ['t', 'top', 'tl', 'top-left', 'tr', 'top-right'].includes(activeHandle.value)) {
-        updatedPosition.y = newPosition.y
+        // Prevent negative y position
+        const constrainedY = Math.max(0, newPosition.y)
+        updatedPosition.y = constrainedY
+
+        // If position was constrained, adjust height to maintain the bottom edge position
+        if (constrainedY > newPosition.y) {
+          // Calculate how much the position was adjusted
+          const positionAdjustment = constrainedY - newPosition.y
+          // Increase height by the same amount to maintain bottom edge position
+          height += positionAdjustment
+        }
       }
 
       position.value = updatedPosition
@@ -499,7 +519,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }
 
   const setPosition = (newPosition: Position) => {
-    position.value = { ...newPosition }
+    // Prevent negative position values for absolute positioned elements
+    if (isAbsolutePositioned.value) {
+      position.value = {
+        x: Math.max(0, newPosition.x),
+        y: Math.max(0, newPosition.y),
+      }
+    }
+    else {
+      position.value = { ...newPosition }
+    }
     applyStyles()
   }
 
