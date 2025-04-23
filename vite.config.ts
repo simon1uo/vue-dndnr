@@ -1,23 +1,43 @@
-import { fileURLToPath, URL } from 'node:url'
-
+import { resolve } from 'node:path'
 import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
 import UnoCSS from 'unocss/vite'
 import { defineConfig } from 'vite'
-import vueDevTools from 'vite-plugin-vue-devtools'
+import dts from 'vite-plugin-dts'
 
 // https://vite.dev/config/
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
   plugins: [
     vue(),
-    vueDevTools(),
+    vueJsx(),
     UnoCSS(),
+    dts({
+      insertTypesEntry: true,
+      include: ['src/**/*.ts', 'src/**/*.vue'],
+    }),
   ],
+  build: {
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'VueDndnr',
+      fileName: format => `vue-dndnr.${format}.js`,
+      formats: ['es', 'umd'],
+    },
+    rollupOptions: {
+      external: ['vue'],
+      output: {
+        globals: {
+          vue: 'Vue',
+        },
+      },
+    },
+    sourcemap: true,
+    minify: 'terser',
+    copyPublicDir: false,
+  },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@': resolve(__dirname, 'src'),
     },
   },
 })

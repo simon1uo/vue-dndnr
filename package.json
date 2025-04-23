@@ -29,14 +29,11 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite --host",
     "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
     "build-only": "vite build",
-    "build:lib": "vite build --config vite.lib.config.ts",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "prepublishOnly": "npm run build:lib"
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "vue": "^3.0.0"

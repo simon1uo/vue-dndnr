@@ -32,6 +32,74 @@ or
 yarn add vue-dndnr
 ```
 
+## Usage
+
+### Components
+
+```vue
+<script setup>
+import { Draggable, Resizable, DnR } from 'vue-dndnr'
+import { ref } from 'vue'
+
+const position = ref({ x: 100, y: 100 })
+const size = ref({ width: 200, height: 150 })
+</script>
+
+<template>
+  <!-- Draggable component -->
+  <Draggable v-model:position="position" bounds="parent">
+    <div>Drag me!</div>
+  </Draggable>
+
+  <!-- Resizable component -->
+  <Resizable v-model:size="size" :min-width="100" :min-height="100">
+    <div>Resize me!</div>
+  </Resizable>
+
+  <!-- Combined Drag and Resize component -->
+  <DnR v-model:position="position" v-model:size="size" bounds="parent">
+    <div>Drag and resize me!</div>
+  </DnR>
+</template>
+```
+
+### Hooks
+
+```vue
+<script setup>
+import { useDraggable, useResizable, useDnR } from 'vue-dndnr'
+import { ref } from 'vue'
+
+const elementRef = ref(null)
+
+// Use the draggable hook
+const { position, isDragging } = useDraggable(elementRef, {
+  initialPosition: { x: 0, y: 0 },
+  bounds: 'parent',
+})
+
+// Use the resizable hook
+const { size, isResizing } = useResizable(elementRef, {
+  initialSize: { width: 200, height: 150 },
+  minWidth: 100,
+  minHeight: 100,
+})
+
+// Use the combined hook
+const { position, size, isDragging, isResizing } = useDnR(elementRef, {
+  initialPosition: { x: 0, y: 0 },
+  initialSize: { width: 200, height: 150 },
+  bounds: 'parent',
+})
+</script>
+
+<template>
+  <div ref="elementRef" :style="{ left: `${position.x}px`, top: `${position.y}px` }">
+    This element can be dragged and resized using hooks
+  </div>
+</template>
+```
+
 ## Development
 
 ### Project Setup
@@ -40,23 +108,13 @@ yarn add vue-dndnr
 pnpm install
 ```
 
-### Compile and Hot-Reload for Development
-
-```sh
-pnpm dev
-```
-
 ### Build the Library
 
 ```sh
-pnpm build:lib
+pnpm build
 ```
 
-### Generate Type Declarations
-
-```sh
-pnpm build:types
-```
+This will build the library and generate type declarations.
 
 ## License
 
