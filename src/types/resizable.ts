@@ -1,6 +1,7 @@
 /**
  * Types for the resizable component
  */
+import type { MaybeRefOrGetter } from 'vue'
 
 export interface Size {
   width: number | string
@@ -49,6 +50,11 @@ export interface ResizableOptions {
    * Which resize handles to enable
    */
   handles?: ResizeHandle[]
+
+  /**
+   * Element or selector to use as bounds for the resizable element
+   */
+  bounds?: MaybeRefOrGetter<HTMLElement | 'parent'>
 
   /**
    * Whether resizing is disabled

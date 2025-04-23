@@ -6,6 +6,7 @@ import {
   applyGrid,
   applyMinMaxConstraints,
   getElementSize,
+  getElementBounds,
 } from '../utils'
 import { useEventListener } from './useEventListener'
 
@@ -19,6 +20,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     grid,
     lockAspectRatio = false,
     handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
+    bounds,
     disabled = false,
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
@@ -294,6 +296,41 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
         startSize.value,
         lockAspectRatio,
       )
+    }
+
+    // Apply bounds constraints if specified
+    if (bounds) {
+      let boundingElement: HTMLElement | null = null
+      const boundsValue = toValue(bounds)
+      const targetEl = toValue(target)
+
+      if (boundsValue === 'parent' && targetEl?.parentElement) {
+        boundingElement = targetEl.parentElement
+      }
+      else if (boundsValue instanceof HTMLElement) {
+        boundingElement = boundsValue
+      }
+
+      if (boundingElement && targetEl) {
+        const boundingRect = getElementBounds(boundingElement)
+        const targetRect = getElementBounds(targetEl)
+        const targetPos = {
+          x: targetRect.left - boundingRect.left,
+          y: targetRect.top - boundingRect.top,
+        }
+
+        // Calculate max width and height based on bounds
+        const maxBoundWidth = boundingRect.right - boundingRect.left - targetPos.x
+        const maxBoundHeight = boundingRect.bottom - boundingRect.top - targetPos.y
+
+        // Apply bounds constraints
+        if (typeof constrainedSize.width === 'number') {
+          constrainedSize.width = Math.min(constrainedSize.width, maxBoundWidth)
+        }
+        if (typeof constrainedSize.height === 'number') {
+          constrainedSize.height = Math.min(constrainedSize.height, maxBoundHeight)
+        }
+      }
     }
 
     // Update the size

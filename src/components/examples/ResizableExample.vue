@@ -96,14 +96,12 @@ onMounted(() => {
           Basic Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="size" class="demo-resizable" @resize-start="onResizeStart" @resize="onResize"
-            @resize-end="onResizeEnd"
-          >
+          <Resizable v-model:size="size" class="demo-resizable" @resize-start="onResizeStart" @resize="onResize"
+            @resize-end="onResizeEnd" :bounds="'parent'">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
-                  Resize Me
+                  Resize Me (Constrained by 'parent')
                 </div>
                 <div class="text-sm text-text-light mt-2">
                   Size: {{ Math.round(size.width) }}px × {{ Math.round(size.height) }}px
@@ -123,10 +121,8 @@ onMounted(() => {
           Constrained Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="constrainedSize" :min-width="100" :min-height="100" :max-width="300"
-            :max-height="250" class="demo-resizable constrained"
-          >
+          <Resizable v-model:size="constrainedSize" :min-width="100" :min-height="100" :max-width="300"
+            :max-height="250" class="demo-resizable constrained">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -177,10 +173,8 @@ onMounted(() => {
           Boundary Resizing (Default)
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="boundarySize" class="demo-resizable boundary" @resize-start="onResizeStart"
-            @resize="onResize" @resize-end="onResizeEnd" @hover-handle-change="onHoverHandleChange"
-          >
+          <Resizable v-model:size="boundarySize" class="demo-resizable boundary" @resize-start="onResizeStart"
+            @resize="onResize" @resize-end="onResizeEnd" @hover-handle-change="onHoverHandleChange">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -208,11 +202,9 @@ onMounted(() => {
           Custom Boundary Threshold
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable
-            v-model:size="smallBoundarySize" :boundary-threshold="4"
+          <Resizable v-model:size="smallBoundarySize" :boundary-threshold="4"
             :handles="['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']" class="demo-resizable small-boundary"
-            @hover-handle-change="onHoverHandleChange" @resize-start="onResizeStart" @resize-end="onResizeEnd"
-          >
+            @hover-handle-change="onHoverHandleChange" @resize-start="onResizeStart" @resize-end="onResizeEnd">
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">

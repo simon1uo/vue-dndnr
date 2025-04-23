@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
   lockAspectRatio: false,
-  disabled: false,
+  disabled: false, 
 })
 
 const emit = defineEmits<{
@@ -32,16 +32,8 @@ let activeHandle: ResizeHandle | null = null
 
 // Create resizable options with callbacks
 const resizableOptions = computed<ResizableOptions>(() => ({
+  ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
-  minWidth: props.minWidth,
-  minHeight: props.minHeight,
-  maxWidth: props.maxWidth,
-  maxHeight: props.maxHeight,
-  grid: props.grid,
-  lockAspectRatio: props.lockAspectRatio,
-  handles: props.handles,
-  disabled: props.disabled,
-  boundaryThreshold: props.boundaryThreshold,
   onResizeStart: (size, event) => {
     if (activeHandle) {
       emit('resizeStart', size, event)
@@ -82,15 +74,6 @@ watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)
 })
 
-// Update the hook when options change
-watch(
-  resizableOptions,
-  () => {
-    // The hook will automatically use the updated options for new resize operations
-    // We don't need to do anything here
-  },
-  { deep: true },
-)
 
 watch(
   () => props.size,
