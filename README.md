@@ -38,8 +38,8 @@ yarn add vue-dndnr
 
 ```vue
 <script setup>
-import { Draggable, Resizable, DnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { DnR, Draggable, Resizable } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 const size = ref({ width: 200, height: 150 })
@@ -67,8 +67,8 @@ const size = ref({ width: 200, height: 150 })
 
 ```vue
 <script setup>
-import { useDraggable, useResizable, useDnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDnR, useDraggable, useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 
@@ -115,6 +115,22 @@ pnpm build
 ```
 
 This will build the library and generate type declarations.
+
+## Documentation
+
+The documentation is built with VitePress and can be found in the `docs` directory.
+
+### Running Documentation Locally
+
+```sh
+pnpm docs:dev
+```
+
+### Building Documentation
+
+```sh
+pnpm docs:build
+```
 
 ## License
 
