@@ -21,7 +21,8 @@ const activeTab = ref('draggable-hook')
 
     <main>
       <div class="tabs">
-        <button class="tab-button" :class="[{ active: activeTab === 'draggable-hook' }]" @click="activeTab = 'draggable-hook'">
+        <button class="tab-button" :class="[{ active: activeTab === 'draggable-hook' }]"
+          @click="activeTab = 'draggable-hook'">
           useDraggable Hook
         </button>
         <button class="tab-button" :class="[{ active: activeTab === 'draggable' }]" @click="activeTab = 'draggable'">

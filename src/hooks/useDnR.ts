@@ -1,34 +1,90 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { DnROptions, Position, Size } from '../types'
 import { computed, ref, toValue, watch } from 'vue'
-import { useDraggable } from './useDraggable'
-import { useResizable } from './useResizable'
+import useDraggable from './useDraggable'
+import useResizable from './useResizable'
 
 /**
  * Combined hook for draggable and resizable functionality
- * @param target Element to make draggable and resizable
- * @param options Options for draggable and resizable behavior
- * @returns Combined state and methods for draggable and resizable functionality
  */
-export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions = {}) {
-  const {
-    draggable: draggableOptions = {},
-    resizable: resizableOptions = {},
-    disabled = false,
-  } = options
+export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions) {
+  // Create a ref to track the current interaction mode
+  const interactionMode = ref<'idle' | 'dragging' | 'resizing'>('idle')
 
-  // Apply disabled state to both draggable and resizable options
-  const mergedDraggableOptions = {
-    ...draggableOptions,
-    disabled: disabled || draggableOptions.disabled,
-  }
+  // Track if we're near a resize handle
+  const isNearResizeHandle = ref(false)
 
-  const mergedResizableOptions = {
-    ...resizableOptions,
-    disabled: disabled || resizableOptions.disabled,
-  }
+  // Create draggable options with modified callbacks to track interaction mode
+  const draggableOptions = computed(() => {
+    const {
+      onDragStart: originalDragStart,
+      onDrag: originalDrag,
+      onDragEnd: originalDragEnd,
+      ...restOptions
+    } = options
 
-  // Initialize draggable functionality
+    return {
+      ...restOptions,
+      // Disable dragging when resizing or near a resize handle
+      disabled: options.disabled || interactionMode.value === 'resizing' || isNearResizeHandle.value,
+      onDragStart: (position: Position, event: MouseEvent | TouchEvent) => {
+        // Don't start dragging if we're resizing or near a resize handle
+        if (interactionMode.value === 'resizing' || isNearResizeHandle.value)
+          return false
+
+        interactionMode.value = 'dragging'
+        return originalDragStart?.(position, event)
+      },
+      onDrag: (position: Position, event: MouseEvent | TouchEvent) => {
+        if (interactionMode.value !== 'dragging')
+          return false
+        return originalDrag?.(position, event)
+      },
+      onDragEnd: (position: Position, event: MouseEvent | TouchEvent) => {
+        if (interactionMode.value !== 'dragging')
+          return false
+        interactionMode.value = 'idle'
+        return originalDragEnd?.(position, event)
+      },
+    }
+  })
+
+  // Create resizable options with modified callbacks to track interaction mode
+  const resizableOptions = computed(() => {
+    const {
+      onResizeStart: originalResizeStart,
+      onResize: originalResize,
+      onResizeEnd: originalResizeEnd,
+      ...restOptions
+    } = options
+
+    return {
+      ...restOptions,
+      // Disable resizing when dragging
+      disabled: options.disabled || interactionMode.value === 'dragging',
+      onResizeStart: (size: Size, event: MouseEvent | TouchEvent) => {
+        if (interactionMode.value === 'dragging')
+          return
+
+        // Set the interaction mode to resizing
+        interactionMode.value = 'resizing'
+        originalResizeStart?.(size, event)
+      },
+      onResize: (size: Size, event: MouseEvent | TouchEvent) => {
+        if (interactionMode.value !== 'resizing')
+          return
+        originalResize?.(size, event)
+      },
+      onResizeEnd: (size: Size, event: MouseEvent | TouchEvent) => {
+        if (interactionMode.value !== 'resizing')
+          return
+        interactionMode.value = 'idle'
+        originalResizeEnd?.(size, event)
+      },
+    }
+  })
+
+  // Initialize the hooks
   const {
     position,
     isDragging,
@@ -37,63 +93,77 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     onDragStart,
     onDrag,
     onDragEnd,
-  } = useDraggable(target, mergedDraggableOptions)
+  } = useDraggable(target, draggableOptions.value)
 
-  // Initialize resizable functionality
   const {
     size,
+    position: resizablePosition,
     isResizing,
-    style: resizableStyle,
     activeHandle,
+    hoverHandle,
+    isAbsolutePositioned,
     setSize,
+    setPosition: setResizablePosition,
     onResizeStart,
     onResize,
     onResizeEnd,
-  } = useResizable(target, mergedResizableOptions)
+    detectBoundary,
+  } = useResizable(target, resizableOptions.value)
 
-  // Track whether the element is being interacted with
-  const isActive = computed(() => isDragging.value || isResizing.value)
+  // Update isNearResizeHandle when hoverHandle changes
+  watch(hoverHandle, (newHandle) => {
+    isNearResizeHandle.value = newHandle !== null
+  })
+
+  // Sync positions between draggable and resizable
+  watch(position, (newPosition) => {
+    if (interactionMode.value === 'dragging' && isAbsolutePositioned.value) {
+      setResizablePosition(newPosition)
+    }
+  }, { deep: true })
+
+  watch(resizablePosition, (newPosition) => {
+    if (interactionMode.value === 'resizing') {
+      setPosition(newPosition)
+    }
+  }, { deep: true })
 
   // Combine styles from both hooks
   const style = computed(() => {
     return {
       ...draggableStyle.value,
-      ...resizableStyle.value,
-      // Override position to be absolute for proper dragging and resizing
-      position: 'absolute' as const,
+      width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
+      height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
     }
   })
 
-  // Watch for changes in position and size to update the element
-  watch(
-    [position, size],
-    () => {
-      // This watch is just to ensure reactivity between the two hooks
-      // The actual updates are handled by the individual hooks
-    },
-    { deep: true },
-  )
-
-  // Return combined state and methods
   return {
     // State
     position,
     size,
     isDragging,
     isResizing,
-    isActive,
+    interactionMode,
     activeHandle,
+    hoverHandle,
+    isAbsolutePositioned,
+    isNearResizeHandle,
+
+    // Styles
     style,
 
     // Methods
     setPosition,
     setSize,
+
+    // Event handlers
     onDragStart,
     onDrag,
     onDragEnd,
     onResizeStart,
     onResize,
     onResizeEnd,
+    detectBoundary,
   }
 }
 

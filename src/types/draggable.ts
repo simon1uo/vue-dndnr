@@ -1,11 +1,5 @@
 import type { MaybeRefOrGetter } from 'vue'
-
-export interface Position {
-  x: number
-  y: number
-}
-
-export type PointerType = 'mouse' | 'touch' | 'pen'
+import type { PointerType, Position } from './common'
 
 export interface DraggableOptions {
   /**

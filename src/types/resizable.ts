@@ -2,11 +2,7 @@
  * Types for the resizable component
  */
 import type { MaybeRefOrGetter } from 'vue'
-
-export interface Size {
-  width: number | string
-  height: number | string
-}
+import type { PointerType, Size } from './common'
 
 export type ResizeHandle = 't' | 'b' | 'r' | 'l' | 'tr' | 'tl' | 'br' | 'bl' | 'top' | 'bottom' | 'right' | 'left' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 
@@ -65,7 +61,7 @@ export interface ResizableOptions {
    * Pointer types to respond to
    * @default ['mouse', 'touch', 'pen']
    */
-  pointerTypes?: string[]
+  pointerTypes?: PointerType[]
 
   /**
    * Whether to prevent default browser behavior during resize
