@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DnROptions, Position, ResizeHandle, Size } from '../types'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toValue, watch } from 'vue'
 import useDnR from '../hooks/useDnR'
 
 interface DnRProps extends DnROptions {
@@ -49,15 +49,14 @@ const emit = defineEmits<{
   'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
-// Create a ref for the element
-const elementRef = ref<HTMLElement | null>(null)
+const targetRef = ref<HTMLElement | null>(null)
+const handle = computed<HTMLElement | SVGElement | null | undefined>(() => toValue(props.handle) ?? toValue(targetRef))
 
-// Create DnR options with callbacks
 const dnrOptions = computed<DnROptions>(() => ({
   ...props,
   initialPosition: props.position || props.positionModel || { x: 0, y: 0 },
   initialSize: props.size || props.sizeModel || { width: 'auto', height: 'auto' },
-
+  handle,
   // Drag callbacks
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
@@ -104,7 +103,7 @@ const {
   setPosition,
   setSize,
   hoverHandle,
-} = useDnR(elementRef, dnrOptions.value)
+} = useDnR(targetRef, dnrOptions.value)
 
 // Watch for external position changes
 watch(
@@ -193,7 +192,7 @@ const combinedClass = computed(() => {
 </script>
 
 <template>
-  <div ref="elementRef" :class="combinedClass" :style="dnrStyle">
+  <div ref="targetRef" :class="combinedClass" :style="dnrStyle">
     <slot />
   </div>
 </template>

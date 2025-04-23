@@ -29,7 +29,7 @@ const emit = defineEmits<{
 }>()
 
 const targetRef = ref<HTMLElement | SVGElement | null | undefined>(null)
-const handle = computed(() => toValue(props.handle) ?? targetRef.value)
+const handle = computed<HTMLElement | SVGElement | null | undefined>(() => toValue(props.handle) ?? toValue(targetRef))
 
 const draggableOptions = computed<DraggableOptions>(() => ({
   ...props,

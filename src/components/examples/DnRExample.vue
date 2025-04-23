@@ -124,6 +124,10 @@ function onHoverHandleChange(handle: string | null) {
       <!-- Handle example -->
       <DnR v-model:position="handlePosition" v-model:size="handleSize" bounds="parent" :handle="handleRef"
         class="dnr-box bg-red-100 dark:bg-red-800">
+        <div ref="handleRef"
+          class="bg-gray-300 dark:bg-gray-700 rounded-full w-8 h-8 absolute top-10 right-10 cursor-grab flex items-center justify-center">
+          👋
+        </div>
         <div class="p-4 flex items-center justify-center h-full">
           <div class="text-center">
             <div class="text-lg font-medium">
@@ -133,10 +137,6 @@ function onHoverHandleChange(handle: string | null) {
               Drag using the handle
             </div>
           </div>
-        </div>
-        <div ref="handleRef"
-          class="bg-gray-300 dark:bg-gray-700 rounded-full w-8 h-8 absolute top-10 right-10 cursor-grab flex items-center justify-center">
-          👋
         </div>
       </DnR>
     </div>
