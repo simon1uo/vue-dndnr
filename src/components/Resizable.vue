@@ -6,10 +6,6 @@ import { useResizable } from '../hooks'
 interface ResizableProps extends ResizableOptions {
   size?: Size
   modelValue?: Size
-
-  class?: string
-  resizingClass?: string
-  style?: Record<string, string>
 }
 
 const props = withDefaults(defineProps<ResizableProps>(), {
@@ -17,15 +13,14 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   modelValue: undefined,
   lockAspectRatio: false,
   disabled: false,
-  resizingClass: 'resizing',
 })
 
 const emit = defineEmits<{
   'update:size': [size: Size]
   'update:modelValue': [size: Size]
-  'resizeStart': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
-  'resize': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
-  'resizeEnd': [event: MouseEvent | TouchEvent, handle: ResizeHandle]
+  'resizeStart': [size: Size, event: MouseEvent | TouchEvent]
+  'resize': [size: Size, event: MouseEvent | TouchEvent]
+  'resizeEnd': [size: Size, event: MouseEvent | TouchEvent]
   'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
@@ -49,21 +44,21 @@ const resizableOptions = computed<ResizableOptions>(() => ({
   boundaryThreshold: props.boundaryThreshold,
   onResizeStart: (size, event) => {
     if (activeHandle) {
-      emit('resizeStart', event, activeHandle)
+      emit('resizeStart', size, event)
       if (props.onResizeStart)
         props.onResizeStart(size, event)
     }
   },
   onResize: (size, event) => {
     if (activeHandle) {
-      emit('resize', event, activeHandle)
+      emit('resize', size, event)
       if (props.onResize)
         props.onResize(size, event)
     }
   },
   onResizeEnd: (size, event) => {
     if (activeHandle) {
-      emit('resizeEnd', event, activeHandle)
+      emit('resizeEnd', size, event)
       if (props.onResizeEnd)
         props.onResizeEnd(size, event)
       activeHandle = null
@@ -74,7 +69,6 @@ const resizableOptions = computed<ResizableOptions>(() => ({
 const {
   size: currentSize,
   isResizing,
-  style: resizableStyle,
   setSize,
   activeHandle: currentActiveHandle,
   hoverHandle,
@@ -128,22 +122,12 @@ watch(
 )
 
 const combinedClass = computed(() => {
-  const classes = ['resizable']
-
-  if (props.class) {
-    classes.push(props.class)
-  }
-
-  if (isResizing.value && props.resizingClass) {
-    classes.push(props.resizingClass)
-  }
-
-  return classes.join(' ')
+  return isResizing.value ? 'resizable resizing' : 'resizable'
 })
 </script>
 
 <template>
-  <div ref="elementRef" :class="combinedClass" :style="resizableStyle">
+  <div ref="elementRef" :class="combinedClass">
     <slot />
   </div>
 </template>

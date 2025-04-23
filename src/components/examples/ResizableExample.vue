@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import type { Size } from '../../types'
+import { computed, onMounted, ref } from 'vue'
 import { Resizable } from '../'
+import { useResizable } from '../../hooks'
 
 const size = ref({ width: 200, height: 150 })
 const constrainedSize = ref({ width: 200, height: 150 })
@@ -8,46 +10,77 @@ const aspectRatioSize = ref({ width: 200, height: 150 })
 const boundarySize = ref({ width: 200, height: 150 })
 const smallBoundarySize = ref({ width: 200, height: 150 })
 
+// For pure hook example
+const hookExampleRef = ref<HTMLElement | null>(null)
+const hookSize = ref({ width: 200, height: 150 })
+
 // Track hover handle for boundary examples
-const hoverHandle = ref(null)
-const activeHandle = ref(null)
+const hoverHandle = ref<string | null>(null)
+const activeHandle = ref<string | null>(null)
 
-function onResizeStart(event, handle) {
-  console.log(`Resize started with handle: ${handle}`)
-  activeHandle.value = handle
+// Event handlers for Resizable component
+// These handlers match the component's emit signature
+function onResizeStart(_size: Size, _event: MouseEvent | TouchEvent) {
+  console.log('onResizeStart', _size);
 }
 
-function onResize(event, handle) {
-  console.log(`Resizing with handle: ${handle}`)
+function onResize(_size: Size, _event: MouseEvent | TouchEvent) {
+  console.log('onResize', _size);
 }
 
-function onResizeEnd(event, handle) {
-  console.log(`Resize ended with handle: ${handle}`)
-  activeHandle.value = null
+function onResizeEnd(_size: Size, _event: MouseEvent | TouchEvent) {
+  console.log('onResizeEnd', _size);
 }
 
 // Handle hover events for boundary examples
-function onHoverHandleChange(handle) {
+function onHoverHandleChange(handle: string | null) {
   hoverHandle.value = handle
 }
 
 // Format handle name for display
-const formatHandle = (handle) => {
-  if (!handle) return 'None'
+function formatHandle(handle: string | null) {
+  if (!handle)
+    return 'None'
 
-  const handleMap = {
-    't': 'Top',
-    'b': 'Bottom',
-    'r': 'Right',
-    'l': 'Left',
-    'tr': 'Top-Right',
-    'tl': 'Top-Left',
-    'br': 'Bottom-Right',
-    'bl': 'Bottom-Left',
+  const handleMap: Record<string, string> = {
+    t: 'Top',
+    b: 'Bottom',
+    r: 'Right',
+    l: 'Left',
+    tr: 'Top-Right',
+    tl: 'Top-Left',
+    br: 'Bottom-Right',
+    bl: 'Bottom-Left',
   }
 
   return handleMap[handle] || handle
 }
+
+// Setup pure hook example
+onMounted(() => {
+  if (hookExampleRef.value) {
+    useResizable(hookExampleRef, {
+      initialSize: hookSize.value,
+      minWidth: 100,
+      minHeight: 100,
+      maxWidth: 400,
+      maxHeight: 250,
+      onResizeStart: (_size, _event) => {
+        // console.log('Hook resize started', size)
+      },
+      onResize: (size, _event) => {
+        // Need to create a copy to avoid type issues
+        hookSize.value = {
+          width: typeof size.width === 'number' ? size.width : Number.parseInt(size.width),
+          height: typeof size.height === 'number' ? size.height : Number.parseInt(size.height),
+        }
+      },
+      onResizeEnd: (_size, _event) => {
+        // console.log('Hook resize ended', size)
+      },
+    })
+  }
+})
 </script>
 
 <template>
@@ -63,8 +96,10 @@ const formatHandle = (handle) => {
           Basic Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable v-model:size="size" class="demo-resizable" @resize-start="onResizeStart" @resize="onResize"
-            @resize-end="onResizeEnd">
+          <Resizable
+            v-model:size="size" class="demo-resizable" @resize-start="onResizeStart" @resize="onResize"
+            @resize-end="onResizeEnd"
+          >
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -88,8 +123,10 @@ const formatHandle = (handle) => {
           Constrained Resizable
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable v-model:size="constrainedSize" :min-width="100" :min-height="100" :max-width="300"
-            :max-height="250" class="demo-resizable constrained">
+          <Resizable
+            v-model:size="constrainedSize" :min-width="100" :min-height="100" :max-width="300"
+            :max-height="250" class="demo-resizable constrained"
+          >
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -140,8 +177,10 @@ const formatHandle = (handle) => {
           Boundary Resizing (Default)
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable v-model:size="boundarySize" class="demo-resizable boundary" @resize-start="onResizeStart"
-            @resize="onResize" @resize-end="onResizeEnd" @hover-handle-change="onHoverHandleChange">
+          <Resizable
+            v-model:size="boundarySize" class="demo-resizable boundary" @resize-start="onResizeStart"
+            @resize="onResize" @resize-end="onResizeEnd" @hover-handle-change="onHoverHandleChange"
+          >
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -169,9 +208,11 @@ const formatHandle = (handle) => {
           Custom Boundary Threshold
         </h3>
         <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
-          <Resizable v-model:size="smallBoundarySize" :boundary-threshold="4"
+          <Resizable
+            v-model:size="smallBoundarySize" :boundary-threshold="4"
             :handles="['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']" class="demo-resizable small-boundary"
-            @hover-handle-change="onHoverHandleChange" @resize-start="onResizeStart" @resize-end="onResizeEnd">
+            @hover-handle-change="onHoverHandleChange" @resize-start="onResizeStart" @resize-end="onResizeEnd"
+          >
             <div class="p-4 flex items-center justify-center h-full">
               <div class="text-center">
                 <div class="text-lg font-medium">
@@ -190,6 +231,33 @@ const formatHandle = (handle) => {
         </div>
         <div class="mt-2 text-sm text-text-light">
           This resizable has a smaller boundary threshold (4px instead of 8px)
+        </div>
+      </div>
+
+      <!-- Pure Hook Usage Example -->
+      <div class="example-card">
+        <h3 class="text-lg font-semibold mb-2">
+          Pure Hook Usage
+        </h3>
+        <div class="demo-container bg-background border border-dashed border-border rounded relative h-300px">
+          <div ref="hookExampleRef" class="demo-resizable hook-example">
+            <div class="p-4 flex items-center justify-center h-full">
+              <div class="text-center">
+                <div class="text-lg font-medium">
+                  Hook Example
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  Size: {{ Math.round(hookSize.width) }}px × {{ Math.round(hookSize.height) }}px
+                </div>
+                <div class="text-sm text-text-light mt-2">
+                  <div>Using useResizable hook directly</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-2 text-sm text-text-light">
+          This example uses the useResizable hook directly without the Resizable component
         </div>
       </div>
     </div>
@@ -238,6 +306,11 @@ const formatHandle = (handle) => {
   border-color: var(--small-boundary-border, #faad14);
 }
 
+.demo-resizable.hook-example {
+  background-color: var(--hook-example-bg, #e6fffb);
+  border-color: var(--hook-example-border, #13c2c2);
+}
+
 .dark .demo-resizable {
   --resizable-bg: rgba(250, 140, 22, 0.1);
   --resizable-border: #fa8c16;
@@ -249,6 +322,8 @@ const formatHandle = (handle) => {
   --boundary-border: #52c41a;
   --small-boundary-bg: rgba(250, 173, 20, 0.1);
   --small-boundary-border: #faad14;
+  --hook-example-bg: rgba(19, 194, 194, 0.1);
+  --hook-example-border: #13c2c2;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 </style>

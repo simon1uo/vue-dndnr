@@ -1,6 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
-import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
+import { onMounted, ref, toValue, watch } from 'vue'
 import {
   applyAspectRatioLock,
   applyGrid,
@@ -71,18 +71,20 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
   }
 
-  // Computed style
-  const style = computed(() => {
+  // Apply styles directly to the target element
+  const applyStyles = () => {
+    const el = toValue(target)
+    if (!el)
+      return
+
     const cursorStyle = hoverHandle.value ? getCursorForHandle(hoverHandle.value) : 'default'
 
-    return {
-      position: 'relative' as const,
-      width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
-      height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
-      userSelect: 'none' as const,
-      cursor: isResizing.value && activeHandle.value ? getCursorForHandle(activeHandle.value) : cursorStyle,
-    }
-  })
+    el.style.position = 'relative'
+    el.style.width = typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width
+    el.style.height = typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height
+    el.style.userSelect = 'none'
+    el.style.cursor = isResizing.value && activeHandle.value ? getCursorForHandle(activeHandle.value) : cursorStyle
+  }
 
   // Filter events based on options
   const filterEvent = (event: MouseEvent | TouchEvent): boolean => {
@@ -297,6 +299,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     // Update the size
     size.value = constrainedSize
 
+    // Apply the updated styles
+    applyStyles()
+
     // Call the callback if provided
     if (onResizeCallback)
       onResizeCallback(size.value, event)
@@ -333,6 +338,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           height: size.value.height === 'auto' ? elementSize.height : size.value.height,
         }
       }
+
+      // Apply initial styles
+      applyStyles()
 
       // Add mouse move listener to the element for boundary detection
       useEventListener(el, 'mousemove', onMouseMove, {
@@ -376,9 +384,15 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     { immediate: true },
   )
 
+  // Watch for changes to size or handle state to update styles
+  watch([size, hoverHandle, isResizing, activeHandle], () => {
+    applyStyles()
+  }, { deep: true })
+
   // Public methods
   const setSize = (newSize: Size) => {
     size.value = { ...newSize }
+    applyStyles()
   }
 
   useEventListener(window, 'pointermove', onResize, {
@@ -392,7 +406,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   return {
     size,
     isResizing,
-    style,
     activeHandle,
     hoverHandle,
     setSize,
