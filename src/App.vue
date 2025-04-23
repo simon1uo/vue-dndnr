@@ -2,9 +2,6 @@
 import { ref } from 'vue'
 import { DnRExample, DraggableExample, ResizableExample, UseDraggableHookExample } from './components/examples'
 import ThemeToggle from './components/ThemeToggle.vue'
-import { provideDndContext } from './hooks'
-
-provideDndContext()
 
 const activeTab = ref('draggable-hook')
 </script>
