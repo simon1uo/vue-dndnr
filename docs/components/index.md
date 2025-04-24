@@ -22,11 +22,7 @@ The `DnR` component combines both draggable and resizable functionality into a s
 
 [Learn more about DnR →](/components/dnr)
 
-### TabContainer
 
-The `TabContainer` component provides a container for creating tabbed interfaces with draggable tabs.
-
-[Learn more about TabContainer →](/components/tab-container)
 
 ## Component Design Philosophy
 

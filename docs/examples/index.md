@@ -63,9 +63,9 @@ const size = ref({ width: 200, height: 150 })
 
 <template>
   <div class="example-container">
-    <Resizable 
-      v-model:size="size" 
-      :min-width="100" 
+    <Resizable
+      v-model:size="size"
+      :min-width="100"
       :min-height="100"
       :max-width="500"
       :max-height="300"
@@ -116,11 +116,11 @@ const size = ref({ width: 200, height: 150 })
 
 <template>
   <div class="example-container">
-    <DnR 
-      v-model:position="position" 
-      v-model:size="size" 
+    <DnR
+      v-model:position="position"
+      v-model:size="size"
       bounds="parent"
-      :min-width="100" 
+      :min-width="100"
       :min-height="100"
     >
       <div class="dnr-box">
@@ -156,58 +156,6 @@ const size = ref({ width: 200, height: 150 })
 </style>
 ```
 
-## TabContainer Example
-
-A simple example of a tab container with draggable tabs.
-
-```vue
-<script setup>
-import { TabContainer } from 'vue-dndnr'
-import { ref } from 'vue'
-
-const tabs = ref([
-  { id: 'tab1', title: 'Tab 1', content: 'Content for Tab 1' },
-  { id: 'tab2', title: 'Tab 2', content: 'Content for Tab 2' },
-  { id: 'tab3', title: 'Tab 3', content: 'Content for Tab 3' },
-])
-const activeTab = ref('tab1')
-</script>
-
-<template>
-  <div class="example-container">
-    <TabContainer 
-      v-model:tabs="tabs" 
-      v-model:active-tab="activeTab"
-      :closable="true"
-    >
-      <template #tab="{ tab }">
-        {{ tab.title }}
-      </template>
-      <template #content="{ tab }">
-        <div class="tab-content">
-          {{ tab.content }}
-        </div>
-      </template>
-    </TabContainer>
-  </div>
-</template>
-
-<style scoped>
-.example-container {
-  width: 100%;
-  height: 300px;
-  border: 2px dashed #ccc;
-  margin-bottom: 20px;
-}
-
-.tab-content {
-  padding: 20px;
-  height: 100%;
-  background-color: #f8f9fa;
-}
-</style>
-```
-
 ## Hook Example
 
 An example using the `useDraggable` hook directly.
@@ -226,15 +174,15 @@ const { position, isDragging } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="containerRef" 
+  <div
+    ref="containerRef"
     class="example-container"
   >
-    <div 
-      ref="elementRef" 
-      :style="{ 
+    <div
+      ref="elementRef"
+      :style="{
         position: 'absolute',
-        left: `${position.x}px`, 
+        left: `${position.x}px`,
         top: `${position.y}px`,
         width: '200px',
         height: '100px',

@@ -34,7 +34,6 @@ export default defineConfig({
             { text: 'Draggable', link: '/components/draggable' },
             { text: 'Resizable', link: '/components/resizable' },
             { text: 'DnR', link: '/components/dnr' },
-            { text: 'TabContainer', link: '/components/tab-container' },
           ],
         },
       ],

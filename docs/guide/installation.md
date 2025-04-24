@@ -31,14 +31,13 @@ You can register all components globally in your main entry file:
 ```js
 import { createApp } from 'vue'
 import App from './App.vue'
-import { DnR, Draggable, Resizable, TabContainer } from 'vue-dndnr'
+import { DnR, Draggable, Resizable } from 'vue-dndnr'
 
 const app = createApp(App)
 
 app.component('DnR', DnR)
 app.component('Draggable', Draggable)
 app.component('Resizable', Resizable)
-app.component('TabContainer', TabContainer)
 
 app.mount('#app')
 ```
