@@ -1,14 +1,12 @@
-import UnoCss from 'unocss/vite'
+import UnoCSS from 'unocss/vite'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
   base: '/',
   server: {
-    hmr: {
-      overlay: false,
-    },
+    port: 3000,
   },
   plugins: [
-    UnoCss(),
+    UnoCSS(),
   ],
 })
