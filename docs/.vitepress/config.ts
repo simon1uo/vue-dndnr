@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
@@ -16,7 +17,7 @@ export default defineConfig({
           { text: 'Getting Started', link: '/guide/' },
           { text: 'Installation', link: '/guide/installation' },
           { text: 'Basic Usage', link: '/guide/basic-usage' },
-        ]
+        ],
       },
       {
         text: 'Components',
@@ -25,7 +26,7 @@ export default defineConfig({
           { text: 'Draggable', link: '/components/draggable' },
           { text: 'Resizable', link: '/components/resizable' },
           { text: 'DnR', link: '/components/dnr' },
-        ]
+        ],
       },
       {
         text: 'Hooks',
@@ -34,14 +35,14 @@ export default defineConfig({
           { text: 'useDraggable', link: '/hooks/use-draggable' },
           { text: 'useResizable', link: '/hooks/use-resizable' },
           { text: 'useDnR', link: '/hooks/use-dnr' },
-        ]
+        ],
       },
       {
         text: 'Examples',
         items: [
           { text: 'Basic Examples', link: '/examples/' },
           { text: 'Advanced Examples', link: '/examples/advanced' },
-        ]
+        ],
       },
     ],
     sidebar: {
@@ -93,6 +94,18 @@ export default defineConfig({
     footer: {
       message: 'Released under the MIT License.',
       copyright: 'Copyright © 2023-present Simon Luo',
+    },
+  },
+  vite: {
+    resolve: {
+      alias: [
+        {
+          find: /^.*\/VPHomeHero\.vue$/,
+          replacement: fileURLToPath(
+            new URL('./theme/components/HomeHero.vue', import.meta.url),
+          ),
+        },
+      ],
     },
   },
 })

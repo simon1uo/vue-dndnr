@@ -1,4 +1,4 @@
-import { defineConfig, presetAttributify, presetIcons, presetWind3 } from 'unocss'
+import { defineConfig, presetAttributify, presetIcons, presetWebFonts, presetWind3 } from 'unocss'
 
 export default defineConfig({
   presets: [
@@ -8,6 +8,13 @@ export default defineConfig({
       scale: 1,
       collections: {
         lucide: () => import('@iconify-json/lucide/icons.json').then(i => i.default),
+      },
+    }),
+    presetWebFonts({
+      provider: 'bunny',
+      fonts: {
+        heading: ['Mori'],
+        "heading-serif": ['Arbutus Slab']
       },
     }),
   ],

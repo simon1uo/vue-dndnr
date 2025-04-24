@@ -2,8 +2,8 @@
 defineProps({
   title: {
     type: String,
-    default: 'Window'
-  }
+    default: 'Window',
+  },
 })
 </script>
 
@@ -11,15 +11,17 @@ defineProps({
   <div class="macos-window">
     <div class="window-titlebar">
       <div class="window-controls">
-        <div class="control close" title="Close"></div>
-        <div class="control minimize" title="Minimize"></div>
-        <div class="control maximize" title="Maximize"></div>
+        <div class="control close" title="Close" />
+        <div class="control minimize" title="Minimize" />
+        <div class="control maximize" title="Maximize" />
       </div>
-      <div class="window-title">{{ title }}</div>
-      <div class="window-actions"></div>
+      <div class="window-title">
+        {{ title }}
+      </div>
+      <div class="window-actions" />
     </div>
     <div class="window-content">
-      <slot></slot>
+      <slot />
     </div>
   </div>
 </template>
