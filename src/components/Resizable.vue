@@ -6,15 +6,11 @@ import { useResizable } from '../hooks'
 interface ResizableProps extends ResizableOptions {
   size?: Size
   modelValue?: Size
-  position?: Position
-  positionModel?: Position
 }
 
 const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
-  position: undefined,
-  positionModel: undefined,
   lockAspectRatio: false,
   disabled: false,
 })
@@ -22,8 +18,6 @@ const props = withDefaults(defineProps<ResizableProps>(), {
 const emit = defineEmits<{
   'update:size': [size: Size]
   'update:modelValue': [size: Size]
-  'update:position': [position: Position]
-  'update:positionModel': [position: Position]
   'resizeStart': [size: Size, event: MouseEvent | TouchEvent]
   'resize': [size: Size, event: MouseEvent | TouchEvent]
   'resizeEnd': [size: Size, event: MouseEvent | TouchEvent]
@@ -66,11 +60,8 @@ const resizableOptions = computed<ResizableOptions>(() => ({
 
 const {
   size: currentSize,
-  position: currentPosition,
-  isResizing,
-  isAbsolutePositioned,
-  setSize,
-  setPosition,
+  isResizing, 
+  setSize, 
   activeHandle: currentActiveHandle,
   hoverHandle,
 } = useResizable(elementRef, resizableOptions.value)
@@ -112,36 +103,8 @@ watch(
   { deep: true },
 )
 
-watch(
-  currentPosition,
-  (newPosition) => {
-    if (isAbsolutePositioned.value) {
-      emit('update:position', newPosition)
-      emit('update:positionModel', newPosition)
-    }
-  },
-  { deep: true },
-)
 
-watch(
-  () => props.position,
-  (newPosition) => {
-    if (newPosition && !isResizing.value && isAbsolutePositioned.value) {
-      setPosition(newPosition)
-    }
-  },
-  { deep: true },
-)
 
-watch(
-  () => props.positionModel,
-  (newPosition) => {
-    if (newPosition && !isResizing.value && isAbsolutePositioned.value) {
-      setPosition(newPosition)
-    }
-  },
-  { deep: true },
-)
 
 const combinedClass = computed(() => {
   return isResizing.value ? 'resizable resizing' : 'resizable'
