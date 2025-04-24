@@ -5,9 +5,11 @@ import {
   applyAspectRatioLock,
   applyGrid,
   applyMinMaxConstraints,
+  defaultWindow,
   getElementBounds,
   getElementPosition,
   getElementSize,
+  isClient,
 } from '../utils'
 import { useEventListener } from './useEventListener'
 
@@ -389,6 +391,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }
 
   const setupElementSize = () => {
+    if (!isClient) return;
+
     const el = toValue(target)
     if (el) {
       const computedStyle = window.getComputedStyle(el)
@@ -473,10 +477,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     applyStyles()
   }
 
-  useEventListener(window, 'pointermove', onResize, {
+  useEventListener(defaultWindow, 'pointermove', onResize, {
     passive: !preventDefault,
   })
-  useEventListener(window, 'pointerup', onResizeEnd, {
+  useEventListener(defaultWindow, 'pointerup', onResizeEnd, {
     passive: !preventDefault,
   })
 

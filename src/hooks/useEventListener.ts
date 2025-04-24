@@ -2,8 +2,11 @@
  * Hook for adding event listeners with automatic cleanup
  */
 
+import { isClient } from '@/utils'
 import type { MaybeRefOrGetter } from 'vue'
 import { getCurrentScope, onScopeDispose, toValue, watch } from 'vue'
+
+
 
 function tryOnScopeDispose(fn: () => void) {
   if (getCurrentScope()) {
@@ -38,8 +41,11 @@ export function useEventListener(
     listener: any,
     options: boolean | AddEventListenerOptions | undefined,
   ) => {
-    el.addEventListener(event, listener, options)
-    return () => el.removeEventListener(event, listener, options)
+    if (isClient) {
+      el.addEventListener(event, listener, options)
+      return () => el.removeEventListener(event, listener, options)
+    }
+    return () => { }
   }
 
   const cleanups: (() => void)[] = []

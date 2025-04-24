@@ -1,11 +1,12 @@
-/**
- * Utility functions for DOM operations
- */
+
+import { isClient } from "./config"
 
 /**
  * Get the computed position of an element
  */
 export function getElementPosition(element: HTMLElement | SVGElement): { x: number, y: number } {
+  if (!isClient) return { x: 0, y: 0 };
+
   const style = window.getComputedStyle(element)
   const transform = style.transform
 
@@ -27,6 +28,8 @@ export function getElementPosition(element: HTMLElement | SVGElement): { x: numb
  * Get the computed size of an element
  */
 export function getElementSize(element: HTMLElement | SVGElement): { width: number, height: number } {
+  if (!isClient) return { width: 0, height: 0 };
+
   const style = window.getComputedStyle(element)
   return {
     width: Number.parseInt(style.width || '0', 10),
@@ -40,11 +43,11 @@ export function getElementSize(element: HTMLElement | SVGElement): { width: numb
 export function matchesSelector(element: HTMLElement | SVGElement, selector: string): boolean {
   const matchesMethod
     = element.matches
-      || (element as any).matchesSelector
-      || (element as any).msMatchesSelector
-      || (element as any).mozMatchesSelector
-      || (element as any).webkitMatchesSelector
-      || (element as any).oMatchesSelector
+    || (element as any).matchesSelector
+    || (element as any).msMatchesSelector
+    || (element as any).mozMatchesSelector
+    || (element as any).webkitMatchesSelector
+    || (element as any).oMatchesSelector
 
   return matchesMethod.call(element, selector)
 }

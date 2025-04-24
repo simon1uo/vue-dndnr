@@ -7,6 +7,7 @@ import {
   applyGrid,
   calculateDelta,
   calculatePosition,
+  defaultWindow,
   getElementBounds,
   getElementSize,
 } from '../utils'
@@ -16,7 +17,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const {
     initialPosition = { x: 0, y: 0 },
     handle: draggingHandle = target,
-    draggingElement = window,
+    draggingElement = defaultWindow,
     bounds,
     grid,
     axis = 'both',

@@ -35,6 +35,7 @@
     "lint": "eslint . --fix",
     "prepublishOnly": "npm run build",
     "docs:dev": "vitepress dev docs",
+    "predocs:build": "npm run build",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
