@@ -25,16 +25,7 @@ const shapeStyle = computed(() => {
     borderWidth: props.selected ? '2px' : '0',
     borderStyle: 'solid',
   }
-  
-  if (props.type === 'triangle') {
-    style.borderBottom = `100px solid ${props.color}`
-    style.borderLeft = '50px solid transparent'
-    style.borderRight = '50px solid transparent'
-    style.backgroundColor = 'transparent'
-    style.width = '0'
-    style.height = '0'
-  }
-  
+
   return style
 })
 
@@ -44,15 +35,29 @@ const shapeClass = computed(() => {
     'shape': true,
     'shape-rectangle': props.type === 'rectangle',
     'shape-circle': props.type === 'circle',
-    'shape-triangle': props.type === 'triangle',
     'shape-selected': props.selected
+  }
+})
+
+// SVG properties for triangle
+const triangleProps = computed(() => {
+  return {
+    fill: props.color,
+    stroke: props.selected ? 'var(--color-primary)' : 'none',
+    strokeWidth: props.selected ? 2 : 0
   }
 })
 </script>
 
 <template>
   <div class="shape-container">
-    <div :class="shapeClass" :style="shapeStyle"></div>
+    <div v-if="type !== 'triangle'" :class="shapeClass" :style="shapeStyle"></div>
+    <svg v-else class="shape-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polygon
+        points="50,0 0,100 100,100"
+        v-bind="triangleProps"
+      />
+    </svg>
   </div>
 </template>
 
@@ -62,8 +67,7 @@ const shapeClass = computed(() => {
   height: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: move;
+  justify-content: center; 
 }
 
 .shape {
@@ -80,12 +84,11 @@ const shapeClass = computed(() => {
   border-radius: 50%;
 }
 
-.shape-triangle {
-  /* Triangle styling is handled in the computed style */
-  transform: translateY(-25%);
+.shape-svg {
+  width: 100%;
+  height: 100%;
+  transition: fill 0.2s;
 }
 
-.shape-selected {
-  box-shadow: 0 0 0 2px var(--color-primary);
-}
+ 
 </style>
