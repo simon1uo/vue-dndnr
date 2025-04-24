@@ -22,19 +22,19 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     return {
       ...restOptions,
       disabled: options.disabled || interactionMode.value === 'resizing' || isNearResizeHandle.value,
-      onDragStart: (position: Position, event: MouseEvent | TouchEvent) => {
+      onDragStart: (position: Position, event: PointerEvent) => {
         if (interactionMode.value === 'resizing' || isNearResizeHandle.value)
           return false
 
         interactionMode.value = 'dragging'
         return originalDragStart?.(position, event)
       },
-      onDrag: (position: Position, event: MouseEvent | TouchEvent) => {
+      onDrag: (position: Position, event: PointerEvent) => {
         if (interactionMode.value !== 'dragging')
           return false
         return originalDrag?.(position, event)
       },
-      onDragEnd: (position: Position, event: MouseEvent | TouchEvent) => {
+      onDragEnd: (position: Position, event: PointerEvent) => {
         if (interactionMode.value !== 'dragging')
           return false
         interactionMode.value = 'idle'
@@ -54,19 +54,19 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     return {
       ...restOptions,
       disabled: options.disabled || interactionMode.value === 'dragging',
-      onResizeStart: (size: Size, event: MouseEvent | TouchEvent) => {
+      onResizeStart: (size: Size, event: PointerEvent) => {
         if (interactionMode.value === 'dragging')
           return
 
         interactionMode.value = 'resizing'
         originalResizeStart?.(size, event)
       },
-      onResize: (size: Size, event: MouseEvent | TouchEvent) => {
+      onResize: (size: Size, event: PointerEvent) => {
         if (interactionMode.value !== 'resizing')
           return
         originalResize?.(size, event)
       },
-      onResizeEnd: (size: Size, event: MouseEvent | TouchEvent) => {
+      onResizeEnd: (size: Size, event: PointerEvent) => {
         if (interactionMode.value !== 'resizing')
           return
         interactionMode.value = 'idle'
