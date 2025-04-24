@@ -10,18 +10,18 @@ export interface DraggableOptions {
   /**
    * Element or selector to use as bounds for the draggable element
    */
-  bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number }>
+  bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number } | null | undefined>
 
   /**
    * Grid size for snapping during drag [x, y]
    */
-  grid?: [number, number]
+  grid?: MaybeRefOrGetter<[number, number] | undefined | null>
 
   /**
    * Axis to drag on
    * @default 'both'
    */
-  axis?: 'x' | 'y' | 'both'
+  axis?: MaybeRefOrGetter<'x' | 'y' | 'both'>
 
   /**
    * Element for the drag handle
@@ -39,58 +39,58 @@ export interface DraggableOptions {
    * Scale factor for the draggable element (useful for transformed parents)
    * @default 1
    */
-  scale?: number
+  scale?: MaybeRefOrGetter<number>
 
   /**
    * Whether dragging is disabled
    * @default false
    */
-  disabled?: boolean
+  disabled?: MaybeRefOrGetter<boolean>
 
   /**
    * Pointer types that listen to
    * @default ['mouse', 'touch', 'pen']
    */
-  pointerTypes?: PointerType[]
+  pointerTypes?: MaybeRefOrGetter<PointerType[] | null | undefined>
 
   /**
    * Whether to prevent default events
    * @default true
    */
-  preventDefault?: boolean
+  preventDefault?: MaybeRefOrGetter<boolean>
 
   /**
    * Whether to stop event propagation
    * @default false
    */
-  stopPropagation?: boolean
+  stopPropagation?: MaybeRefOrGetter<boolean>
 
   /**
    * Whether to dispatch events in capturing phase
    * @default true
    */
-  capture?: boolean
+  capture?: MaybeRefOrGetter<boolean>
 
   /**
    * Called when dragging starts
    * @param position Current position of the element
    * @param event The mouse or touch event
    */
-  onDragStart?: (position: Position, event: MouseEvent | TouchEvent) => void | boolean
+  onDragStart?: (position: Position, event: PointerEvent) => void | boolean
 
   /**
    * Called during dragging
    * @param position Current position of the element
    * @param event The mouse or touch event
    */
-  onDrag?: (position: Position, event: MouseEvent | TouchEvent) => void | boolean
+  onDrag?: (position: Position, event: PointerEvent) => void | boolean
 
   /**
    * Called when dragging ends
    * @param position Final position of the element
    * @param event The mouse or touch event
    */
-  onDragEnd?: (position: Position, event: MouseEvent | TouchEvent) => void | boolean
+  onDragEnd?: (position: Position, event: PointerEvent) => void | boolean
 }
 
 export interface DraggableElement {

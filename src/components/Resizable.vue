@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ResizableOptions, ResizeHandle, Size } from '../types'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toValue, watch } from 'vue'
 import { useResizable } from '../hooks'
 
 interface ResizableProps extends ResizableOptions {
@@ -13,59 +13,73 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   modelValue: undefined,
   lockAspectRatio: false,
   disabled: false,
+  preventDefault: true,
+  stopPropagation: false,
+  capture: true,
 })
 
 const emit = defineEmits<{
   'update:size': [size: Size]
   'update:modelValue': [size: Size]
-  'resizeStart': [size: Size, event: MouseEvent | TouchEvent]
-  'resize': [size: Size, event: MouseEvent | TouchEvent]
-  'resizeEnd': [size: Size, event: MouseEvent | TouchEvent]
+  'resizeStart': [size: Size, event: PointerEvent]
+  'resize': [size: Size, event: PointerEvent]
+  'resizeEnd': [size: Size, event: PointerEvent]
   'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
-const elementRef = ref<HTMLElement | null>(null)
+const targetRef = ref<HTMLElement | null>(null)
+const grid = computed(() => toValue(props.grid))
+const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
+const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
+const bounds = computed(() => toValue(props.bounds))
+const disabled = computed(() => toValue(props.disabled))
+const pointerTypes = computed(() => toValue(props.pointerTypes))
+const preventDefault = computed(() => toValue(props.preventDefault))
+const stopPropagation = computed(() => toValue(props.stopPropagation))
+const capture = computed(() => toValue(props.capture))
 
-let activeHandle: ResizeHandle | null = null
 
-const resizableOptions = computed<ResizableOptions>(() => ({
+const {
+  size: currentSize,
+  isResizing,
+  setSize,
+  activeHandle,
+  hoverHandle,
+} = useResizable(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
+  grid,
+  lockAspectRatio,
+  handles,
+  bounds,
+  disabled,
+  pointerTypes,
+  preventDefault,
+  stopPropagation,
+  capture,
   onResizeStart: (size, event) => {
-    if (activeHandle) {
+    if (activeHandle.value) {
       emit('resizeStart', size, event)
       if (props.onResizeStart)
         props.onResizeStart(size, event)
     }
   },
   onResize: (size, event) => {
-    if (activeHandle) {
+    if (activeHandle.value) {
       emit('resize', size, event)
       if (props.onResize)
         props.onResize(size, event)
     }
   },
   onResizeEnd: (size, event) => {
-    if (activeHandle) {
+    if (activeHandle.value) {
       emit('resizeEnd', size, event)
       if (props.onResizeEnd)
         props.onResizeEnd(size, event)
-      activeHandle = null
     }
   },
-}))
-
-const {
-  size: currentSize,
-  isResizing,
-  setSize,
-  activeHandle: currentActiveHandle,
-  hoverHandle,
-} = useResizable(elementRef, resizableOptions.value)
-
-watch(currentActiveHandle, (newHandle) => {
-  activeHandle = newHandle
 })
+
 
 watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)
@@ -100,16 +114,13 @@ watch(
   { deep: true },
 )
 
-
-
-
 const combinedClass = computed(() => {
   return isResizing.value ? 'resizable resizing' : 'resizable'
 })
 </script>
 
 <template>
-  <div ref="elementRef" :class="combinedClass">
+  <div ref="targetRef" :class="combinedClass">
     <slot />
   </div>
 </template>

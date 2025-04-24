@@ -17,24 +17,50 @@ const props = withDefaults(defineProps<DraggableProps>(), {
   axis: 'both',
   scale: 1,
   disabled: false,
+  preventDefault: true,
+  stopPropagation: false,
+  capture: true,
   draggingClassName: 'dragging',
 })
 
 const emit = defineEmits<{
   'update:position': [position: Position]
   'update:modelValue': [position: Position]
-  'dragStart': [position: Position, event: MouseEvent | TouchEvent]
-  'drag': [position: Position, event: MouseEvent | TouchEvent]
-  'dragEnd': [position: Position, event: MouseEvent | TouchEvent]
+  'dragStart': [position: Position, event: PointerEvent]
+  'drag': [position: Position, event: PointerEvent]
+  'dragEnd': [position: Position, event: PointerEvent]
 }>()
 
 const targetRef = ref<HTMLElement | SVGElement | null | undefined>(null)
-const handle = computed<HTMLElement | SVGElement | null | undefined>(() => toValue(props.handle) ?? toValue(targetRef))
+const bounds = computed(() => toValue(props.bounds))
+const handle = computed(() => toValue(props.handle) ?? targetRef.value)
+const grid = computed(() => toValue(props.grid))
+const axis = computed(() => toValue(props.axis))
+const scale = computed(() => toValue(props.scale))
+const disabled = computed(() => toValue(props.disabled))
+const pointerTypes = computed(() => toValue(props.pointerTypes))
+const preventDefault = computed(() => toValue(props.preventDefault))
+const stopPropagation = computed(() => toValue(props.stopPropagation))
+const capture = computed(() => toValue(props.capture))
 
-const draggableOptions = computed<DraggableOptions>(() => ({
+const {
+  position,
+  isDragging,
+  style: draggableStyle,
+  setPosition,
+} = useDraggable(targetRef, {
   ...props,
-  handle,
   initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
+  bounds,
+  handle,
+  grid,
+  axis,
+  scale,
+  disabled,
+  pointerTypes,
+  preventDefault,
+  stopPropagation,
+  capture,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)
@@ -50,14 +76,7 @@ const draggableOptions = computed<DraggableOptions>(() => ({
     if (props.onDragEnd)
       props.onDragEnd(position, event)
   },
-}))
-
-const {
-  position,
-  isDragging,
-  style: draggableStyle,
-  setPosition,
-} = useDraggable(targetRef, draggableOptions.value)
+})
 
 watch(
   () => props.position,

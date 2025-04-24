@@ -15,90 +15,97 @@ export interface ResizableOptions {
   /**
    * Minimum width of the resizable element
    */
-  minWidth?: number
+  minWidth?: MaybeRefOrGetter<number>
 
   /**
    * Minimum height of the resizable element
    */
-  minHeight?: number
+  minHeight?: MaybeRefOrGetter<number>
 
   /**
    * Maximum width of the resizable element
    */
-  maxWidth?: number
+  maxWidth?: MaybeRefOrGetter<number>
 
   /**
    * Maximum height of the resizable element
    */
-  maxHeight?: number
+  maxHeight?: MaybeRefOrGetter<number>
 
   /**
    * Grid to snap to during resizing [x, y]
    */
-  grid?: [number, number]
+  grid?: MaybeRefOrGetter<[number, number] | undefined | null>
 
   /**
    * Whether to maintain aspect ratio during resizing
    */
-  lockAspectRatio?: boolean
+  lockAspectRatio?: MaybeRefOrGetter<boolean>
 
   /**
    * Which resize handles to enable
+   * @default ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']
    */
-  handles?: ResizeHandle[]
+  handles?: MaybeRefOrGetter<ResizeHandle[]>
 
   /**
    * Element or selector to use as bounds for the resizable element
    */
-  bounds?: MaybeRefOrGetter<HTMLElement | 'parent'>
+  bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | null | undefined>
 
   /**
    * Whether resizing is disabled
    */
-  disabled?: boolean
+  disabled?: MaybeRefOrGetter<boolean>
 
   /**
    * Pointer types to respond to
    * @default ['mouse', 'touch', 'pen']
    */
-  pointerTypes?: PointerType[]
+  pointerTypes?: MaybeRefOrGetter<PointerType[] | null | undefined>
 
   /**
    * Whether to prevent default browser behavior during resize
    * @default true
    */
-  preventDefault?: boolean
+  preventDefault?: MaybeRefOrGetter<boolean>
 
   /**
    * Whether to stop event propagation during resize
    * @default false
    */
-  stopPropagation?: boolean
+  stopPropagation?: MaybeRefOrGetter<boolean>
 
   /**
    * Threshold in pixels for boundary detection
    * @default 8
    */
-  boundaryThreshold?: number
+  boundaryThreshold?: MaybeRefOrGetter<number>
+
+  /**
+   * Whether to dispatch events in capturing phase
+   * @default true
+   */
+  capture?: MaybeRefOrGetter<boolean>
 
   /**
    * Called when resizing starts
    * @param size Current size of the element
    * @param event The mouse or touch event
    */
-  onResizeStart?: (size: Size, event: MouseEvent | TouchEvent) => void
+  onResizeStart?: (size: Size, event: PointerEvent) => void
 
   /**
    * Called during resizing
    * @param size Current size of the element
    * @param event The mouse or touch event
    */
-  onResize?: (size: Size, event: MouseEvent | TouchEvent) => void
+  onResize?: (size: Size, event: PointerEvent) => void
 
   /**
    * Called when resizing ends
    * @param size Final size of the element
    * @param event The mouse or touch event
    */
-  onResizeEnd?: (size: Size, event: MouseEvent | TouchEvent) => void
+  onResizeEnd?: (size: Size, event: PointerEvent) => void
 }

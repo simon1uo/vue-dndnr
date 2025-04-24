@@ -26,6 +26,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
+    capture = true,
     onDragStart: onDragStartCallback,
     onDrag: onDragCallback,
     onDragEnd: onDragEndCallback,
@@ -47,17 +48,18 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }))
 
   const filterEvent = (event: PointerEvent): boolean => {
-    if (disabled)
+    if (toValue(disabled))
       return false
-    if (pointerTypes)
-      return pointerTypes.includes(event.pointerType as PointerType)
+    const types = toValue(pointerTypes)
+    if (types)
+      return types.includes(event.pointerType as PointerType)
     return true
   }
 
   const handleEvent = (event: PointerEvent) => {
-    if (preventDefault)
+    if (toValue(preventDefault))
       event.preventDefault()
-    if (stopPropagation)
+    if (toValue(stopPropagation))
       event.stopPropagation()
   }
 
@@ -80,8 +82,9 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!isDragging.value || !startEvent.value || !el)
       return
 
-    const eventPosition = calculatePosition(event, scale)
-    const startEventPosition = calculatePosition(startEvent.value, scale)
+    const scaleValue = toValue(scale)
+    const eventPosition = calculatePosition(event, scaleValue)
+    const startEventPosition = calculatePosition(startEvent.value, scaleValue)
     const delta = calculateDelta(startEventPosition, eventPosition)
 
     let newPosition = {
@@ -89,8 +92,14 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       y: startPosition.value.y + delta.y,
     }
 
-    newPosition = applyAxisConstraint(newPosition, axis, startPosition.value)
-    newPosition = applyGrid(newPosition, grid)
+    const axisValue = toValue(axis)
+    newPosition = applyAxisConstraint(newPosition, axisValue, startPosition.value)
+
+    const gridValue = toValue(grid)
+    if (gridValue) {
+      newPosition = applyGrid(newPosition, gridValue)
+    }
+
 
     if (bounds) {
       let boundingElement: HTMLElement | null = null
@@ -122,7 +131,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           },
         )
       }
-      else if (typeof boundsValue === 'object') {
+      else if (typeof boundsValue === 'object' && boundsValue) {
         newPosition = applyBounds(
           newPosition,
           boundsValue,
@@ -149,14 +158,14 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
-  const config = ({
-    capture: options.capture ?? true,
-    passive: !preventDefault,
+  const getConfig = () => ({
+    capture: toValue(capture),
+    passive: !toValue(preventDefault),
   })
 
-  useEventListener(draggingHandle, 'pointerdown', onDragStart, config)
-  useEventListener(draggingElement, 'pointermove', onDrag, config)
-  useEventListener(draggingElement, 'pointerup', onDragEnd, config)
+  useEventListener(draggingHandle, 'pointerdown', onDragStart, getConfig())
+  useEventListener(draggingElement, 'pointermove', onDrag, getConfig())
+  useEventListener(draggingElement, 'pointerup', onDragEnd, getConfig())
 
   const setPosition = (newPosition: Position) => {
     position.value = { ...newPosition }

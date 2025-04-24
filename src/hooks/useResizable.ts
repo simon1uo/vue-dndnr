@@ -1,5 +1,5 @@
 import type { MaybeRefOrGetter } from 'vue'
-import type { Position, ResizableOptions, ResizeHandle, Size } from '../types'
+import type { PointerType, Position, ResizableOptions, ResizeHandle, Size } from '../types'
 import { onMounted, ref, toValue, watch } from 'vue'
 import {
   applyAspectRatioLock,
@@ -28,6 +28,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
+    capture = true,
     boundaryThreshold = 8,
     onResizeStart: onResizeStartCallback,
     onResize: onResizeCallback,
@@ -38,7 +39,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const position = ref<Position>({ x: 0, y: 0 })
   const isResizing = ref(false)
   const activeHandle = ref<ResizeHandle | null>(null)
-  const startEvent = ref<MouseEvent | TouchEvent | null>(null)
+  const startEvent = ref<PointerEvent | null>(null)
   const hoverHandle = ref<ResizeHandle | null>(null)
   const isAbsolutePositioned = ref(false)
 
@@ -97,76 +98,72 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     el.style.cursor = isResizing.value && activeHandle.value ? getCursorForHandle(activeHandle.value) : cursorStyle
   }
 
-  const filterEvent = (event: MouseEvent | TouchEvent): boolean => {
-    if (disabled)
+  const filterEvent = (event: PointerEvent): boolean => {
+    if (toValue(disabled))
       return false
 
-    if (event instanceof MouseEvent) {
-      if (!pointerTypes.includes('mouse'))
-        return false
-    }
-    else if (event instanceof TouchEvent) {
-      if (!pointerTypes.includes('touch'))
-        return false
-    }
+    const types = toValue(pointerTypes)
+    if (types)
+      return types.includes(event.pointerType as PointerType)
 
     return true
   }
 
-  const handleEvent = (event: MouseEvent | TouchEvent) => {
-    if (preventDefault)
+  const handleEvent = (event: PointerEvent) => {
+    if (toValue(preventDefault))
       event.preventDefault()
-    if (stopPropagation)
+    if (toValue(stopPropagation))
       event.stopPropagation()
   }
 
-  const detectBoundary = (event: MouseEvent | TouchEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
+  const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
     const rect = element.getBoundingClientRect()
-    const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
-    const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
+    const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX
+    const clientY = event instanceof MouseEvent ? event.clientY : (event as TouchEvent).touches[0].clientY
 
     const distToTop = Math.abs(clientY - rect.top)
     const distToBottom = Math.abs(clientY - rect.bottom)
     const distToLeft = Math.abs(clientX - rect.left)
     const distToRight = Math.abs(clientX - rect.right)
 
-    const isWithinX = clientX >= rect.left - boundaryThreshold && clientX <= rect.right + boundaryThreshold
-    const isWithinY = clientY >= rect.top - boundaryThreshold && clientY <= rect.bottom + boundaryThreshold
+    const thresholdValue = toValue(boundaryThreshold)
+    const isWithinX = clientX >= rect.left - thresholdValue && clientX <= rect.right + thresholdValue
+    const isWithinY = clientY >= rect.top - thresholdValue && clientY <= rect.bottom + thresholdValue
 
     if (!isWithinX || !isWithinY) {
       return null
     }
 
-    if (distToTop <= boundaryThreshold && distToLeft <= boundaryThreshold) {
+    if (distToTop <= thresholdValue && distToLeft <= thresholdValue) {
       return 'tl'
     }
-    if (distToTop <= boundaryThreshold && distToRight <= boundaryThreshold) {
+    if (distToTop <= thresholdValue && distToRight <= thresholdValue) {
       return 'tr'
     }
-    if (distToBottom <= boundaryThreshold && distToLeft <= boundaryThreshold) {
+    if (distToBottom <= thresholdValue && distToLeft <= thresholdValue) {
       return 'bl'
     }
-    if (distToBottom <= boundaryThreshold && distToRight <= boundaryThreshold) {
+    if (distToBottom <= thresholdValue && distToRight <= thresholdValue) {
       return 'br'
     }
 
-    if (distToTop <= boundaryThreshold && isWithinX) {
+    if (distToTop <= thresholdValue && isWithinX) {
       return 't'
     }
-    if (distToBottom <= boundaryThreshold && isWithinX) {
+    if (distToBottom <= thresholdValue && isWithinX) {
       return 'b'
     }
-    if (distToLeft <= boundaryThreshold && isWithinY) {
+    if (distToLeft <= thresholdValue && isWithinY) {
       return 'l'
     }
-    if (distToRight <= boundaryThreshold && isWithinY) {
+    if (distToRight <= thresholdValue && isWithinY) {
       return 'r'
     }
 
     return null
   }
 
-  const onMouseMove = (event: MouseEvent | TouchEvent) => {
+  const onMouseMove = (event: PointerEvent) => {
     if (isResizing.value || !filterEvent(event)) {
       return
     }
@@ -183,14 +180,15 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
   }
 
-  const onResizeStart = (event: MouseEvent | TouchEvent) => {
+  const onResizeStart = (event: PointerEvent) => {
     const el = toValue(target)
     if (!filterEvent(event) || !el)
       return
 
     const handle = detectBoundary(event, el)
-
-    if (!handle || !handles.includes(handle))
+    const handlesValue = toValue(handles) 
+ 
+    if (!handle || !handlesValue || !handlesValue.includes(handle))
       return
 
     startEvent.value = event
@@ -205,15 +203,15 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
-  const onResize = (event: MouseEvent | TouchEvent) => {
+  const onResize = (event: PointerEvent) => {
     const el = toValue(target)
     if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
       return
 
-    const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
-    const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
-    const startClientX = startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as TouchEvent).touches[0].clientX
-    const startClientY = startEvent.value instanceof MouseEvent ? startEvent.value.clientY : (startEvent.value as TouchEvent).touches[0].clientY
+    const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX
+    const clientY = event instanceof MouseEvent ? event.clientY : (event as TouchEvent).touches[0].clientY
+    const startClientX = startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as unknown as TouchEvent).touches[0].clientX
+    const startClientY = startEvent.value instanceof MouseEvent ? startEvent.value.clientY : (startEvent.value as unknown as TouchEvent).touches[0].clientY
 
     const deltaX = clientX - startClientX
     const deltaY = clientY - startClientY
@@ -311,26 +309,27 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     newSize = { width, height }
 
     let snappedSize = newSize
-    if (grid) {
+    const gridValue = toValue(grid)
+    if (gridValue) {
       snappedSize = {
-        width: typeof newSize.width === 'number' ? applyGrid({ x: newSize.width, y: 0 }, grid).x : newSize.width,
-        height: typeof newSize.height === 'number' ? applyGrid({ x: 0, y: newSize.height }, grid).y : newSize.height,
+        width: typeof newSize.width === 'number' ? applyGrid({ x: newSize.width, y: 0 }, gridValue).x : newSize.width,
+        height: typeof newSize.height === 'number' ? applyGrid({ x: 0, y: newSize.height }, gridValue).y : newSize.height,
       }
     }
 
     let constrainedSize = applyMinMaxConstraints(
       snappedSize,
-      minWidth,
-      minHeight,
-      maxWidth,
-      maxHeight,
+      toValue(minWidth),
+      toValue(minHeight),
+      toValue(maxWidth),
+      toValue(maxHeight),
     )
 
-    if (lockAspectRatio) {
+    if (toValue(lockAspectRatio)) {
       constrainedSize = applyAspectRatioLock(
         constrainedSize,
         startSize.value,
-        lockAspectRatio,
+        true,
       )
     }
 
@@ -376,7 +375,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
-  const onResizeEnd = (event: MouseEvent | TouchEvent) => {
+  const onResizeEnd = (event: PointerEvent) => {
     if (!isResizing.value)
       return
 
@@ -414,30 +413,15 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
       applyStyles()
 
-      useEventListener(el, 'mousemove', onMouseMove, {
-        passive: !preventDefault,
-      })
-
-      useEventListener(el, 'mousedown', onResizeStart, {
-        passive: !preventDefault,
-      })
-
-      useEventListener(el, 'touchmove', onMouseMove, {
-        passive: !preventDefault,
-      })
-
-      useEventListener(el, 'touchstart', onResizeStart, {
-        passive: !preventDefault,
-      })
-
-      useEventListener(el, 'mouseleave', () => {
-        hoverHandle.value = null
-      }, {
-        passive: true,
-      })
     }
   }
 
+  const getConfig = () => ({
+    capture: toValue(capture),
+    passive: !toValue(preventDefault),
+  })
+
+  
   onMounted(setupElementSize)
 
   // Watch for changes to the target element
@@ -477,12 +461,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     applyStyles()
   }
 
-  useEventListener(defaultWindow, 'pointermove', onResize, {
-    passive: !preventDefault,
-  })
-  useEventListener(defaultWindow, 'pointerup', onResizeEnd, {
-    passive: !preventDefault,
-  })
+
+  useEventListener(target, 'pointermove', onMouseMove, getConfig())
+  useEventListener(target, 'pointerdown', onResizeStart, getConfig())
+  useEventListener(target, 'pointermove', onMouseMove, getConfig())
+  useEventListener(target, 'pointerleave', () => {
+    hoverHandle.value = null
+  }, getConfig())
+
+  useEventListener(defaultWindow, 'pointermove', onResize, getConfig())
+  useEventListener(defaultWindow, 'pointerup', onResizeEnd, getConfig())
 
   // Return values and methods
   return {
