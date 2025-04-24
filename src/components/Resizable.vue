@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Position, ResizableOptions, ResizeHandle, Size } from '../types'
+import type { ResizableOptions, ResizeHandle, Size } from '../types'
 import { computed, ref, watch } from 'vue'
 import { useResizable } from '../hooks'
 
@@ -24,13 +24,10 @@ const emit = defineEmits<{
   'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
-// Create a ref for the element
 const elementRef = ref<HTMLElement | null>(null)
 
-// Track active handle for event handlers
 let activeHandle: ResizeHandle | null = null
 
-// Create resizable options with callbacks
 const resizableOptions = computed<ResizableOptions>(() => ({
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
@@ -60,8 +57,8 @@ const resizableOptions = computed<ResizableOptions>(() => ({
 
 const {
   size: currentSize,
-  isResizing, 
-  setSize, 
+  isResizing,
+  setSize,
   activeHandle: currentActiveHandle,
   hoverHandle,
 } = useResizable(elementRef, resizableOptions.value)

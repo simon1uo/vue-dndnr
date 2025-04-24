@@ -10,7 +10,6 @@ export function getElementPosition(element: HTMLElement | SVGElement): { x: numb
   const transform = style.transform
 
   if (transform && transform !== 'none') {
-    // Extract translation values from the transform matrix
     const matrix = new DOMMatrix(transform)
     return {
       x: matrix.e,
@@ -54,7 +53,6 @@ export function matchesSelector(element: HTMLElement | SVGElement, selector: str
  * Check if an element or its parents match a selector
  */
 export function matchesSelectorAndParents(element: HTMLElement | SVGElement, selector: string): boolean {
-  // SVGElement doesn't have parentElement, but it has parentNode
   let target: HTMLElement | SVGElement | null = element
 
   do {

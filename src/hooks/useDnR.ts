@@ -8,13 +8,9 @@ import useResizable from './useResizable'
  * Combined hook for draggable and resizable functionality
  */
 export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions) {
-  // Create a ref to track the current interaction mode
   const interactionMode = ref<'idle' | 'dragging' | 'resizing'>('idle')
-
-  // Track if we're near a resize handle
   const isNearResizeHandle = ref(false)
 
-  // Create draggable options with modified callbacks to track interaction mode
   const draggableOptions = computed(() => {
     const {
       onDragStart: originalDragStart,
@@ -25,10 +21,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
     return {
       ...restOptions,
-      // Disable dragging when resizing or near a resize handle
       disabled: options.disabled || interactionMode.value === 'resizing' || isNearResizeHandle.value,
       onDragStart: (position: Position, event: MouseEvent | TouchEvent) => {
-        // Don't start dragging if we're resizing or near a resize handle
         if (interactionMode.value === 'resizing' || isNearResizeHandle.value)
           return false
 
@@ -49,7 +43,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
   })
 
-  // Create resizable options with modified callbacks to track interaction mode
   const resizableOptions = computed(() => {
     const {
       onResizeStart: originalResizeStart,
@@ -60,13 +53,11 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
     return {
       ...restOptions,
-      // Disable resizing when dragging
       disabled: options.disabled || interactionMode.value === 'dragging',
       onResizeStart: (size: Size, event: MouseEvent | TouchEvent) => {
         if (interactionMode.value === 'dragging')
           return
 
-        // Set the interaction mode to resizing
         interactionMode.value = 'resizing'
         originalResizeStart?.(size, event)
       },
@@ -84,7 +75,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
   })
 
-  // Initialize the hooks
   const {
     position,
     isDragging,
@@ -110,12 +100,10 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     detectBoundary,
   } = useResizable(target, resizableOptions.value)
 
-  // Update isNearResizeHandle when hoverHandle changes
   watch(hoverHandle, (newHandle) => {
     isNearResizeHandle.value = newHandle !== null
   })
 
-  // Sync positions between draggable and resizable
   watch(position, (newPosition) => {
     if (interactionMode.value === 'dragging' && isAbsolutePositioned.value) {
       setResizablePosition(newPosition)
@@ -128,7 +116,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
   }, { deep: true })
 
-  // Combine styles from both hooks
   const style = computed(() => {
     return {
       ...draggableStyle.value,
@@ -138,7 +125,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   })
 
   return {
-    // State
     position,
     size,
     isDragging,
@@ -149,14 +135,11 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     isAbsolutePositioned,
     isNearResizeHandle,
 
-    // Styles
     style,
 
-    // Methods
     setPosition,
     setSize,
 
-    // Event handlers
     onDragStart,
     onDrag,
     onDragEnd,

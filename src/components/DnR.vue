@@ -4,15 +4,12 @@ import { computed, ref, toValue, watch } from 'vue'
 import useDnR from '../hooks/useDnR'
 
 interface DnRProps extends DnROptions {
-  // Position props
   position?: Position
   positionModel?: Position
 
-  // Size props
   size?: Size
   sizeModel?: Size
 
-  // Styling props
   className?: string
   draggingClassName?: string
   resizingClassName?: string
@@ -29,20 +26,16 @@ const props = withDefaults(defineProps<DnRProps>(), {
 })
 
 const emit = defineEmits<{
-  // Position updates
   'update:position': [position: Position]
   'update:positionModel': [position: Position]
 
-  // Size updates
   'update:size': [size: Size]
   'update:sizeModel': [size: Size]
 
-  // Drag events
   'dragStart': [position: Position, event: MouseEvent | TouchEvent]
   'drag': [position: Position, event: MouseEvent | TouchEvent]
   'dragEnd': [position: Position, event: MouseEvent | TouchEvent]
 
-  // Resize events
   'resizeStart': [size: Size, event: MouseEvent | TouchEvent]
   'resize': [size: Size, event: MouseEvent | TouchEvent]
   'resizeEnd': [size: Size, event: MouseEvent | TouchEvent]
@@ -57,7 +50,6 @@ const dnrOptions = computed<DnROptions>(() => ({
   initialPosition: props.position || props.positionModel || { x: 0, y: 0 },
   initialSize: props.size || props.sizeModel || { width: 'auto', height: 'auto' },
   handle,
-  // Drag callbacks
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)
@@ -74,7 +66,6 @@ const dnrOptions = computed<DnROptions>(() => ({
       props.onDragEnd(position, event)
   },
 
-  // Resize callbacks
   onResizeStart: (size, event) => {
     emit('resizeStart', size, event)
     if (props.onResizeStart)
@@ -105,7 +96,6 @@ const {
   hoverHandle,
 } = useDnR(targetRef, dnrOptions.value)
 
-// Watch for external position changes
 watch(
   () => props.position,
   (newPosition) => {
@@ -126,7 +116,6 @@ watch(
   { deep: true },
 )
 
-// Watch for external size changes
 watch(
   () => props.size,
   (newSize) => {
@@ -147,7 +136,6 @@ watch(
   { deep: true },
 )
 
-// Emit position and size updates
 watch(
   position,
   (newPosition) => {
@@ -166,12 +154,10 @@ watch(
   { deep: true },
 )
 
-// Watch for hover handle changes
 watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)
 })
 
-// Compute combined class based on interaction state
 const combinedClass = computed(() => {
   const classes = ['dnr']
 
@@ -213,6 +199,6 @@ const combinedClass = computed(() => {
 .dnr.resizing {
   opacity: 0.8;
   z-index: 1;
-  /* Cursor is handled by the useResizable hook based on the active handle */
+
 }
 </style>

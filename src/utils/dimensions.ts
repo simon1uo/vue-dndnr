@@ -1,7 +1,3 @@
-/**
- * Utility functions for dimension calculations
- */
-
 import type { Size } from '../types'
 
 /**
@@ -17,7 +13,6 @@ export function applyMinMaxConstraints(
   let { width, height } = size
 
   if (typeof width === 'number') {
-    // Always ensure width is at least 0
     width = Math.max(width, 0)
     if (minWidth !== undefined)
       width = Math.max(width, minWidth)
@@ -26,7 +21,6 @@ export function applyMinMaxConstraints(
   }
 
   if (typeof height === 'number') {
-    // Always ensure height is at least 0
     height = Math.max(height, 0)
     if (minHeight !== undefined)
       height = Math.max(height, minHeight)
@@ -55,16 +49,13 @@ export function applyAspectRatioLock(
   let { width, height } = size
 
   if (typeof width === 'number' && typeof height === 'number') {
-    // Determine which dimension changed more
     const widthChange = Math.abs(width - originalWidth)
     const heightChange = Math.abs(height - originalHeight)
 
     if (widthChange >= heightChange) {
-      // Width changed more, adjust height based on aspect ratio
       height = width / aspectRatio
     }
     else {
-      // Height changed more, adjust width based on aspect ratio
       width = height * aspectRatio
     }
   }

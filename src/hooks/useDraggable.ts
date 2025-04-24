@@ -37,15 +37,13 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const startEvent = ref<PointerEvent | null>(null)
   const elementSize = ref<{ width: number, height: number }>({ width: 0, height: 0 })
 
-  const style = computed(() => {
-    return {
-      position: 'absolute' as const,
-      left: `${position.value.x}px`,
-      top: `${position.value.y}px`,
-      touchAction: 'none' as const,
-      userSelect: 'none' as const,
-    }
-  })
+  const style = computed(() => ({
+    position: 'absolute' as const,
+    left: `${position.value.x}px`,
+    top: `${position.value.y}px`,
+    touchAction: 'none' as const,
+    userSelect: 'none' as const,
+  }))
 
   const filterEvent = (event: PointerEvent): boolean => {
     if (disabled)

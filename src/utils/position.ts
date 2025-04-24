@@ -47,7 +47,6 @@ export function applyBounds(
   let boundingRect: { left: number, top: number, right: number, bottom: number }
 
   if (bounds === 'parent') {
-    // Parent bounds will be handled by the component
     return position
   }
   else if (bounds instanceof HTMLElement) {

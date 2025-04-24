@@ -26,26 +26,23 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
-    boundaryThreshold = 8, // New option for boundary detection threshold
+    boundaryThreshold = 8,
     onResizeStart: onResizeStartCallback,
     onResize: onResizeCallback,
     onResizeEnd: onResizeEndCallback,
   } = options
 
-  // State
   const size = ref<Size>({ ...initialSize })
   const position = ref<Position>({ x: 0, y: 0 })
   const isResizing = ref(false)
   const activeHandle = ref<ResizeHandle | null>(null)
   const startEvent = ref<MouseEvent | TouchEvent | null>(null)
-  const hoverHandle = ref<ResizeHandle | null>(null) // Track which boundary is being hovered
+  const hoverHandle = ref<ResizeHandle | null>(null)
   const isAbsolutePositioned = ref(false)
 
-  // Internal state
   const startSize = ref<Size>({ ...initialSize })
   const startPosition = ref<Position>({ x: 0, y: 0 })
 
-  // Helper function to get cursor style for a handle
   const getCursorForHandle = (handle: ResizeHandle): string => {
     switch (handle) {
       case 't':
@@ -77,7 +74,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
   }
 
-  // Apply styles directly to the target element
   const applyStyles = () => {
     const el = toValue(target)
     if (!el)
@@ -85,12 +81,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     const cursorStyle = hoverHandle.value ? getCursorForHandle(hoverHandle.value) : 'default'
 
-    // Don't change position style if it's already set to absolute
     if (!isAbsolutePositioned.value) {
       el.style.position = 'relative'
     }
     else {
-      // Update position for absolute positioned elements
       el.style.left = `${position.value.x}px`
       el.style.top = `${position.value.y}px`
     }
@@ -101,13 +95,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     el.style.cursor = isResizing.value && activeHandle.value ? getCursorForHandle(activeHandle.value) : cursorStyle
   }
 
-  // Filter events based on options
   const filterEvent = (event: MouseEvent | TouchEvent): boolean => {
-    // Check if resizing is disabled
     if (disabled)
       return false
 
-    // Check pointer type
     if (event instanceof MouseEvent) {
       if (!pointerTypes.includes('mouse'))
         return false
@@ -120,7 +111,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     return true
   }
 
-  // Handle event options
   const handleEvent = (event: MouseEvent | TouchEvent) => {
     if (preventDefault)
       event.preventDefault()
@@ -128,19 +118,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       event.stopPropagation()
   }
 
-  // Detect which boundary the cursor is near
   const detectBoundary = (event: MouseEvent | TouchEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
     const rect = element.getBoundingClientRect()
     const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
     const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
 
-    // Calculate distances to each edge
     const distToTop = Math.abs(clientY - rect.top)
     const distToBottom = Math.abs(clientY - rect.bottom)
     const distToLeft = Math.abs(clientX - rect.left)
     const distToRight = Math.abs(clientX - rect.right)
 
-    // Check if cursor is within the element bounds plus threshold
     const isWithinX = clientX >= rect.left - boundaryThreshold && clientX <= rect.right + boundaryThreshold
     const isWithinY = clientY >= rect.top - boundaryThreshold && clientY <= rect.bottom + boundaryThreshold
 
@@ -148,7 +135,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       return null
     }
 
-    // Check corners first (they have priority)
     if (distToTop <= boundaryThreshold && distToLeft <= boundaryThreshold) {
       return 'tl'
     }
@@ -162,7 +148,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       return 'br'
     }
 
-    // Then check edges
     if (distToTop <= boundaryThreshold && isWithinX) {
       return 't'
     }
@@ -179,7 +164,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     return null
   }
 
-  // Handle mouse move to detect boundaries
   const onMouseMove = (event: MouseEvent | TouchEvent) => {
     if (isResizing.value || !filterEvent(event)) {
       return
@@ -192,36 +176,30 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     const detectedHandle = detectBoundary(event, el)
 
-    // Only update if the handle has changed to avoid unnecessary renders
     if (detectedHandle !== hoverHandle.value) {
       hoverHandle.value = detectedHandle
     }
   }
 
-  // Event handlers
   const onResizeStart = (event: MouseEvent | TouchEvent) => {
     const el = toValue(target)
     if (!filterEvent(event) || !el)
       return
 
-    // Detect which boundary we're near
     const handle = detectBoundary(event, el)
 
     if (!handle || !handles.includes(handle))
       return
 
-    // Store the start event, size and position
     startEvent.value = event
     startSize.value = { ...size.value }
     startPosition.value = { ...position.value }
     isResizing.value = true
     activeHandle.value = handle
 
-    // Call the callback if provided
     if (onResizeStartCallback)
       onResizeStartCallback(size.value, event)
 
-    // Handle the event
     handleEvent(event)
   }
 
@@ -230,7 +208,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
       return
 
-    // Calculate the new size
     const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
     const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
     const startClientX = startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as TouchEvent).touches[0].clientX
@@ -243,8 +220,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     let width = Number(startSize.value.width)
     let height = Number(startSize.value.height)
 
-    // Handle different resize directions
-    // For absolute positioned elements, we need to update position as well
     const newPosition = { ...startPosition.value }
 
     switch (activeHandle.value) {
@@ -302,41 +277,28 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
         break
     }
 
-    // Ensure width and height are not negative
     width = Math.max(0, width)
     height = Math.max(0, height)
 
-    // Update position if element is absolutely positioned
-    // Only update position if the corresponding dimension is not zero
     if (isAbsolutePositioned.value) {
       const updatedPosition = { ...position.value }
 
-      // Handle left-side resizing
       if (width > 0 && ['l', 'left', 'tl', 'top-left', 'bl', 'bottom-left'].includes(activeHandle.value)) {
-        // Prevent negative x position
         const constrainedX = Math.max(0, newPosition.x)
         updatedPosition.x = constrainedX
 
-        // If position was constrained, adjust width to maintain the right edge position
         if (constrainedX > newPosition.x) {
-          // Calculate how much the position was adjusted
           const positionAdjustment = constrainedX - newPosition.x
-          // Increase width by the same amount to maintain right edge position
           width += positionAdjustment
         }
       }
 
-      // Handle top-side resizing
       if (height > 0 && ['t', 'top', 'tl', 'top-left', 'tr', 'top-right'].includes(activeHandle.value)) {
-        // Prevent negative y position
         const constrainedY = Math.max(0, newPosition.y)
         updatedPosition.y = constrainedY
 
-        // If position was constrained, adjust height to maintain the bottom edge position
         if (constrainedY > newPosition.y) {
-          // Calculate how much the position was adjusted
           const positionAdjustment = constrainedY - newPosition.y
-          // Increase height by the same amount to maintain bottom edge position
           height += positionAdjustment
         }
       }
@@ -346,7 +308,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     newSize = { width, height }
 
-    // Apply grid snapping if specified
     let snappedSize = newSize
     if (grid) {
       snappedSize = {
@@ -355,7 +316,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    // Apply min/max constraints
     let constrainedSize = applyMinMaxConstraints(
       snappedSize,
       minWidth,
@@ -364,7 +324,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       maxHeight,
     )
 
-    // Apply aspect ratio lock if specified
     if (lockAspectRatio) {
       constrainedSize = applyAspectRatioLock(
         constrainedSize,
@@ -373,7 +332,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       )
     }
 
-    // Apply bounds constraints if specified
     if (bounds) {
       let boundingElement: HTMLElement | null = null
       const boundsValue = toValue(bounds)
@@ -394,11 +352,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           y: targetRect.top - boundingRect.top,
         }
 
-        // Calculate max width and height based on bounds
         const maxBoundWidth = boundingRect.right - boundingRect.left - targetPos.x
         const maxBoundHeight = boundingRect.bottom - boundingRect.top - targetPos.y
 
-        // Apply bounds constraints
         if (typeof constrainedSize.width === 'number') {
           constrainedSize.width = Math.min(constrainedSize.width, maxBoundWidth)
         }
@@ -408,17 +364,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    // Update the size
     size.value = constrainedSize
 
-    // Apply the updated styles
     applyStyles()
 
-    // Call the callback if provided
     if (onResizeCallback)
       onResizeCallback(size.value, event)
 
-    // Handle the event
     handleEvent(event)
   }
 
@@ -430,30 +382,24 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     activeHandle.value = null
     startEvent.value = null
 
-    // Call the callback if provided
     if (onResizeEndCallback)
       onResizeEndCallback(size.value, event)
 
-    // Handle the event
     handleEvent(event)
   }
 
-  // Set up event listeners
   const setupElementSize = () => {
     const el = toValue(target)
     if (el) {
-      // Check if element is absolutely positioned
       const computedStyle = window.getComputedStyle(el)
       isAbsolutePositioned.value = computedStyle.position === 'absolute'
 
-      // If absolutely positioned, get the initial position
       if (isAbsolutePositioned.value) {
         const elementPosition = getElementPosition(el)
         position.value = elementPosition
         startPosition.value = { ...elementPosition }
       }
 
-      // Initialize size if set to auto
       if (size.value.width === 'auto' || size.value.height === 'auto') {
         const elementSize = getElementSize(el)
         size.value = {
@@ -462,20 +408,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
         }
       }
 
-      // Apply initial styles
       applyStyles()
 
-      // Add mouse move listener to the element for boundary detection
       useEventListener(el, 'mousemove', onMouseMove, {
         passive: !preventDefault,
       })
 
-      // Add mousedown listener to start resizing
       useEventListener(el, 'mousedown', onResizeStart, {
         passive: !preventDefault,
       })
 
-      // Add touch events for mobile
       useEventListener(el, 'touchmove', onMouseMove, {
         passive: !preventDefault,
       })
@@ -484,7 +426,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
         passive: !preventDefault,
       })
 
-      // Add mouseleave listener to reset hover state
       useEventListener(el, 'mouseleave', () => {
         hoverHandle.value = null
       }, {
