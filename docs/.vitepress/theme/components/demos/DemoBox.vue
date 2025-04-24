@@ -1,0 +1,55 @@
+<script setup>
+import { ref } from 'vue'
+
+const props = defineProps({
+  title: {
+    type: String,
+    default: '',
+  },
+  height: {
+    type: [String, Number],
+    default: 300,
+  },
+})
+
+const controlsVisible = ref(true)
+
+const toggleControls = () => {
+  controlsVisible.value = !controlsVisible.value
+}
+</script>
+
+<template>
+  <div class="flex flex-col gap-4 mb-8">
+    <div v-if="title || $slots.controls" class="flex items-center justify-between">
+      <h3 v-if="title" class="text-lg font-medium mb-0">{{ title }}</h3>
+      <div class="flex items-center gap-2">
+        <button 
+          v-if="$slots.controls" 
+          class="text-sm flex items-center gap-1 text-text-light hover:text-primary transition-colors"
+          @click="toggleControls"
+        >
+          <span>{{ controlsVisible ? 'Hide Controls' : 'Show Controls' }}</span>
+          <div class="i-lucide-settings w-4 h-4"></div>
+        </button>
+        <slot name="actions"></slot>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div 
+      v-if="$slots.controls && controlsVisible" 
+      class="flex flex-wrap gap-4 p-3 bg-background-soft rounded-lg"
+    >
+      <slot name="controls"></slot>
+    </div>
+    
+    <!-- Demo playground -->
+    <div 
+      class="relative border-2 border-dashed border-border rounded-lg overflow-hidden"
+      :style="{ height: typeof height === 'number' ? `${height}px` : height }"
+    >
+      <slot></slot>
+    </div>
+  </div>
+</template>

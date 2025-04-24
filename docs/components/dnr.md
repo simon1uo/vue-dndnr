@@ -4,6 +4,8 @@ The `DnR` (Draggable and Resizable) component combines both draggable and resiza
 
 ## Basic Usage
 
+<DnRDemo />
+
 ```vue
 <script setup>
 import { DnR } from 'vue-dndnr'
@@ -86,8 +88,8 @@ The `DnR` component emits all events from both the `Draggable` and `Resizable` c
 ```vue
 <template>
   <div class="parent-container">
-    <DnR 
-      v-model:position="position" 
+    <DnR
+      v-model:position="position"
       v-model:size="size"
       bounds="parent"
       :min-width="100"

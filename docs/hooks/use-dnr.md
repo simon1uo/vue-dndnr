@@ -4,6 +4,8 @@ The `useDnR` hook combines both drag and resize functionality into a single hook
 
 ## Usage
 
+<UseDnRDemo />
+
 ```vue
 <script setup>
 import { useDnR } from 'vue-dndnr'
@@ -20,13 +22,13 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
+  <div
+    ref="elementRef"
+    :style="{
       position: 'absolute',
-      left: `${position.x}px`, 
+      left: `${position.x}px`,
       top: `${position.y}px`,
-      width: `${size.width}px`, 
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: isDragging || isResizing ? '#e74c3c' : '#3498db',
       color: 'white',
@@ -125,17 +127,17 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="containerRef" 
+  <div
+    ref="containerRef"
     style="position: relative; width: 600px; height: 400px; border: 2px solid #ccc;"
   >
-    <div 
-      ref="elementRef" 
-      :style="{ 
+    <div
+      ref="elementRef"
+      :style="{
         position: 'absolute',
-        left: `${position.x}px`, 
+        left: `${position.x}px`,
         top: `${position.y}px`,
-        width: `${size.width}px`, 
+        width: `${size.width}px`,
         height: `${size.height}px`,
         backgroundColor: isDragging || isResizing ? '#e74c3c' : '#3498db',
         color: 'white',
@@ -170,13 +172,13 @@ const { position, size } = useDnR(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
+  <div
+    ref="elementRef"
+    :style="{
       position: 'absolute',
-      left: `${position.x}px`, 
+      left: `${position.x}px`,
       top: `${position.y}px`,
-      width: `${size.width}px`, 
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: '#3498db',
       color: 'white',
@@ -224,13 +226,13 @@ function resetElement() {
 
 <template>
   <div>
-    <div 
-      ref="elementRef" 
-      :style="{ 
+    <div
+      ref="elementRef"
+      :style="{
         position: 'absolute',
-        left: `${position.x}px`, 
+        left: `${position.x}px`,
         top: `${position.y}px`,
-        width: `${size.width}px`, 
+        width: `${size.width}px`,
         height: `${size.height}px`,
         backgroundColor: '#3498db',
         color: 'white',
@@ -243,7 +245,7 @@ function resetElement() {
     >
       Drag and resize me!
     </div>
-    
+
     <div style="position: fixed; bottom: 20px; left: 20px;">
       <button @click="moveToCenter">Center</button>
       <button @click="makeSmaller">Smaller</button>

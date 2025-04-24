@@ -4,6 +4,8 @@ The `useDraggable` hook adds drag functionality to any element.
 
 ## Usage
 
+<UseDraggableDemo />
+
 ```vue
 <script setup>
 import { useDraggable } from 'vue-dndnr'
@@ -17,11 +19,11 @@ const { position, isDragging } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
+  <div
+    ref="elementRef"
+    :style="{
       position: 'absolute',
-      left: `${position.x}px`, 
+      left: `${position.x}px`,
       top: `${position.y}px`,
       backgroundColor: isDragging ? '#e74c3c' : '#3498db',
       padding: '20px',
@@ -85,15 +87,15 @@ const { position, isDragging } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="containerRef" 
+  <div
+    ref="containerRef"
     style="position: relative; width: 400px; height: 400px; border: 2px solid #ccc;"
   >
-    <div 
-      ref="elementRef" 
-      :style="{ 
+    <div
+      ref="elementRef"
+      :style="{
         position: 'absolute',
-        left: `${position.x}px`, 
+        left: `${position.x}px`,
         top: `${position.y}px`,
         width: '100px',
         height: '100px',
@@ -127,11 +129,11 @@ const { position } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
+  <div
+    ref="elementRef"
+    :style="{
       position: 'absolute',
-      left: `${position.x}px`, 
+      left: `${position.x}px`,
       top: `${position.y}px`,
       padding: '20px',
       backgroundColor: '#3498db',
@@ -168,11 +170,11 @@ const { position: verticalPosition } = useDraggable(verticalRef, {
 
 <template>
   <div>
-    <div 
-      ref="horizontalRef" 
-      :style="{ 
+    <div
+      ref="horizontalRef"
+      :style="{
         position: 'absolute',
-        left: `${horizontalPosition.x}px`, 
+        left: `${horizontalPosition.x}px`,
         top: `${horizontalPosition.y}px`,
         padding: '20px',
         backgroundColor: '#3498db',
@@ -183,12 +185,12 @@ const { position: verticalPosition } = useDraggable(verticalRef, {
     >
       X-axis only
     </div>
-    
-    <div 
-      ref="verticalRef" 
-      :style="{ 
+
+    <div
+      ref="verticalRef"
+      :style="{
         position: 'absolute',
-        left: `${verticalPosition.x}px`, 
+        left: `${verticalPosition.x}px`,
         top: `${verticalPosition.y}px`,
         padding: '20px',
         backgroundColor: '#e74c3c',

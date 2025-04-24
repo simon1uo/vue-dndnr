@@ -37,12 +37,21 @@ export default defineConfig({
     },
   },
   shortcuts: {
+    // General UI components
     'btn': 'px-4 py-2 rounded-md transition-colors duration-300 cursor-pointer',
     'btn-primary': 'btn bg-primary text-white hover:bg-primary-dark',
     'btn-secondary': 'btn bg-secondary text-white hover:bg-secondary-dark',
     'card': 'bg-background-soft rounded-lg p-4 shadow-md',
     'card-hover': 'hover:shadow-lg transition-shadow duration-300',
     'input': 'border border-border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary',
-    'draggable-box': 'rounded shadow-lg',
+
+    // Demo components
+    'demo-box': 'p-4 rounded-lg text-white flex flex-col items-center gap-2 transition-colors duration-200',
+    'demo-control': 'flex items-center gap-2',
+
+    // Element styles
+    'draggable-box': 'p-4 rounded-lg bg-primary text-white cursor-move select-none flex flex-col items-center gap-2 transition-colors duration-200',
+    'resizable-box': 'p-4 rounded-lg bg-primary-light text-white flex flex-col items-center justify-center gap-2 transition-colors duration-200',
+    'dnr-box': 'p-4 rounded-lg bg-primary-dark text-white cursor-move select-none flex flex-col items-center justify-center gap-2 transition-colors duration-200',
   },
 })

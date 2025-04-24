@@ -4,6 +4,8 @@ The `Draggable` component allows you to make any element draggable.
 
 ## Basic Usage
 
+<DraggableDemo />
+
 ```vue
 <script setup>
 import { Draggable } from 'vue-dndnr'

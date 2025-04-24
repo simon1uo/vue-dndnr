@@ -4,6 +4,8 @@ The `useResizable` hook adds resize functionality to any element.
 
 ## Usage
 
+<UseResizableDemo />
+
 ```vue
 <script setup>
 import { useResizable } from 'vue-dndnr'
@@ -18,10 +20,10 @@ const { size, isResizing } = useResizable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
-      width: `${size.width}px`, 
+  <div
+    ref="elementRef"
+    :style="{
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: isResizing ? '#e74c3c' : '#3498db',
       color: 'white',
@@ -94,10 +96,10 @@ const { size, isResizing } = useResizable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
-      width: `${size.width}px`, 
+  <div
+    ref="elementRef"
+    :style="{
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: isResizing ? '#e74c3c' : '#3498db',
       color: 'white',
@@ -131,10 +133,10 @@ const { size } = useResizable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
-      width: `${size.width}px`, 
+  <div
+    ref="elementRef"
+    :style="{
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: '#3498db',
       color: 'white',
@@ -165,10 +167,10 @@ const { size } = useResizable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
-      width: `${size.width}px`, 
+  <div
+    ref="elementRef"
+    :style="{
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: '#3498db',
       color: 'white',
@@ -199,10 +201,10 @@ const { size } = useResizable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
-      width: `${size.width}px`, 
+  <div
+    ref="elementRef"
+    :style="{
+      width: `${size.width}px`,
       height: `${size.height}px`,
       backgroundColor: '#3498db',
       color: 'white',

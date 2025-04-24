@@ -10,10 +10,39 @@ export default defineConfig({
     logo: '/logo.svg',
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Guide', link: '/guide/' },
-      { text: 'Components', link: '/components/' },
-      { text: 'Hooks', link: '/hooks/' },
-      { text: 'Examples', link: '/examples/' },
+      {
+        text: 'Guide',
+        items: [
+          { text: 'Getting Started', link: '/guide/' },
+          { text: 'Installation', link: '/guide/installation' },
+          { text: 'Basic Usage', link: '/guide/basic-usage' },
+        ]
+      },
+      {
+        text: 'Components',
+        items: [
+          { text: 'Overview', link: '/components/' },
+          { text: 'Draggable', link: '/components/draggable' },
+          { text: 'Resizable', link: '/components/resizable' },
+          { text: 'DnR', link: '/components/dnr' },
+        ]
+      },
+      {
+        text: 'Hooks',
+        items: [
+          { text: 'Overview', link: '/hooks/' },
+          { text: 'useDraggable', link: '/hooks/use-draggable' },
+          { text: 'useResizable', link: '/hooks/use-resizable' },
+          { text: 'useDnR', link: '/hooks/use-dnr' },
+        ]
+      },
+      {
+        text: 'Examples',
+        items: [
+          { text: 'Basic Examples', link: '/examples/' },
+          { text: 'Advanced Examples', link: '/examples/advanced' },
+        ]
+      },
     ],
     sidebar: {
       '/guide/': [

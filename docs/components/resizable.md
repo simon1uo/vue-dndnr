@@ -4,6 +4,8 @@ The `Resizable` component allows you to make any element resizable.
 
 ## Basic Usage
 
+<ResizableDemo />
+
 ```vue
 <script setup>
 import { Resizable } from 'vue-dndnr'
@@ -56,9 +58,9 @@ const size = ref({ width: 200, height: 150 })
 
 ```vue
 <template>
-  <Resizable 
-    v-model:size="size" 
-    :min-width="100" 
+  <Resizable
+    v-model:size="size"
+    :min-width="100"
     :min-height="100"
     :max-width="500"
     :max-height="400"
