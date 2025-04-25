@@ -43,45 +43,58 @@ const emit = defineEmits<{
 }>()
 
 const targetRef = ref<HTMLElement | null>(null)
-const handle = computed<HTMLElement | SVGElement | null | undefined>(() => toValue(props.handle) ?? toValue(targetRef))
 
-const dnrOptions = computed<DnROptions>(() => ({
-  ...props,
+// Create reactive options object
+const dnrOptions: DnROptions = {
   initialPosition: props.position || props.positionModel || { x: 0, y: 0 },
   initialSize: props.size || props.sizeModel || { width: 'auto', height: 'auto' },
-  handle,
-  onDragStart: (position, event) => {
+  handle: computed(() => toValue(props.handle) ?? targetRef.value),
+  bounds: computed(() => toValue(props.bounds)),
+  grid: computed(() => toValue(props.grid)),
+  axis: computed(() => toValue(props.axis) ?? 'both'),
+  scale: computed(() => toValue(props.scale) ?? 1),
+  disabled: computed(() => toValue(props.disabled) ?? false),
+  pointerTypes: computed(() => toValue(props.pointerTypes)),
+  preventDefault: computed(() => toValue(props.preventDefault) ?? true),
+  stopPropagation: computed(() => toValue(props.stopPropagation) ?? false),
+  capture: computed(() => toValue(props.capture) ?? true),
+  lockAspectRatio: computed(() => toValue(props.lockAspectRatio) ?? false),
+  handles: computed(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']),
+  minWidth: props.minWidth,
+  minHeight: props.minHeight,
+  maxWidth: props.maxWidth,
+  maxHeight: props.maxHeight,
+  onDragStart: (position: Position, event: PointerEvent) => {
     emit('dragStart', position, event)
     if (props.onDragStart)
       props.onDragStart(position, event)
   },
-  onDrag: (position, event) => {
+  onDrag: (position: Position, event: PointerEvent) => {
     emit('drag', position, event)
     if (props.onDrag)
       props.onDrag(position, event)
   },
-  onDragEnd: (position, event) => {
+  onDragEnd: (position: Position, event: PointerEvent) => {
     emit('dragEnd', position, event)
     if (props.onDragEnd)
       props.onDragEnd(position, event)
   },
-
-  onResizeStart: (size, event) => {
+  onResizeStart: (size: Size, event: PointerEvent) => {
     emit('resizeStart', size, event)
     if (props.onResizeStart)
       props.onResizeStart(size, event)
   },
-  onResize: (size, event) => {
+  onResize: (size: Size, event: PointerEvent) => {
     emit('resize', size, event)
     if (props.onResize)
       props.onResize(size, event)
   },
-  onResizeEnd: (size, event) => {
+  onResizeEnd: (size: Size, event: PointerEvent) => {
     emit('resizeEnd', size, event)
     if (props.onResizeEnd)
       props.onResizeEnd(size, event)
   },
-}))
+}
 
 const {
   position,
@@ -94,7 +107,7 @@ const {
   setPosition,
   setSize,
   hoverHandle,
-} = useDnR(targetRef, dnrOptions.value)
+} = useDnR(targetRef, dnrOptions)
 
 watch(
   () => props.position,
