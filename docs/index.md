@@ -3,7 +3,7 @@ layout: home
 hero:
   name: Vue DNDNR
   text: Vue 3 Draggable and Resizable Component Library
-  tagline: Powerful, flexible, and type-safe drag and resize components for Vue 3
+  tagline: Powerful, flexible, and type-safe hooks and components for Vue 3.
   actions:
     - theme: brand
       text: Get Started

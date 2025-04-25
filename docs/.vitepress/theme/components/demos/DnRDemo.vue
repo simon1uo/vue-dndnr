@@ -1,49 +1,61 @@
-<script setup>
+<script setup lang="ts">
 import { ref, shallowRef } from 'vue'
 import { DnR } from 'vue-dndnr'
 import DemoBox from './DemoBox.vue'
 import DemoControl from './DemoControl.vue'
 
+interface Position {
+  x: number
+  y: number
+}
+
+interface Size {
+  width: number
+  height: number
+}
+
+type GridType = [number, number] | null
+
 // State
-const position = ref({ x: 50, y: 50 })
-const size = ref({ width: 200, height: 150 })
-const disabled = shallowRef(false)
-const grid = ref(null)
-const lockAspectRatio = ref(false)
-const bounds = ref('parent')
-const isDragging = ref(false)
-const isResizing = ref(false)
+const position = ref<Position>({ x: 50, y: 50 })
+const size = ref<Size>({ width: 200, height: 150 })
+const disabled = shallowRef<boolean>(false)
+const grid = ref<GridType>(null)
+const lockAspectRatio = ref<boolean>(false)
+const bounds = ref<string | null>('parent')
+const isDragging = ref<boolean>(false)
+const isResizing = ref<boolean>(false)
 
 // Min/Max constraints
-const minWidth = ref(100)
-const minHeight = ref(100)
-const maxWidth = ref(400)
-const maxHeight = ref(300)
+const minWidth = ref<number>(100)
+const minHeight = ref<number>(100)
+const maxWidth = ref<number>(400)
+const maxHeight = ref<number>(300)
 
 // Options
-const boundsOptions = ['parent', 'none']
-const gridOptions = [null, [20, 20], [50, 50]]
+const boundsOptions: string[] = ['parent', 'none']
+const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid) => {
+const gridDisplay = (grid: GridType): string => {
   if (!grid) return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
 // Event handlers
-const onDragStart = () => {
+const onDragStart = (): void => {
   isDragging.value = true
 }
 
-const onDragEnd = () => {
+const onDragEnd = (): void => {
   isDragging.value = false
 }
 
-const onResizeStart = () => {
+const onResizeStart = (): void => {
   isResizing.value = true
 }
 
-const onResizeEnd = () => {
+const onResizeEnd = (): void => {
   isResizing.value = false
 }
 </script>

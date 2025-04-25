@@ -1,40 +1,87 @@
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, nextTick, onMounted } from 'vue'
 import { DnR } from 'vue-dndnr'
 import ShapeElement from './ShapeElement.vue'
 
-const shapes = ref([
+type ShapeType = 'rectangle' | 'circle' | 'triangle'
+
+interface Position {
+  x: number
+  y: number
+}
+
+interface Size {
+  width: number
+  height: number
+}
+
+interface Shape {
+  id: string
+  type: ShapeType
+  position: Position
+  size: Size
+  color: string
+  zIndex: number
+  isNew?: boolean
+}
+
+// Helper function to generate random position
+function getRandomPosition(width: number, height: number): Position {
+  // Canvas dimensions for random positioning
+  const canvasWidth = 600
+  const canvasHeight = 400
+  const padding = 50
+
+  return {
+    x: padding + Math.random() * (canvasWidth - width - padding * 2),
+    y: padding + Math.random() * (canvasHeight - height - padding * 2)
+  }
+}
+
+const shapes = ref<Shape[]>([
   {
     id: 'rect1',
     type: 'rectangle',
-    position: { x: 50, y: 50 },
+    position: getRandomPosition(120, 80),
     size: { width: 120, height: 80 },
     color: '#4299e1',
     zIndex: 1,
+    isNew: true,
   },
   {
     id: 'circle1',
     type: 'circle',
-    position: { x: 200, y: 100 },
+    position: getRandomPosition(100, 100),
     size: { width: 100, height: 100 },
     color: '#9f7aea',
     zIndex: 2,
+    isNew: true,
   },
   {
     id: 'triangle1',
     type: 'triangle',
-    position: { x: 350, y: 150 },
+    position: getRandomPosition(100, 100),
     size: { width: 100, height: 100 },
     color: '#f56565',
     zIndex: 3,
+    isNew: true,
   },
 ])
 
 // Track the currently selected shape
-const selectedShapeId = ref(null)
+const selectedShapeId = ref<string | null>(null)
+
+// Reset isNew property for initial shapes after animation completes
+onMounted(() => {
+  setTimeout(() => {
+    shapes.value.forEach(shape => {
+      shape.isNew = false
+    })
+  }, 800) // Animation duration is 0.6s, add a little extra time
+})
 
 // Function to select a shape and bring it to front
-function selectShape(id) {
+function selectShape(id: string): void {
   selectedShapeId.value = id
 
   // Update z-index to bring selected shape to front
@@ -46,36 +93,55 @@ function selectShape(id) {
 }
 
 // Function to add a new shape
-function addShape(type) {
+function addShape(type: ShapeType): void {
   const id = `${type}${Date.now()}`
-  const newShape = {
+
+  // Generate random size first
+  const shapeSize = {
+    width: 80 + Math.random() * 50,
+    height: 80 + Math.random() * 50
+  }
+
+  const newShape: Shape = {
     id,
     type,
-    position: { x: 100 + Math.random() * 200, y: 100 + Math.random() * 100 },
-    size: { width: 80 + Math.random() * 50, height: 80 + Math.random() * 50 },
+    position: getRandomPosition(shapeSize.width, shapeSize.height),
+    size: shapeSize,
     color: getRandomColor(),
     zIndex: Math.max(...shapes.value.map(s => s.zIndex), 0) + 1,
+    isNew: true
   }
 
   shapes.value.push(newShape)
   selectShape(id)
+
+  // Use nextTick to ensure DOM is updated before modifying the shape again
+  nextTick(() => {
+    // Reset isNew property after animation completes
+    setTimeout(() => {
+      const shape = shapes.value.find(s => s.id === id)
+      if (shape) {
+        shape.isNew = false
+      }
+    }, 800) // Animation duration is 0.6s, add a little extra time
+  })
 }
 
 // Helper function to generate random colors
-function getRandomColor() {
+function getRandomColor(): string {
   const colors = ['#4299e1', '#9f7aea', '#f56565', '#48bb78', '#ed8936', '#38b2ac']
   return colors[Math.floor(Math.random() * colors.length)]
 }
 
 // Update position and size when dragging or resizing
-function updateShapePosition(id, position) {
+function updateShapePosition(id: string, position: Position): void {
   const shape = shapes.value.find(s => s.id === id)
   if (shape) {
     shape.position = position
   }
 }
 
-function updateShapeSize(id, size) {
+function updateShapeSize(id: string, size: Size): void {
   const shape = shapes.value.find(s => s.id === id)
   if (shape) {
     shape.size = size
@@ -83,8 +149,59 @@ function updateShapeSize(id, size) {
 }
 
 // Clear selection when clicking on the background
-function clearSelection() {
+function clearSelection(): void {
   selectedShapeId.value = null
+}
+
+// Reset canvas to initial state
+function resetCanvas(): void {
+  // Clear selection first to avoid any reactivity issues
+  clearSelection()
+
+  // Create new shapes with unique IDs to avoid reactivity conflicts
+  const timestamp = Date.now()
+
+  // Reset to initial shapes with random positions
+  shapes.value = [
+    {
+      id: `rect${timestamp}`,
+      type: 'rectangle',
+      position: getRandomPosition(120, 80),
+      size: { width: 120, height: 80 },
+      color: '#4299e1',
+      zIndex: 1,
+      isNew: true,
+    },
+    {
+      id: `circle${timestamp}`,
+      type: 'circle',
+      position: getRandomPosition(100, 100),
+      size: { width: 100, height: 100 },
+      color: '#9f7aea',
+      zIndex: 2,
+      isNew: true,
+    },
+    {
+      id: `triangle${timestamp}`,
+      type: 'triangle',
+      position: getRandomPosition(100, 100),
+      size: { width: 100, height: 100 },
+      color: '#f56565',
+      zIndex: 3,
+      isNew: true,
+    },
+  ]
+
+  // Use nextTick to ensure DOM is updated before modifying the shapes again
+  // This breaks the reactivity chain and prevents recursive updates
+  nextTick(() => {
+    // Reset isNew property after animation completes
+    setTimeout(() => {
+      shapes.value.forEach(shape => {
+        shape.isNew = false
+      })
+    }, 800) // Animation duration is 0.6s, add a little extra time
+  })
 }
 </script>
 
@@ -101,6 +218,10 @@ function clearSelection() {
       <button class="toolbar-btn" title="Add Triangle" @click="addShape('triangle')">
         <div class="i-lucide-triangle" />
       </button>
+
+      <button class="toolbar-btn" title="Reset Canvas" @click="resetCanvas">
+        <div class="i-lucide-refresh-ccw" />
+      </button>
     </div>
 
     <!-- Canvas with shapes -->
@@ -110,7 +231,7 @@ function clearSelection() {
         :min-width="20" :min-height="20" @click="selectShape(shape.id)" @drag-start="selectShape(shape.id)"
         @resize-start="selectShape(shape.id)" @drag="updateShapePosition(shape.id, $event)"
         @resize="updateShapeSize(shape.id, $event)">
-        <ShapeElement :type="shape.type" :color="shape.color" :selected="selectedShapeId === shape.id" />
+        <ShapeElement :type="shape.type" :color="shape.color" :selected="selectedShapeId === shape.id" :is-new="shape.isNew" />
       </DnR>
     </div>
 
