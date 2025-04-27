@@ -67,13 +67,6 @@ export default defineConfig({
           { text: 'useDnR', link: '/hooks/use-dnr' },
         ],
       },
-      {
-        text: 'Examples',
-        items: [
-          { text: 'Basic Examples', link: '/examples/' },
-          { text: 'Advanced Examples', link: '/examples/advanced' },
-        ],
-      },
     ],
     sidebar: {
       '/guide/': [

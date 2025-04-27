@@ -49,32 +49,63 @@ const { size, isResizing } = useResizable(elementRef, {
 
 ### Options
 
+#### Core Options
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `initialSize` | `Object` | `{ width: 200, height: 150 }` | Initial size of the element. |
+| `initialSize` | `Object` | `{ width: 'auto', height: 'auto' }` | Initial size of the element. |
 | `minWidth` | `Number` | `10` | Minimum width in pixels. |
 | `minHeight` | `Number` | `10` | Minimum height in pixels. |
 | `maxWidth` | `Number\|null` | `null` | Maximum width in pixels. |
 | `maxHeight` | `Number\|null` | `null` | Maximum height in pixels. |
 | `disabled` | `Boolean` | `false` | Whether resizing is disabled. |
 | `grid` | `Array\|null` | `null` | Snaps the element to a grid. Format: `[width, height]`. |
-| `handles` | `Array` | All handles | Array of handles to display. Options: 'n', 'e', 's', 'w', 'ne', 'se', 'sw', 'nw'. |
+| `handles` | `Array` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Array of handles to display. |
 | `lockAspectRatio` | `Boolean` | `false` | Whether to maintain the aspect ratio when resizing. |
 | `scale` | `Number` | `1` | Scale factor for the resizable element. |
+
+#### Event Control Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `pointerTypes` | `Array` | `['mouse', 'touch', 'pen']` | Array of supported pointer types. |
+| `preventDefault` | `Boolean` | `true` | Whether to prevent default event behavior. |
+| `stopPropagation` | `Boolean` | `false` | Whether to stop event propagation. |
+| `capture` | `Boolean` | `true` | Whether to use event capture phase. |
+| `boundaryThreshold` | `Number` | `8` | Threshold in pixels for handle detection. |
+| `throttleDelay` | `Number` | `16` | Throttle delay in milliseconds for resize events. |
+
+#### Callback Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
 | `onResizeStart` | `Function` | `null` | Callback function called when resizing starts. |
 | `onResize` | `Function` | `null` | Callback function called during resizing. |
 | `onResizeEnd` | `Function` | `null` | Callback function called when resizing ends. |
 
 ## Return Value
 
+### State
+
 | Property | Type | Description |
 |----------|------|-------------|
-| `size` | `Ref<{ width: number, height: number }>` | Current size of the element. |
+| `size` | `Ref<{ width: number\|string, height: number\|string }>` | Current size of the element. |
+| `position` | `Ref<{ x: number, y: number }>` | Current position of the element. |
 | `isResizing` | `Ref<boolean>` | Whether the element is currently being resized. |
-| `setSize` | `(size: { width: number, height: number }) => void` | Function to programmatically set the size. |
-| `reset` | `() => void` | Function to reset the size to the initial size. |
-| `enable` | `() => void` | Function to enable resizing. |
-| `disable` | `() => void` | Function to disable resizing. |
+| `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
+| `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
+| `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
+
+### Methods
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `setSize` | `(size: { width: number\|string, height: number\|string }) => void` | Function to programmatically set the size. |
+| `setPosition` | `(position: { x: number, y: number }) => void` | Function to programmatically set the position. |
+| `onResizeStart` | `(event: PointerEvent) => void` | Handler for resize start event. |
+| `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
+| `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |
+| `detectBoundary` | `(event: PointerEvent, element: HTMLElement) => ResizeHandle \| null` | Function to detect handle at pointer position. |
 
 ## Examples
 

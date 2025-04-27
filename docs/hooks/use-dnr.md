@@ -58,6 +58,17 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
 
 The `useDnR` hook combines all options from both the `useDraggable` and `useResizable` hooks.
 
+#### Common Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `disabled` | `Boolean` | `false` | Whether all interactions are disabled. |
+| `pointerTypes` | `Array` | `undefined` | Array of supported pointer types. |
+| `preventDefault` | `Boolean` | `true` | Whether to prevent default event behavior. |
+| `stopPropagation` | `Boolean` | `false` | Whether to stop event propagation. |
+| `capture` | `Boolean` | `true` | Whether to use event capture phase. |
+| `throttleDelay` | `Number` | `16` | Throttle delay in milliseconds for events. |
+
 #### Draggable Options
 
 | Option | Type | Default | Description |
@@ -90,19 +101,39 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 
 ## Return Value
 
+### State
+
 | Property | Type | Description |
 |----------|------|-------------|
 | `position` | `Ref<{ x: number, y: number }>` | Current position of the element. |
-| `size` | `Ref<{ width: number, height: number }>` | Current size of the element. |
+| `size` | `Ref<{ width: number\|string, height: number\|string }>` | Current size of the element. |
 | `isDragging` | `Ref<boolean>` | Whether the element is currently being dragged. |
 | `isResizing` | `Ref<boolean>` | Whether the element is currently being resized. |
+| `interactionMode` | `Ref<'idle' \| 'dragging' \| 'resizing'>` | Current interaction state. |
+| `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
+| `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
+| `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
+| `isNearResizeHandle` | `Ref<boolean>` | Whether the mouse is near a resize handle. |
+
+### Style
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `style` | `Ref<Object>` | Combined style object for positioning and sizing. |
+
+### Methods
+
+| Method | Type | Description |
+|--------|------|-------------|
 | `setPosition` | `(position: { x: number, y: number }) => void` | Function to programmatically set the position. |
-| `setSize` | `(size: { width: number, height: number }) => void` | Function to programmatically set the size. |
-| `reset` | `() => void` | Function to reset both position and size to their initial values. |
-| `enableDrag` | `() => void` | Function to enable dragging. |
-| `disableDrag` | `() => void` | Function to disable dragging. |
-| `enableResize` | `() => void` | Function to enable resizing. |
-| `disableResize` | `() => void` | Function to disable resizing. |
+| `setSize` | `(size: { width: number\|string, height: number\|string }) => void` | Function to programmatically set the size. |
+| `onDragStart` | `(event: PointerEvent) => void` | Handler for drag start event. |
+| `onDrag` | `(event: PointerEvent) => void` | Handler for drag event. |
+| `onDragEnd` | `(event: PointerEvent) => void` | Handler for drag end event. |
+| `onResizeStart` | `(event: PointerEvent) => void` | Handler for resize start event. |
+| `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
+| `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |
+| `detectBoundary` | `() => void` | Function to detect and enforce boundary constraints. |
 
 ## Examples
 
