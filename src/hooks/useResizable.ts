@@ -120,8 +120,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
   const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
     const rect = element.getBoundingClientRect()
-    const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX
-    const clientY = event instanceof MouseEvent ? event.clientY : (event as TouchEvent).touches[0].clientY
+    const clientX = event.clientX ?? ((event as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
+    const clientY = event.clientY ?? ((event as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
 
     const distToTop = Math.abs(clientY - rect.top)
     const distToBottom = Math.abs(clientY - rect.bottom)
@@ -129,8 +129,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     const distToRight = Math.abs(clientX - rect.right)
 
     const thresholdValue = toValue(boundaryThreshold)
-    const isWithinX = clientX >= rect.left - thresholdValue && clientX <= rect.right + thresholdValue
-    const isWithinY = clientY >= rect.top - thresholdValue && clientY <= rect.bottom + thresholdValue
+
+    const expandedRect = {
+      left: rect.left - thresholdValue,
+      right: rect.right + thresholdValue,
+      top: rect.top - thresholdValue,
+      bottom: rect.bottom + thresholdValue,
+    }
+
+    const isWithinX = clientX >= expandedRect.left && clientX <= expandedRect.right
+    const isWithinY = clientY >= expandedRect.top && clientY <= expandedRect.bottom
 
     if (!isWithinX || !isWithinY) {
       return null
@@ -149,16 +157,18 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       return 'br'
     }
 
-    if (distToTop <= thresholdValue && isWithinX) {
+    const edgeThreshold = thresholdValue * 0.8
+
+    if (distToTop <= edgeThreshold && isWithinX) {
       return 't'
     }
-    if (distToBottom <= thresholdValue && isWithinX) {
+    if (distToBottom <= edgeThreshold && isWithinX) {
       return 'b'
     }
-    if (distToLeft <= thresholdValue && isWithinY) {
+    if (distToLeft <= edgeThreshold && isWithinY) {
       return 'l'
     }
-    if (distToRight <= thresholdValue && isWithinY) {
+    if (distToRight <= edgeThreshold && isWithinY) {
       return 'r'
     }
 
@@ -210,106 +220,158 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
       return
 
-    const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX
-    const clientY = event instanceof MouseEvent ? event.clientY : (event as TouchEvent).touches[0].clientY
-    const startClientX = startEvent.value instanceof MouseEvent ? startEvent.value.clientX : (startEvent.value as unknown as TouchEvent).touches[0].clientX
-    const startClientY = startEvent.value instanceof MouseEvent ? startEvent.value.clientY : (startEvent.value as unknown as TouchEvent).touches[0].clientY
+    const clientX = event.clientX ?? ((event as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
+    const clientY = event.clientY ?? ((event as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
+    const startClientX = startEvent.value.clientX ?? ((startEvent.value as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
+    const startClientY = startEvent.value.clientY ?? ((startEvent.value as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
 
     const deltaX = clientX - startClientX
     const deltaY = clientY - startClientY
 
-    let newSize: Size = { ...startSize.value }
-    let width = Number(startSize.value.width)
-    let height = Number(startSize.value.height)
-
     const newPosition = { ...startPosition.value }
+    const minWidthValue = toValue(minWidth) ?? 0
+    const minHeightValue = toValue(minHeight) ?? 0
+    const maxWidthValue = toValue(maxWidth) ?? Infinity
+    const maxHeightValue = toValue(maxHeight) ?? Infinity
 
-    switch (activeHandle.value) {
-      case 'r':
-      case 'right':
-        width = width + deltaX
-        break
-      case 'l':
-      case 'left':
-        width = width - deltaX
-        if (isAbsolutePositioned.value) {
-          newPosition.x = startPosition.value.x + deltaX
-        }
-        break
-      case 'b':
-      case 'bottom':
-        height = height + deltaY
-        break
-      case 't':
-      case 'top':
-        height = height - deltaY
-        if (isAbsolutePositioned.value) {
-          newPosition.y = startPosition.value.y + deltaY
-        }
-        break
-      case 'tr':
-      case 'top-right':
-        width = width + deltaX
-        height = height - deltaY
-        if (isAbsolutePositioned.value) {
-          newPosition.y = startPosition.value.y + deltaY
-        }
-        break
-      case 'tl':
-      case 'top-left':
-        width = width - deltaX
-        height = height - deltaY
-        if (isAbsolutePositioned.value) {
-          newPosition.x = startPosition.value.x + deltaX
-          newPosition.y = startPosition.value.y + deltaY
-        }
-        break
-      case 'br':
-      case 'bottom-right':
-        width = width + deltaX
-        height = height + deltaY
-        break
-      case 'bl':
-      case 'bottom-left':
-        width = width - deltaX
-        height = height + deltaY
-        if (isAbsolutePositioned.value) {
-          newPosition.x = startPosition.value.x + deltaX
-        }
-        break
-    }
+    // Get current element dimensions and position
+    const rect = el.getBoundingClientRect()
+    const computedStyle = window.getComputedStyle(el)
+    const borderLeft = Number.parseFloat(computedStyle.borderLeftWidth) || 0
+    const borderRight = Number.parseFloat(computedStyle.borderRightWidth) || 0
+    const borderTop = Number.parseFloat(computedStyle.borderTopWidth) || 0
+    const borderBottom = Number.parseFloat(computedStyle.borderBottomWidth) || 0
 
-    width = Math.max(0, width)
-    height = Math.max(0, height)
+    // Calculate available space
+    const availableWidth = rect.width - borderLeft - borderRight
+    const availableHeight = rect.height - borderTop - borderBottom
 
-    if (isAbsolutePositioned.value) {
-      const updatedPosition = { ...position.value }
+    // Pre-calculate potential dimensions
+    let newWidth = Number(startSize.value.width === 'auto' ? availableWidth : startSize.value.width)
+    let newHeight = Number(startSize.value.height === 'auto' ? availableHeight : startSize.value.height)
 
-      if (width > 0 && ['l', 'left', 'tl', 'top-left', 'bl', 'bottom-left'].includes(activeHandle.value)) {
-        const constrainedX = Math.max(0, newPosition.x)
-        updatedPosition.x = constrainedX
+    // Track accumulated position changes
+    let accumulatedDeltaX = 0
+    let accumulatedDeltaY = 0
 
-        if (constrainedX > newPosition.x) {
-          const positionAdjustment = constrainedX - newPosition.x
-          width += positionAdjustment
+    // Calculate new dimensions with constraints
+    const calculateNewDimensions = () => {
+      let widthChange = 0
+      let heightChange = 0
+      let shouldUpdateX = false
+      let shouldUpdateY = false
+
+      // Calculate changes based on different resize handles
+      switch (activeHandle.value) {
+        case 'r':
+        case 'right':
+          widthChange = deltaX
+          break
+        case 'l':
+        case 'left':
+          widthChange = -deltaX
+          shouldUpdateX = true
+          break
+        case 'b':
+        case 'bottom':
+          heightChange = deltaY
+          break
+        case 't':
+        case 'top':
+          heightChange = -deltaY
+          shouldUpdateY = true
+          break
+        case 'tr':
+        case 'top-right':
+          widthChange = deltaX
+          heightChange = -deltaY
+          shouldUpdateY = true
+          break
+        case 'tl':
+        case 'top-left':
+          widthChange = -deltaX
+          heightChange = -deltaY
+          shouldUpdateX = true
+          shouldUpdateY = true
+          break
+        case 'br':
+        case 'bottom-right':
+          widthChange = deltaX
+          heightChange = deltaY
+          break
+        case 'bl':
+        case 'bottom-left':
+          widthChange = -deltaX
+          heightChange = deltaY
+          shouldUpdateX = true
+          break
+      }
+
+      // Calculate new dimensions with constraints
+      const currentWidth = typeof startSize.value.width === 'number' ? startSize.value.width : newWidth
+      const currentHeight = typeof startSize.value.height === 'number' ? startSize.value.height : newHeight
+
+      // Fix: Reset accumulated changes to avoid reverse movement
+      let effectiveWidthChange = widthChange
+      let effectiveHeightChange = heightChange
+
+      // Handle width changes
+      if (shouldUpdateX) {
+        const potentialWidth = currentWidth + widthChange
+        if (potentialWidth < minWidthValue) {
+          // If new width is less than minimum, adjust the offset
+          effectiveWidthChange = minWidthValue - currentWidth
+          accumulatedDeltaX = -effectiveWidthChange
+        }
+        else if (potentialWidth > maxWidthValue) {
+          // If new width is greater than maximum, adjust the offset
+          effectiveWidthChange = maxWidthValue - currentWidth
+          accumulatedDeltaX = -effectiveWidthChange
+        }
+        else {
+          // In normal cases, use the direct offset
+          accumulatedDeltaX = -widthChange
         }
       }
 
-      if (height > 0 && ['t', 'top', 'tl', 'top-left', 'tr', 'top-right'].includes(activeHandle.value)) {
-        const constrainedY = Math.max(0, newPosition.y)
-        updatedPosition.y = constrainedY
-
-        if (constrainedY > newPosition.y) {
-          const positionAdjustment = constrainedY - newPosition.y
-          height += positionAdjustment
+      // Handle height changes
+      if (shouldUpdateY) {
+        const potentialHeight = currentHeight + heightChange
+        if (potentialHeight < minHeightValue) {
+          // If new height is less than minimum, adjust the offset
+          effectiveHeightChange = minHeightValue - currentHeight
+          accumulatedDeltaY = -effectiveHeightChange
+        }
+        else if (potentialHeight > maxHeightValue) {
+          // If new height is greater than maximum, adjust the offset
+          effectiveHeightChange = maxHeightValue - currentHeight
+          accumulatedDeltaY = -effectiveHeightChange
+        }
+        else {
+          // In normal cases, use the direct offset
+          accumulatedDeltaY = -heightChange
         }
       }
 
-      position.value = updatedPosition
+      // Apply final dimension changes
+      newWidth = Math.min(Math.max(currentWidth + effectiveWidthChange, minWidthValue), maxWidthValue)
+      newHeight = Math.min(Math.max(currentHeight + effectiveHeightChange, minHeightValue), maxHeightValue)
+
+      // Update position using corrected accumulated changes
+      if (isAbsolutePositioned.value) {
+        if (shouldUpdateX) {
+          newPosition.x = Math.max(0, startPosition.value.x + accumulatedDeltaX)
+        }
+        if (shouldUpdateY) {
+          newPosition.y = Math.max(0, startPosition.value.y + accumulatedDeltaY)
+        }
+      }
     }
 
-    newSize = { width, height }
+    calculateNewDimensions()
 
+    // 应用网格对齐
+    const newSize = { width: newWidth, height: newHeight }
     let snappedSize = newSize
     const gridValue = toValue(grid)
     if (gridValue) {
@@ -319,14 +381,16 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
+    // 应用最小/最大约束
     let constrainedSize = applyMinMaxConstraints(
       snappedSize,
-      toValue(minWidth),
-      toValue(minHeight),
-      toValue(maxWidth),
-      toValue(maxHeight),
+      minWidthValue,
+      minHeightValue,
+      maxWidthValue,
+      maxHeightValue,
     )
 
+    // 应用宽高比锁定
     if (toValue(lockAspectRatio)) {
       constrainedSize = applyAspectRatioLock(
         constrainedSize,
@@ -335,6 +399,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       )
     }
 
+    // 应用边界约束
     if (bounds) {
       let boundingElement: HTMLElement | null = null
       const boundsValue = toValue(bounds)
@@ -355,6 +420,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           y: targetRect.top - boundingRect.top,
         }
 
+        // 考虑边界约束时的最大尺寸
         const maxBoundWidth = boundingRect.right - boundingRect.left - targetPos.x
         const maxBoundHeight = boundingRect.bottom - boundingRect.top - targetPos.y
 
@@ -367,12 +433,18 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
+    // 更新状态
     size.value = constrainedSize
+    if (isAbsolutePositioned.value) {
+      position.value = newPosition
+    }
 
+    // 应用样式
     applyStyles()
 
-    if (onResizeCallback)
+    if (onResizeCallback) {
       onResizeCallback(size.value, event)
+    }
 
     handleEvent(event)
   }
@@ -404,15 +476,18 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     const el = toValue(target)
     if (el) {
+      // Check positioning type
       const computedStyle = window.getComputedStyle(el)
       isAbsolutePositioned.value = computedStyle.position === 'absolute'
 
+      // Set initial position for absolute positioned elements
       if (isAbsolutePositioned.value) {
         const elementPosition = getElementPosition(el)
         position.value = elementPosition
         startPosition.value = { ...elementPosition }
       }
 
+      // Set initial size if auto
       if (size.value.width === 'auto' || size.value.height === 'auto') {
         const elementSize = getElementSize(el)
         size.value = {
@@ -456,16 +531,63 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }
 
   const setPosition = (newPosition: Position) => {
-    // Prevent negative position values for absolute positioned elements
+    const el = toValue(target)
+    if (!el)
+      return
+
+    // 获取元素的当前位置和尺寸信息
+    const rect = el.getBoundingClientRect()
+    const computedStyle = window.getComputedStyle(el)
+    const marginLeft = Number.parseFloat(computedStyle.marginLeft) || 0
+    const marginTop = Number.parseFloat(computedStyle.marginTop) || 0
+
+    // 如果元素是绝对定位
     if (isAbsolutePositioned.value) {
-      position.value = {
-        x: Math.max(0, newPosition.x),
-        y: Math.max(0, newPosition.y),
+      // 考虑边界约束
+      if (bounds) {
+        const boundsValue = toValue(bounds)
+        let boundingElement: HTMLElement | null = null
+
+        if (boundsValue === 'parent' && el.parentElement) {
+          boundingElement = el.parentElement
+        }
+        else if (boundsValue instanceof HTMLElement) {
+          boundingElement = boundsValue
+        }
+
+        if (boundingElement) {
+          const boundingRect = boundingElement.getBoundingClientRect()
+          const maxX = boundingRect.width - rect.width - marginLeft
+          const maxY = boundingRect.height - rect.height - marginTop
+
+          // 确保位置在边界内
+          position.value = {
+            x: Math.max(0, Math.min(newPosition.x, maxX)),
+            y: Math.max(0, Math.min(newPosition.y, maxY)),
+          }
+        }
+        else {
+          // 如果没有边界元素,至少确保不会出现负值
+          position.value = {
+            x: Math.max(0, newPosition.x),
+            y: Math.max(0, newPosition.y),
+          }
+        }
+      }
+      else {
+        // 没有边界约束时,直接更新位置,但确保不会出现负值
+        position.value = {
+          x: Math.max(0, newPosition.x),
+          y: Math.max(0, newPosition.y),
+        }
       }
     }
     else {
+      // 对于相对定位元素,直接更新位置
       position.value = { ...newPosition }
     }
+
+    // 应用新的位置
     applyStyles()
   }
 
