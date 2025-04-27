@@ -89,6 +89,12 @@ export interface ResizableOptions {
   capture?: MaybeRefOrGetter<boolean>
 
   /**
+   * Throttle delay in milliseconds for resize events
+   * @default 16 (approximately 60fps)
+   */
+  throttleDelay?: MaybeRefOrGetter<number>
+
+  /**
    * Called when resizing starts
    * @param size Current size of the element
    * @param event The mouse or touch event

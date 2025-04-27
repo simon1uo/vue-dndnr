@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<DraggableProps>(), {
   preventDefault: true,
   stopPropagation: false,
   capture: true,
+  throttleDelay: 16,
   draggingClassName: 'dragging',
 })
 
@@ -42,6 +43,7 @@ const pointerTypes = computed(() => toValue(props.pointerTypes))
 const preventDefault = computed(() => toValue(props.preventDefault))
 const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
+const throttleDelay = computed(() => toValue(props.throttleDelay))
 
 const {
   position,
@@ -61,6 +63,7 @@ const {
   preventDefault,
   stopPropagation,
   capture,
+  throttleDelay,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)

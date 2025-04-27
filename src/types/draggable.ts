@@ -72,6 +72,12 @@ export interface DraggableOptions {
   capture?: MaybeRefOrGetter<boolean>
 
   /**
+   * Throttle delay in milliseconds for drag events
+   * @default 16 (approximately 60fps)
+   */
+  throttleDelay?: MaybeRefOrGetter<number>
+
+  /**
    * Called when dragging starts
    * @param position Current position of the element
    * @param event The mouse or touch event

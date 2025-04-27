@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   preventDefault: true,
   stopPropagation: false,
   capture: true,
+  throttleDelay: 16,
 })
 
 const emit = defineEmits<{
@@ -37,6 +38,7 @@ const pointerTypes = computed(() => toValue(props.pointerTypes))
 const preventDefault = computed(() => toValue(props.preventDefault))
 const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
+const throttleDelay = computed(() => toValue(props.throttleDelay))
 
 const {
   size: currentSize,
@@ -56,6 +58,7 @@ const {
   preventDefault,
   stopPropagation,
   capture,
+  throttleDelay,
   onResizeStart: (size, event) => {
     if (activeHandle.value) {
       emit('resizeStart', size, event)

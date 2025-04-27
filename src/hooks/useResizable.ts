@@ -11,6 +11,7 @@ import {
   getElementSize,
   isClient,
 } from '../utils'
+import { throttle } from '../utils/throttle'
 import { useEventListener } from './useEventListener'
 
 export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
@@ -30,6 +31,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     stopPropagation = false,
     capture = true,
     boundaryThreshold = 8,
+    throttleDelay = 16, // Default to ~60fps
     onResizeStart: onResizeStartCallback,
     onResize: onResizeCallback,
     onResizeEnd: onResizeEndCallback,
@@ -203,7 +205,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
-  const onResize = (event: PointerEvent) => {
+  const updateSize = (event: PointerEvent) => {
     const el = toValue(target)
     if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
       return
@@ -373,6 +375,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       onResizeCallback(size.value, event)
 
     handleEvent(event)
+  }
+
+  // Create a throttled version of the updateSize function
+  const throttledUpdateSize = throttle(updateSize, toValue(throttleDelay))
+
+  const onResize = (event: PointerEvent) => {
+    throttledUpdateSize(event)
   }
 
   const onResizeEnd = (event: PointerEvent) => {

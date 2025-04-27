@@ -11,6 +11,7 @@ import {
   getElementBounds,
   getElementSize,
 } from '../utils'
+import { throttle } from '../utils/throttle'
 import { useEventListener } from './useEventListener'
 
 export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DraggableOptions = {}) {
@@ -30,6 +31,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     onDragStart: onDragStartCallback,
     onDrag: onDragCallback,
     onDragEnd: onDragEndCallback,
+    throttleDelay = 16, // Default to ~60fps
   } = options
 
   const position = ref<Position>({ ...initialPosition })
@@ -77,7 +79,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
-  const onDrag = (event: PointerEvent) => {
+  const updatePosition = (event: PointerEvent) => {
     const el = toValue(draggingHandle)
     if (!isDragging.value || !startEvent.value || !el)
       return
@@ -144,6 +146,13 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     position.value = newPosition
     handleEvent(event)
+  }
+
+  // Create a throttled version of the updatePosition function
+  const throttledUpdatePosition = throttle(updatePosition, toValue(throttleDelay))
+
+  const onDrag = (event: PointerEvent) => {
+    throttledUpdatePosition(event)
   }
 
   const onDragEnd = (event: PointerEvent) => {
