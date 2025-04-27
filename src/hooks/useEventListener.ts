@@ -1,12 +1,6 @@
-/**
- * Hook for adding event listeners with automatic cleanup
- */
-
-import { isClient } from '@/utils'
 import type { MaybeRefOrGetter } from 'vue'
+import { isClient } from '@/utils'
 import { getCurrentScope, onScopeDispose, toValue, watch } from 'vue'
-
-
 
 function tryOnScopeDispose(fn: () => void) {
   if (getCurrentScope()) {
@@ -21,6 +15,12 @@ export interface UseEventListenerOptions extends AddEventListenerOptions {
   passive?: boolean
 }
 
+type EventMap = {
+  [K in keyof WindowEventMap]: WindowEventMap[K]
+} & {
+  [key: string]: Event
+}
+
 /**
  * Hook for adding event listeners with automatic cleanup
  * @param target The event target (can be a ref or a getter)
@@ -29,21 +29,21 @@ export interface UseEventListenerOptions extends AddEventListenerOptions {
  * @param options Optional event listener options
  * @returns A function to stop watching and clean up the event listener
  */
-export function useEventListener(
+export function useEventListener<K extends keyof EventMap>(
   target: MaybeRefOrGetter<EventTarget | null | undefined>,
-  event: string,
-  listener: any,
+  event: K,
+  listener: (event: EventMap[K]) => void,
   options?: boolean | UseEventListenerOptions,
 ) {
   const register = (
     el: EventTarget,
-    event: string,
-    listener: any,
+    event: K,
+    listener: (event: EventMap[K]) => void,
     options: boolean | AddEventListenerOptions | undefined,
   ) => {
     if (isClient) {
-      el.addEventListener(event, listener, options)
-      return () => el.removeEventListener(event, listener, options)
+      el.addEventListener(event as string, listener as EventListener, options)
+      return () => el.removeEventListener(event as string, listener as EventListener, options)
     }
     return () => { }
   }
@@ -54,18 +54,20 @@ export function useEventListener(
     cleanups.length = 0
   }
 
-  const stopWatch = watch(() => [toValue(target), event, listener, options], (
-    [rawTarget, event, listener, options],
-  ) => {
-    if (!rawTarget || !event || !listener)
-      return
-    if (typeof rawTarget === 'string')
-      return
+  const stopWatch = watch(
+    () => [toValue(target), event, listener, options] as const,
+    ([rawTarget, event, listener, options]) => {
+      if (!rawTarget || !event || !listener)
+        return
+      if (typeof rawTarget === 'string')
+        return
 
-    cleanups.push(register(rawTarget, event, listener, options))
-  }, {
-    immediate: true,
-  })
+      cleanups.push(register(rawTarget, event, listener, options))
+    },
+    {
+      immediate: true,
+    },
+  )
 
   const stop = () => {
     stopWatch()

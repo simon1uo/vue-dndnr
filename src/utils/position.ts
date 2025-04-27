@@ -87,9 +87,9 @@ export function calculateDelta(position1: Position, position2: Position): Positi
 /**
  * Calculate position from event and scale
  */
-export function calculatePosition(event: MouseEvent | TouchEvent, scale = 1): Position {
-  const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
-  const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
+export function calculatePosition(event: PointerEvent, scale = 1): Position {
+  const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX
+  const clientY = event instanceof MouseEvent ? event.clientY : (event as TouchEvent).touches[0].clientY
 
   return {
     x: clientX / scale,

@@ -32,13 +32,13 @@ const emit = defineEmits<{
   'update:size': [size: Size]
   'update:sizeModel': [size: Size]
 
-  'dragStart': [position: Position, event: MouseEvent | TouchEvent]
-  'drag': [position: Position, event: MouseEvent | TouchEvent]
-  'dragEnd': [position: Position, event: MouseEvent | TouchEvent]
+  'dragStart': [position: Position, event: PointerEvent]
+  'drag': [position: Position, event: PointerEvent]
+  'dragEnd': [position: Position, event: PointerEvent]
 
-  'resizeStart': [size: Size, event: MouseEvent | TouchEvent]
-  'resize': [size: Size, event: MouseEvent | TouchEvent]
-  'resizeEnd': [size: Size, event: MouseEvent | TouchEvent]
+  'resizeStart': [size: Size, event: PointerEvent]
+  'resize': [size: Size, event: PointerEvent]
+  'resizeEnd': [size: Size, event: PointerEvent]
   'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
