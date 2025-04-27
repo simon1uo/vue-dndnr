@@ -2,41 +2,6 @@
 
 The `useDraggable` hook adds drag functionality to any element.
 
-## Usage
-
-<UseDraggableDemo />
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useDraggable } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { position, isDragging } = useDraggable(elementRef, {
-  initialPosition: { x: 100, y: 100 },
-  bounds: 'parent',
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      position: 'absolute',
-      left: `${position.x}px`,
-      top: `${position.y}px`,
-      backgroundColor: isDragging ? '#e74c3c' : '#3498db',
-      padding: '20px',
-      borderRadius: '4px',
-      color: 'white',
-      cursor: 'move',
-    }"
-  >
-    Drag me using the hook!
-  </div>
-</template>
-```
-
 ## Parameters
 
 | Parameter | Type | Description |

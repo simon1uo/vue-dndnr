@@ -2,44 +2,6 @@
 
 The `useResizable` hook adds resize functionality to any element.
 
-## Usage
-
-<UseResizableDemo />
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useResizable } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { size, isResizing } = useResizable(elementRef, {
-  initialSize: { width: 200, height: 150 },
-  minWidth: 100,
-  minHeight: 100,
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: isResizing ? '#e74c3c' : '#3498db',
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      position: 'relative',
-    }"
-  >
-    Resize me using the hook!
-    <div>Size: {{ size.width }} x {{ size.height }}</div>
-  </div>
-</template>
-```
-
 ## Parameters
 
 | Parameter | Type | Description |

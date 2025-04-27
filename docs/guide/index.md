@@ -24,4 +24,3 @@ Vue DNDNR provides a set of components and hooks to easily add drag and resize f
 - [Basic Usage](/guide/basic-usage) - Learn how to use the basic components
 - [Components](/components/) - Explore the available components
 - [Hooks](/hooks/) - Learn about the TypeScript hooks
-- [Examples](/examples/) - See examples of Vue DNDNR in action

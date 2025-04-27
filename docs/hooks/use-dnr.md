@@ -2,51 +2,6 @@
 
 The `useDnR` hook combines both drag and resize functionality into a single hook.
 
-## Usage
-
-<UseDnRDemo />
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useDnR } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { position, size, isDragging, isResizing } = useDnR(elementRef, {
-  initialPosition: { x: 100, y: 100 },
-  initialSize: { width: 200, height: 150 },
-  bounds: 'parent',
-  minWidth: 100,
-  minHeight: 100,
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      position: 'absolute',
-      left: `${position.x}px`,
-      top: `${position.y}px`,
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: isDragging || isResizing ? '#e74c3c' : '#3498db',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      cursor: isDragging ? 'move' : 'default',
-    }"
-  >
-    <div>Drag and resize me!</div>
-    <div>Position: {{ position.x }}, {{ position.y }}</div>
-    <div>Size: {{ size.width }} x {{ size.height }}</div>
-  </div>
-</template>
-```
-
 ## Parameters
 
 | Parameter | Type | Description |

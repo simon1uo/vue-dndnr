@@ -2,27 +2,6 @@
 
 The `Draggable` component allows you to make any element draggable.
 
-## Basic Usage
-
-<DraggableDemo />
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { Draggable } from 'vue-dndnr'
-
-const position = ref({ x: 100, y: 100 })
-</script>
-
-<template>
-  <Draggable v-model:position="position">
-    <div class="draggable-box">
-      Drag me!
-    </div>
-  </Draggable>
-</template>
-```
-
 ## Props
 
 ### Model Values

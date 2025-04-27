@@ -2,28 +2,6 @@
 
 The `DnR` (Draggable and Resizable) component combines both draggable and resizable functionality into a single component.
 
-## Basic Usage
-
-<DnRDemo />
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { DnR } from 'vue-dndnr'
-
-const position = ref({ x: 100, y: 100 })
-const size = ref({ width: 200, height: 150 })
-</script>
-
-<template>
-  <DnR v-model:position="position" v-model:size="size">
-    <div class="dnr-box">
-      Drag and resize me!
-    </div>
-  </DnR>
-</template>
-```
-
 ## Props
 
 The `DnR` component combines all props from both the `Draggable` and `Resizable` components.
@@ -106,56 +84,3 @@ The `DnR` component emits all events from both the `Draggable` and `Resizable` c
 | Slot | Props | Description |
 |------|-------|-------------|
 | default | `{ position, size, isDragging, isResizing }` | The content to be made draggable and resizable. |
-
-## Examples
-
-### With Bounds and Size Constraints
-
-```vue
-<template>
-  <div class="parent-container">
-    <DnR
-      v-model:position="position"
-      v-model:size="size"
-      bounds="parent"
-      :min-width="100"
-      :min-height="100"
-      :max-width="500"
-      :max-height="400"
-    >
-      <div class="dnr-box">
-        Constrained within parent
-        <br>
-        Size between 100x100 and 500x400
-      </div>
-    </DnR>
-  </div>
-</template>
-```
-
-### With Grid Snapping
-
-```vue
-<template>
-  <DnR v-model:position="position" v-model:size="size" :grid="[20, 20]">
-    <div class="dnr-box">
-      Snaps to 20x20 grid
-    </div>
-  </DnR>
-</template>
-```
-
-### With Handle
-
-```vue
-<template>
-  <DnR v-model:position="position" v-model:size="size" handle=".handle">
-    <div class="dnr-box">
-      <div class="handle">
-        Drag here
-      </div>
-      <div>Content (not draggable)</div>
-    </div>
-  </DnR>
-</template>
-```
