@@ -5,11 +5,7 @@ import { computed, ref, toValue, watch } from 'vue'
 
 interface DnRProps extends DnROptions {
   position?: Position
-  positionModel?: Position
-
   size?: Size
-  sizeModel?: Size
-
   className?: string
   draggingClassName?: string
   resizingClassName?: string
@@ -17,9 +13,7 @@ interface DnRProps extends DnROptions {
 
 const props = withDefaults(defineProps<DnRProps>(), {
   position: undefined,
-  positionModel: undefined,
   size: undefined,
-  sizeModel: undefined,
   disabled: false,
   draggingClassName: 'dragging',
   resizingClassName: 'resizing',
@@ -27,10 +21,7 @@ const props = withDefaults(defineProps<DnRProps>(), {
 
 const emit = defineEmits<{
   'update:position': [position: Position]
-  'update:positionModel': [position: Position]
-
   'update:size': [size: Size]
-  'update:sizeModel': [size: Size]
 
   'dragStart': [position: Position, event: PointerEvent]
   'drag': [position: Position, event: PointerEvent]
@@ -46,8 +37,8 @@ const targetRef = ref<HTMLElement | null>(null)
 
 // Create reactive options object
 const dnrOptions: DnROptions = {
-  initialPosition: props.position || props.positionModel || { x: 0, y: 0 },
-  initialSize: props.size || props.sizeModel || { width: 'auto', height: 'auto' },
+  initialPosition: props.position || { x: 0, y: 0 },
+  initialSize: props.size || { width: 'auto', height: 'auto' },
   handle: computed(() => toValue(props.handle) ?? targetRef.value),
   bounds: computed(() => toValue(props.bounds)),
   grid: computed(() => toValue(props.grid)),
@@ -120,27 +111,7 @@ watch(
 )
 
 watch(
-  () => props.positionModel,
-  (newPosition) => {
-    if (newPosition && interactionMode.value === 'idle') {
-      setPosition(newPosition)
-    }
-  },
-  { deep: true },
-)
-
-watch(
   () => props.size,
-  (newSize) => {
-    if (newSize && interactionMode.value === 'idle') {
-      setSize(newSize)
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  () => props.sizeModel,
   (newSize) => {
     if (newSize && interactionMode.value === 'idle') {
       setSize(newSize)
@@ -153,7 +124,6 @@ watch(
   position,
   (newPosition) => {
     emit('update:position', newPosition)
-    emit('update:positionModel', newPosition)
   },
   { deep: true },
 )
@@ -162,7 +132,6 @@ watch(
   size,
   (newSize) => {
     emit('update:size', newSize)
-    emit('update:sizeModel', newSize)
   },
   { deep: true },
 )

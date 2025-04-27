@@ -46,9 +46,7 @@ The `DnR` component combines all props from both the `Draggable` and `Resizable`
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `position` | `Object` | `{ x: 0, y: 0 }` | The position of the element. Can be bound with `v-model:position`. |
-| `positionModel` | `Object` | `undefined` | Alternative v-model binding for position. |
 | `size` | `Object` | `{ width: 'auto', height: 'auto' }` | The size of the element. Can be bound with `v-model:size`. |
-| `sizeModel` | `Object` | `undefined` | Alternative v-model binding for size. |
 
 ### Draggable Props
 
@@ -84,9 +82,7 @@ The `DnR` component emits all events from both the `Draggable` and `Resizable` c
 | Event | Parameters | Description |
 |-------|------------|-------------|
 | `update:position` | `{ x, y }` | Emitted when the position changes. |
-| `update:positionModel` | `{ x, y }` | Alternative v-model event for position. |
 | `update:size` | `{ width, height }` | Emitted when the size changes. |
-| `update:sizeModel` | `{ width, height }` | Alternative v-model event for size. |
 | `hoverHandleChange` | `ResizeHandle \| null` | Emitted when mouse hovers over a resize handle. |
 
 ### Draggable Events
