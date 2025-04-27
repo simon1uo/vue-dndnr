@@ -8,8 +8,8 @@ The `DnR` (Draggable and Resizable) component combines both draggable and resiza
 
 ```vue
 <script setup>
-import { DnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { DnR } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 const size = ref({ width: 200, height: 150 })
@@ -17,7 +17,9 @@ const size = ref({ width: 200, height: 150 })
 
 <template>
   <DnR v-model:position="position" v-model:size="size">
-    <div class="dnr-box">Drag and resize me!</div>
+    <div class="dnr-box">
+      Drag and resize me!
+    </div>
   </DnR>
 </template>
 ```
@@ -112,7 +114,9 @@ The `DnR` component emits all events from both the `Draggable` and `Resizable` c
 ```vue
 <template>
   <DnR v-model:position="position" v-model:size="size" :grid="[20, 20]">
-    <div class="dnr-box">Snaps to 20x20 grid</div>
+    <div class="dnr-box">
+      Snaps to 20x20 grid
+    </div>
   </DnR>
 </template>
 ```
@@ -123,7 +127,9 @@ The `DnR` component emits all events from both the `Draggable` and `Resizable` c
 <template>
   <DnR v-model:position="position" v-model:size="size" handle=".handle">
     <div class="dnr-box">
-      <div class="handle">Drag here</div>
+      <div class="handle">
+        Drag here
+      </div>
       <div>Content (not draggable)</div>
     </div>
   </DnR>

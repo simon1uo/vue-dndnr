@@ -38,8 +38,8 @@ Here's a simple example using the `useDraggable` hook:
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position, isDragging } = useDraggable(elementRef, {
@@ -49,17 +49,17 @@ const { position, isDragging } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
+  <div
+    ref="elementRef"
+    :style="{
       position: 'absolute',
-      left: `${position.x}px`, 
+      left: `${position.x}px`,
       top: `${position.y}px`,
       padding: '20px',
       backgroundColor: isDragging ? '#e74c3c' : '#3498db',
       color: 'white',
       borderRadius: '4px',
-      cursor: 'move'
+      cursor: 'move',
     }"
   >
     Drag me using the hook!

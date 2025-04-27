@@ -26,27 +26,27 @@ const boundsOptions: string[] = ['parent', 'none']
 const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid: GridType): string => {
-  if (!grid) return 'None'
+function gridDisplay(grid: GridType): string {
+  if (!grid)
+    return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
 // Event handlers
-const onDragStart = (): void => {
+function onDragStart(): void {
   isDragging.value = true
 }
 
-const onDragEnd = (): void => {
+function onDragEnd(): void {
   isDragging.value = false
 }
-
 </script>
 
 <template>
   <DemoBox title="Draggable Component">
     <template #controls>
       <DemoControl>
-        <input type="checkbox" id="disabled" v-model="disabled" />
+        <input id="disabled" v-model="disabled" type="checkbox">
         <label for="disabled">Disabled</label>
       </DemoControl>
 
@@ -67,16 +67,20 @@ const onDragEnd = (): void => {
       </DemoControl>
     </template>
 
-    <Draggable v-model:position="position" :bounds="bounds" :disabled="disabled" :grid="grid" @drag-start="onDragStart"
-      @drag-end="onDragEnd">
+    <Draggable
+      v-model:position="position" :bounds="bounds" :disabled="disabled" :grid="grid" @drag-start="onDragStart"
+      @drag-end="onDragEnd"
+    >
       <div
         class="p-4 rounded-lg text-white flex flex-col items-center gap-2 transition-colors duration-200 cursor-move select-none"
-        :class="isDragging ? 'bg-primary-dark' : 'bg-primary'">
-
+        :class="isDragging ? 'bg-primary-dark' : 'bg-primary'"
+      >
         <div class="text-sm opacity-80">
           Position: {{ Math.round(position.x) }}, {{ Math.round(position.y) }}
         </div>
-        <div v-if="isDragging" class="text-sm opacity-80">Dragging...</div>
+        <div v-if="isDragging" class="text-sm opacity-80">
+          Dragging...
+        </div>
       </div>
     </Draggable>
   </DemoBox>
@@ -84,7 +88,9 @@ const onDragEnd = (): void => {
   <DemoBox title="Draggable Component with Handle">
     <Draggable v-model:position="handlePosition" :handle="handleRef">
       <div class="draggable-box">
-        <div ref="handleRef">👋 Drag me!</div>
+        <div ref="handleRef">
+          👋 Drag me!
+        </div>
         <div>Content (not draggable)</div>
       </div>
     </Draggable>

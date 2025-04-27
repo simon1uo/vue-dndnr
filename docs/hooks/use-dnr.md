@@ -8,8 +8,8 @@ The `useDnR` hook combines both drag and resize functionality into a single hook
 
 ```vue
 <script setup>
-import { useDnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDnR } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position, size, isDragging, isResizing } = useDnR(elementRef, {
@@ -37,7 +37,7 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      cursor: isDragging ? 'move' : 'default'
+      cursor: isDragging ? 'move' : 'default',
     }"
   >
     <div>Drag and resize me!</div>
@@ -110,8 +110,8 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 
 ```vue
 <script setup>
-import { useDnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDnR } from 'vue-dndnr'
 
 const containerRef = ref(null)
 const elementRef = ref(null)
@@ -146,7 +146,7 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: '4px',
-        cursor: isDragging ? 'move' : 'default'
+        cursor: isDragging ? 'move' : 'default',
       }"
     >
       <div>Constrained within parent</div>
@@ -160,8 +160,8 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
 
 ```vue
 <script setup>
-import { useDnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDnR } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position, size } = useDnR(elementRef, {
@@ -186,7 +186,7 @@ const { position, size } = useDnR(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      cursor: 'move'
+      cursor: 'move',
     }"
   >
     Snaps to 20x20 grid
@@ -198,8 +198,8 @@ const { position, size } = useDnR(elementRef, {
 
 ```vue
 <script setup>
-import { useDnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDnR } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position, size, setPosition, setSize, reset } = useDnR(elementRef, {
@@ -240,17 +240,25 @@ function resetElement() {
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: '4px',
-        cursor: 'move'
+        cursor: 'move',
       }"
     >
       Drag and resize me!
     </div>
 
     <div style="position: fixed; bottom: 20px; left: 20px;">
-      <button @click="moveToCenter">Center</button>
-      <button @click="makeSmaller">Smaller</button>
-      <button @click="makeLarger">Larger</button>
-      <button @click="resetElement">Reset</button>
+      <button @click="moveToCenter">
+        Center
+      </button>
+      <button @click="makeSmaller">
+        Smaller
+      </button>
+      <button @click="makeLarger">
+        Larger
+      </button>
+      <button @click="resetElement">
+        Reset
+      </button>
     </div>
   </div>
 </template>

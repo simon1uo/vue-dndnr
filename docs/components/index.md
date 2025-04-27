@@ -22,8 +22,6 @@ The `DnR` component combines both draggable and resizable functionality into a s
 
 [Learn more about DnR →](/components/dnr)
 
-
-
 ## Component Design Philosophy
 
 All components in Vue DNDNR follow these design principles:
@@ -40,8 +38,8 @@ Here's a simple example using the `Draggable` component:
 
 ```vue
 <script setup>
-import { Draggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 </script>

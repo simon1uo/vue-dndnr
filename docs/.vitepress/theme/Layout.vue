@@ -15,9 +15,8 @@ const { Layout } = DefaultTheme
 </template>
 
 <style scoped>
- 
 :deep(.VPHomeHero .container) {
-  display: flex; 
+  display: flex;
   align-items: center;
 }
 
@@ -25,7 +24,7 @@ const { Layout } = DefaultTheme
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-   
+
 }
 :deep(.VPHomeHero .image .image-container) {
   height: fit-content;

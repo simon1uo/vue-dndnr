@@ -8,8 +8,8 @@ The `Draggable` component allows you to make any element draggable.
 
 ```vue
 <script setup>
-import { Draggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 </script>
@@ -45,8 +45,8 @@ The `Resizable` component allows you to make any element resizable.
 
 ```vue
 <script setup>
-import { Resizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
 
 const size = ref({ width: 200, height: 150 })
 </script>
@@ -81,19 +81,19 @@ The `DnR` component combines both draggable and resizable functionality.
 
 ```vue
 <script setup>
-import { DnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { DnR } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 const size = ref({ width: 200, height: 150 })
 </script>
 
 <template>
-  <DnR 
-    v-model:position="position" 
-    v-model:size="size" 
+  <DnR
+    v-model:position="position"
+    v-model:size="size"
     bounds="parent"
-    :min-width="100" 
+    :min-width="100"
     :min-height="100"
   >
     <div class="dnr-box">
@@ -126,8 +126,8 @@ If you need more control, you can use the hooks directly:
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position, isDragging } = useDraggable(elementRef, {
@@ -137,18 +137,18 @@ const { position, isDragging } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div 
-    ref="elementRef" 
-    :style="{ 
+  <div
+    ref="elementRef"
+    :style="{
       position: 'absolute',
-      left: `${position.x}px`, 
+      left: `${position.x}px`,
       top: `${position.y}px`,
       backgroundColor: isDragging ? '#e74c3c' : '#3498db',
       padding: '20px',
       borderRadius: '4px',
       color: 'white',
       cursor: 'move',
-      userSelect: 'none'
+      userSelect: 'none',
     }"
   >
     Using useDraggable hook

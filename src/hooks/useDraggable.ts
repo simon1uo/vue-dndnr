@@ -100,7 +100,6 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       newPosition = applyGrid(newPosition, gridValue)
     }
 
-
     if (bounds) {
       let boundingElement: HTMLElement | null = null
       const boundsValue = toValue(bounds)

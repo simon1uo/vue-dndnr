@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { DnR } from 'vue-dndnr'
 import ShapeElement from './ShapeElement.vue'
 
@@ -34,7 +34,7 @@ function getRandomPosition(width: number, height: number): Position {
 
   return {
     x: padding + Math.random() * (canvasWidth - width - padding * 2),
-    y: padding + Math.random() * (canvasHeight - height - padding * 2)
+    y: padding + Math.random() * (canvasHeight - height - padding * 2),
   }
 }
 
@@ -74,7 +74,7 @@ const selectedShapeId = ref<string | null>(null)
 // Reset isNew property for initial shapes after animation completes
 onMounted(() => {
   setTimeout(() => {
-    shapes.value.forEach(shape => {
+    shapes.value.forEach((shape) => {
       shape.isNew = false
     })
   }, 800) // Animation duration is 0.6s, add a little extra time
@@ -99,7 +99,7 @@ function addShape(type: ShapeType): void {
   // Generate random size first
   const shapeSize = {
     width: 80 + Math.random() * 50,
-    height: 80 + Math.random() * 50
+    height: 80 + Math.random() * 50,
   }
 
   const newShape: Shape = {
@@ -109,7 +109,7 @@ function addShape(type: ShapeType): void {
     size: shapeSize,
     color: getRandomColor(),
     zIndex: Math.max(...shapes.value.map(s => s.zIndex), 0) + 1,
-    isNew: true
+    isNew: true,
   }
 
   shapes.value.push(newShape)
@@ -197,7 +197,7 @@ function resetCanvas(): void {
   nextTick(() => {
     // Reset isNew property after animation completes
     setTimeout(() => {
-      shapes.value.forEach(shape => {
+      shapes.value.forEach((shape) => {
         shape.isNew = false
       })
     }, 800) // Animation duration is 0.6s, add a little extra time
@@ -226,11 +226,13 @@ function resetCanvas(): void {
 
     <!-- Canvas with shapes -->
     <div class="editor-canvas">
-      <DnR v-for="shape in shapes" :key="shape.id" v-model:position="shape.position" v-model:size="shape.size"
+      <DnR
+        v-for="shape in shapes" :key="shape.id" v-model:position="shape.position" v-model:size="shape.size"
         :style="{ zIndex: shape.zIndex }" :class="{ 'shape-selected': selectedShapeId === shape.id }" bounds="parent"
         :min-width="20" :min-height="20" @click="selectShape(shape.id)" @drag-start="selectShape(shape.id)"
         @resize-start="selectShape(shape.id)" @drag="updateShapePosition(shape.id, $event)"
-        @resize="updateShapeSize(shape.id, $event)">
+        @resize="updateShapeSize(shape.id, $event)"
+      >
         <ShapeElement :type="shape.type" :color="shape.color" :selected="selectedShapeId === shape.id" :is-new="shape.isNew" />
       </DnR>
     </div>
@@ -240,12 +242,12 @@ function resetCanvas(): void {
       <div v-if="selectedShapeId" class="status-info">
         <span>Selected: {{ selectedShapeId }}</span>
         <span v-if="selectedShapeId">
-          {{shapes.find(s => s.id === selectedShapeId)?.position.x.toFixed(0)}},
-          {{shapes.find(s => s.id === selectedShapeId)?.position.y.toFixed(0)}}
+          {{ shapes.find(s => s.id === selectedShapeId)?.position.x.toFixed(0) }},
+          {{ shapes.find(s => s.id === selectedShapeId)?.position.y.toFixed(0) }}
         </span>
         <span v-if="selectedShapeId">
-          {{shapes.find(s => s.id === selectedShapeId)?.size.width.toFixed(0)}} x
-          {{shapes.find(s => s.id === selectedShapeId)?.size.height.toFixed(0)}}
+          {{ shapes.find(s => s.id === selectedShapeId)?.size.width.toFixed(0) }} x
+          {{ shapes.find(s => s.id === selectedShapeId)?.size.height.toFixed(0) }}
         </span>
       </div>
       <div v-else class="status-info">

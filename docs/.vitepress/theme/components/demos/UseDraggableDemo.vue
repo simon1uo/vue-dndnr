@@ -4,11 +4,6 @@ import { useDraggable } from 'vue-dndnr'
 import DemoBox from './DemoBox.vue'
 import DemoControl from './DemoControl.vue'
 
-interface Position {
-  x: number
-  y: number
-}
-
 type GridType = [number, number] | null
 
 // State
@@ -23,17 +18,18 @@ const boundsOptions: string[] = ['parent', 'none']
 const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid: GridType): string => {
-  if (!grid) return 'None'
+function gridDisplay(grid: GridType): string {
+  if (!grid)
+    return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
 // Use the hook
 const { position, isDragging } = useDraggable(elementRef, {
   initialPosition: { x: 50, y: 50 },
-  bounds: bounds,
-  disabled: disabled,
-  grid: grid,
+  bounds,
+  disabled,
+  grid,
 })
 </script>
 
@@ -41,7 +37,7 @@ const { position, isDragging } = useDraggable(elementRef, {
   <DemoBox title="useDraggable Hook">
     <template #controls>
       <DemoControl>
-        <input type="checkbox" id="use-draggable-disabled" v-model="disabled" />
+        <input id="use-draggable-disabled" v-model="disabled" type="checkbox">
         <label for="use-draggable-disabled">Disabled</label>
       </DemoControl>
 
@@ -66,10 +62,9 @@ const { position, isDragging } = useDraggable(elementRef, {
       <div
         ref="elementRef"
         class="absolute p-4 rounded-lg text-white cursor-move select-none flex flex-col items-center gap-2 transition-colors duration-200"
-        :class="isDragging ? 'bg-primary-dark' : 'bg-primary'"
-        :style="{
+        :class="isDragging ? 'bg-primary-dark' : 'bg-primary'" :style="{
           left: `${position.x}px`,
-          top: `${position.y}px`
+          top: `${position.y}px`,
         }"
       >
         <div>👋 Drag me!</div>

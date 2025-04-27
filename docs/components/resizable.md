@@ -8,15 +8,17 @@ The `Resizable` component allows you to make any element resizable.
 
 ```vue
 <script setup>
-import { Resizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
 
 const size = ref({ width: 200, height: 150 })
 </script>
 
 <template>
   <Resizable v-model:size="size">
-    <div class="resizable-box">Resize me!</div>
+    <div class="resizable-box">
+      Resize me!
+    </div>
   </Resizable>
 </template>
 ```
@@ -77,7 +79,9 @@ const size = ref({ width: 200, height: 150 })
 ```vue
 <template>
   <Resizable v-model:size="size" :grid="[20, 20]">
-    <div class="resizable-box">Snaps to 20x20 grid</div>
+    <div class="resizable-box">
+      Snaps to 20x20 grid
+    </div>
   </Resizable>
 </template>
 ```
@@ -87,7 +91,9 @@ const size = ref({ width: 200, height: 150 })
 ```vue
 <template>
   <Resizable v-model:size="size" :handles="['se', 'sw', 'ne', 'nw']">
-    <div class="resizable-box">Only corner handles</div>
+    <div class="resizable-box">
+      Only corner handles
+    </div>
   </Resizable>
 </template>
 ```
@@ -97,7 +103,9 @@ const size = ref({ width: 200, height: 150 })
 ```vue
 <template>
   <Resizable v-model:size="size" :lock-aspect-ratio="true">
-    <div class="resizable-box">Maintains aspect ratio</div>
+    <div class="resizable-box">
+      Maintains aspect ratio
+    </div>
   </Resizable>
 </template>
 ```

@@ -11,6 +11,6 @@ withDefaults(defineProps<Props>(), {
 <template>
   <div class="flex items-center gap-2">
     <span v-if="label">{{ label }}:</span>
-    <slot></slot>
+    <slot />
   </div>
 </template>

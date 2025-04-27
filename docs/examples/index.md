@@ -8,8 +8,8 @@ A simple example of a draggable element.
 
 ```vue
 <script setup>
-import { Draggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 </script>
@@ -55,8 +55,8 @@ A simple example of a resizable element.
 
 ```vue
 <script setup>
-import { Resizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
 
 const size = ref({ width: 200, height: 150 })
 </script>
@@ -107,8 +107,8 @@ A simple example of an element that is both draggable and resizable.
 
 ```vue
 <script setup>
-import { DnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { DnR } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 const size = ref({ width: 200, height: 150 })
@@ -162,8 +162,8 @@ An example using the `useDraggable` hook directly.
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const containerRef = ref(null)
 const elementRef = ref(null)
@@ -194,7 +194,7 @@ const { position, isDragging } = useDraggable(elementRef, {
         alignItems: 'center',
         borderRadius: '4px',
         cursor: 'move',
-        userSelect: 'none'
+        userSelect: 'none',
       }"
     >
       <div>Using useDraggable hook</div>

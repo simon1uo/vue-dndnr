@@ -4,16 +4,6 @@ import { useDnR } from 'vue-dndnr'
 import DemoBox from './DemoBox.vue'
 import DemoControl from './DemoControl.vue'
 
-interface Position {
-  x: number
-  y: number
-}
-
-interface Size {
-  width: number
-  height: number
-}
-
 type GridType = [number, number] | null
 
 // State
@@ -35,8 +25,9 @@ const boundsOptions: string[] = ['parent', 'none']
 const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid: GridType): string => {
-  if (!grid) return 'None'
+function gridDisplay(grid: GridType): string {
+  if (!grid)
+    return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
@@ -44,14 +35,14 @@ const gridDisplay = (grid: GridType): string => {
 const { position, size, isDragging, isResizing } = useDnR(elementRef, {
   initialPosition: { x: 50, y: 50 },
   initialSize: { width: 200, height: 150 },
-  minWidth: minWidth,
-  minHeight: minHeight,
-  maxWidth: maxWidth,
-  maxHeight: maxHeight,
-  disabled: disabled,
-  grid: grid,
-  lockAspectRatio: lockAspectRatio,
-  bounds: bounds,
+  minWidth,
+  minHeight,
+  maxWidth,
+  maxHeight,
+  disabled,
+  grid,
+  lockAspectRatio,
+  bounds,
 })
 </script>
 
@@ -59,12 +50,12 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
   <DemoBox title="useDnR Hook">
     <template #controls>
       <DemoControl>
-        <input type="checkbox" id="use-dnr-disabled" v-model="disabled" />
+        <input id="use-dnr-disabled" v-model="disabled" type="checkbox">
         <label for="use-dnr-disabled">Disabled</label>
       </DemoControl>
 
       <DemoControl>
-        <input type="checkbox" id="use-dnr-lock-aspect-ratio" v-model="lockAspectRatio" />
+        <input id="use-dnr-lock-aspect-ratio" v-model="lockAspectRatio" type="checkbox">
         <label for="use-dnr-lock-aspect-ratio">Lock aspect ratio</label>
       </DemoControl>
 
@@ -92,13 +83,12 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
         :class="{
           'bg-primary': isDragging,
           'bg-primary-light': isResizing,
-          'bg-primary-dark': !isDragging && !isResizing
-        }"
-        :style="{
+          'bg-primary-dark': !isDragging && !isResizing,
+        }" :style="{
           left: `${position.x}px`,
           top: `${position.y}px`,
           width: `${size.width}px`,
-          height: `${size.height}px`
+          height: `${size.height}px`,
         }"
       >
         <div>🧩 Drag & Resize me!</div>

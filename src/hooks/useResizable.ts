@@ -186,8 +186,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       return
 
     const handle = detectBoundary(event, el)
-    const handlesValue = toValue(handles) 
- 
+    const handlesValue = toValue(handles)
+
     if (!handle || !handlesValue || !handlesValue.includes(handle))
       return
 
@@ -390,7 +390,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }
 
   const setupElementSize = () => {
-    if (!isClient) return;
+    if (!isClient)
+      return
 
     const el = toValue(target)
     if (el) {
@@ -412,7 +413,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
 
       applyStyles()
-
     }
   }
 
@@ -421,7 +421,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     passive: !toValue(preventDefault),
   })
 
-  
   onMounted(setupElementSize)
 
   // Watch for changes to the target element
@@ -460,7 +459,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
     applyStyles()
   }
-
 
   useEventListener(target, 'pointermove', onMouseMove, getConfig())
   useEventListener(target, 'pointerdown', onResizeStart, getConfig())

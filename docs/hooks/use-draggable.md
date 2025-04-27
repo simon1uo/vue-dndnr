@@ -8,8 +8,8 @@ The `useDraggable` hook adds drag functionality to any element.
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position, isDragging } = useDraggable(elementRef, {
@@ -29,7 +29,7 @@ const { position, isDragging } = useDraggable(elementRef, {
       padding: '20px',
       borderRadius: '4px',
       color: 'white',
-      cursor: 'move'
+      cursor: 'move',
     }"
   >
     Drag me using the hook!
@@ -75,8 +75,8 @@ const { position, isDragging } = useDraggable(elementRef, {
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const containerRef = ref(null)
 const elementRef = ref(null)
@@ -105,7 +105,7 @@ const { position, isDragging } = useDraggable(elementRef, {
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: '4px',
-        cursor: 'move'
+        cursor: 'move',
       }"
     >
       Constrained to parent
@@ -118,8 +118,8 @@ const { position, isDragging } = useDraggable(elementRef, {
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { position } = useDraggable(elementRef, {
@@ -139,7 +139,7 @@ const { position } = useDraggable(elementRef, {
       backgroundColor: '#3498db',
       color: 'white',
       borderRadius: '4px',
-      cursor: 'move'
+      cursor: 'move',
     }"
   >
     Snaps to 20x20 grid
@@ -151,8 +151,8 @@ const { position } = useDraggable(elementRef, {
 
 ```vue
 <script setup>
-import { useDraggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
 
 const horizontalRef = ref(null)
 const verticalRef = ref(null)
@@ -180,7 +180,7 @@ const { position: verticalPosition } = useDraggable(verticalRef, {
         backgroundColor: '#3498db',
         color: 'white',
         borderRadius: '4px',
-        cursor: 'move'
+        cursor: 'move',
       }"
     >
       X-axis only
@@ -196,7 +196,7 @@ const { position: verticalPosition } = useDraggable(verticalRef, {
         backgroundColor: '#e74c3c',
         color: 'white',
         borderRadius: '4px',
-        cursor: 'move'
+        cursor: 'move',
       }"
     >
       Y-axis only

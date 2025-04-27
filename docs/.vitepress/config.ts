@@ -17,7 +17,7 @@ export default defineConfig({
             translations: {
               button: {
                 buttonText: 'Search',
-                buttonAriaLabel: 'Search'
+                buttonAriaLabel: 'Search',
               },
               modal: {
                 displayDetails: 'Display detailed list',
@@ -31,13 +31,13 @@ export default defineConfig({
                   navigateUpKeyAriaLabel: 'Arrow up',
                   navigateDownKeyAriaLabel: 'Arrow down',
                   closeText: 'Close',
-                  closeKeyAriaLabel: 'Escape'
-                }
-              }
-            }
-          }
-        }
-      }
+                  closeKeyAriaLabel: 'Escape',
+                },
+              },
+            },
+          },
+        },
+      },
     },
     nav: [
       { text: 'Home', link: '/' },

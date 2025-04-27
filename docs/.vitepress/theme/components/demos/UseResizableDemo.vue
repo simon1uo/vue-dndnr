@@ -4,11 +4,6 @@ import { useResizable } from 'vue-dndnr'
 import DemoBox from './DemoBox.vue'
 import DemoControl from './DemoControl.vue'
 
-interface Size {
-  width: number
-  height: number
-}
-
 type GridType = [number, number] | null
 
 // State
@@ -27,21 +22,22 @@ const maxHeight = ref<number>(300)
 const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid: GridType): string => {
-  if (!grid) return 'None'
+function gridDisplay(grid: GridType): string {
+  if (!grid)
+    return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
 // Use the hook
 const { size, isResizing } = useResizable(elementRef, {
   initialSize: { width: 200, height: 150 },
-  minWidth: minWidth,
-  minHeight: minHeight,
-  maxWidth: maxWidth,
-  maxHeight: maxHeight,
-  disabled: disabled,
-  grid: grid,
-  lockAspectRatio: lockAspectRatio,
+  minWidth,
+  minHeight,
+  maxWidth,
+  maxHeight,
+  disabled,
+  grid,
+  lockAspectRatio,
 })
 </script>
 
@@ -49,12 +45,12 @@ const { size, isResizing } = useResizable(elementRef, {
   <DemoBox title="useResizable Hook">
     <template #controls>
       <DemoControl>
-        <input type="checkbox" id="use-resizable-disabled" v-model="disabled" />
+        <input id="use-resizable-disabled" v-model="disabled" type="checkbox">
         <label for="use-resizable-disabled">Disabled</label>
       </DemoControl>
 
       <DemoControl>
-        <input type="checkbox" id="use-resizable-lock-aspect-ratio" v-model="lockAspectRatio" />
+        <input id="use-resizable-lock-aspect-ratio" v-model="lockAspectRatio" type="checkbox">
         <label for="use-resizable-lock-aspect-ratio">Lock aspect ratio</label>
       </DemoControl>
 
@@ -71,10 +67,9 @@ const { size, isResizing } = useResizable(elementRef, {
       <div
         ref="elementRef"
         class="relative p-4 rounded-lg text-white flex flex-col items-center justify-center gap-2 transition-colors duration-200"
-        :class="isResizing ? 'bg-primary-dark' : 'bg-primary-light'"
-        :style="{
+        :class="isResizing ? 'bg-primary-dark' : 'bg-primary-light'" :style="{
           width: `${size.width}px`,
-          height: `${size.height}px`
+          height: `${size.height}px`,
         }"
       >
         <div>↔️ Resize me!</div>

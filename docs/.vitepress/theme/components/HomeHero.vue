@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useData } from 'vitepress'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import EditorDemo from './EditorDemo.vue'
 import MacOSWindow from './MacOSWindow.vue'
@@ -15,14 +15,15 @@ const isHovering = ref(false)
 
 // Calculate distance from mouse to container center
 const distanceFromCenter = computed(() => {
-  if (!containerRect.value) return { x: 0, y: 0 }
+  if (!containerRect.value)
+    return { x: 0, y: 0 }
 
   const centerX = containerRect.value.left + containerRect.value.width / 2
   const centerY = containerRect.value.top + containerRect.value.height / 2
 
   return {
     x: mousePosition.value.x - centerX,
-    y: mousePosition.value.y - centerY
+    y: mousePosition.value.y - centerY,
   }
 })
 
@@ -37,18 +38,19 @@ const shadowOffset = computed(() => {
 
 // Calculate shadow size based on mouse proximity
 const shadowSizeMultiplier = computed(() => {
-  if (!isHovering.value) return 1
+  if (!isHovering.value)
+    return 1
 
   // Calculate distance from mouse to container center
   const distance = Math.sqrt(
-    Math.pow(distanceFromCenter.value.x, 2) +
-    Math.pow(distanceFromCenter.value.y, 2)
+    distanceFromCenter.value.x ** 2
+    + distanceFromCenter.value.y ** 2,
   )
 
   // Scale based on proximity (closer = larger)
   const maxDistance = Math.sqrt(
-    Math.pow(containerRect.value.width / 2, 2) +
-    Math.pow(containerRect.value.height / 2, 2)
+    (containerRect.value.width / 2) ** 2
+    + (containerRect.value.height / 2) ** 2,
   )
 
   // Calculate normalized distance (0 = center, 1 = edge)
@@ -57,7 +59,7 @@ const shadowSizeMultiplier = computed(() => {
   // Create a non-linear scaling effect that's more pronounced near the cursor
   // Scale between 1.5 and 3 with more growth closer to the cursor
   // The base multiplier is 1.5 (even at the edge) and increases to 3 at the center
-  return 1.5 + (1 - Math.pow(normalizedDistance, 2)) * 1.5
+  return 1.5 + (1 - normalizedDistance ** 2) * 1.5
 })
 
 // Computed style for the container with dynamic shadow only (no scaling)
@@ -92,7 +94,7 @@ const containerStyle = computed(() => {
   // Always show shadow, but with different characteristics based on hover state
   styles.boxShadow = `
     ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowSize}px rgba(var(--color-primary-rgb, 66, 153, 225), ${primaryOpacity}),
-    ${-shadowX/2}px ${-shadowY/2}px ${shadowBlur}px ${Math.round(shadowSize/2)}px rgba(var(--color-secondary-rgb, 159, 122, 234), ${secondaryOpacity})
+    ${-shadowX / 2}px ${-shadowY / 2}px ${shadowBlur}px ${Math.round(shadowSize / 2)}px rgba(var(--color-secondary-rgb, 159, 122, 234), ${secondaryOpacity})
   `
 
   // Add animation only when not hovering
@@ -104,7 +106,7 @@ const containerStyle = computed(() => {
 })
 
 // Track mouse position
-const handleMouseMove = (event: MouseEvent) => {
+function handleMouseMove(event: MouseEvent) {
   mousePosition.value = { x: event.clientX, y: event.clientY }
 
   // Update container rect in case of page scroll/resize
@@ -113,11 +115,11 @@ const handleMouseMove = (event: MouseEvent) => {
   }
 }
 
-const handleMouseEnter = () => {
+function handleMouseEnter() {
   isHovering.value = true
 }
 
-const handleMouseLeave = () => {
+function handleMouseLeave() {
   isHovering.value = false
 }
 
@@ -146,7 +148,8 @@ onUnmounted(() => {
 // Helper function to convert hex color to RGB
 function hexToRgb(hex: string): string {
   // Default fallback
-  if (!hex || !hex.startsWith('#')) return '66, 153, 225'
+  if (!hex || !hex.startsWith('#'))
+    return '66, 153, 225'
 
   // Remove # if present
   hex = hex.replace('#', '')
@@ -157,9 +160,9 @@ function hexToRgb(hex: string): string {
   }
 
   // Parse the hex values
-  const r = parseInt(hex.substring(0, 2), 16)
-  const g = parseInt(hex.substring(2, 4), 16)
-  const b = parseInt(hex.substring(4, 6), 16)
+  const r = Number.parseInt(hex.substring(0, 2), 16)
+  const g = Number.parseInt(hex.substring(2, 4), 16)
+  const b = Number.parseInt(hex.substring(4, 6), 16)
 
   return `${r}, ${g}, ${b}`
 }
@@ -169,14 +172,16 @@ function hexToRgb(hex: string): string {
   <div class="HomeHero flex flex-col mx-auto  max-w-1152px">
     <div class="flex flex-col justify-start relative mb-5">
       <h1
-        class="font-heading flex flex-col w-fit text-32px sm:text-48px md:text-56px font-extrabold max-w-576px lh-0.9em">
+        class="font-heading flex flex-col w-fit text-32px sm:text-48px md:text-56px font-extrabold max-w-576px lh-0.9em"
+      >
         <span>
           {{ frontmatter.hero.name }}
         </span>
         <p class="font-light text-xl">
           <span>A </span>
           <span><span font-bold>Draggable</span>&<span font-bold>Resizable</span>&<span
-              font-bold>Droppable</span></span>
+            font-bold
+          >Droppable</span></span>
           <span class="font-light"> library</span>
         </p>
         <p class="font-light text-lg">
@@ -188,9 +193,9 @@ function hexToRgb(hex: string): string {
     <div
       ref="demoContainerRef"
       class="flex lg:justify-center justify-end w-full h-500px"
+      :style="containerStyle"
       @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
-      :style="containerStyle"
     >
       <MacOSWindow title="Vue DNDNR Demo">
         <EditorDemo />

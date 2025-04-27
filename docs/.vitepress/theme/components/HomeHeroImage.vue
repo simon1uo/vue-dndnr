@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import EditorDemo from './EditorDemo.vue'
 import MacOSWindow from './MacOSWindow.vue'
 </script>

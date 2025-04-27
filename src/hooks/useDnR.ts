@@ -1,6 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { DnROptions, Position, Size } from '../types'
-import { computed, ref, toValue, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import useDraggable from './useDraggable'
 import useResizable from './useResizable'
 

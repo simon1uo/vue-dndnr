@@ -37,25 +37,26 @@ const boundsOptions: string[] = ['parent', 'none']
 const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid: GridType): string => {
-  if (!grid) return 'None'
+function gridDisplay(grid: GridType): string {
+  if (!grid)
+    return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
 // Event handlers
-const onDragStart = (): void => {
+function onDragStart(): void {
   isDragging.value = true
 }
 
-const onDragEnd = (): void => {
+function onDragEnd(): void {
   isDragging.value = false
 }
 
-const onResizeStart = (): void => {
+function onResizeStart(): void {
   isResizing.value = true
 }
 
-const onResizeEnd = (): void => {
+function onResizeEnd(): void {
   isResizing.value = false
 }
 </script>
@@ -64,12 +65,12 @@ const onResizeEnd = (): void => {
   <DemoBox title="Drag & Resize Component">
     <template #controls>
       <DemoControl>
-        <input type="checkbox" id="dnr-disabled" v-model="disabled" />
+        <input id="dnr-disabled" v-model="disabled" type="checkbox">
         <label for="dnr-disabled">Disabled</label>
       </DemoControl>
 
       <DemoControl>
-        <input type="checkbox" id="dnr-lock-aspect-ratio" v-model="lockAspectRatio" />
+        <input id="dnr-lock-aspect-ratio" v-model="lockAspectRatio" type="checkbox">
         <label for="dnr-lock-aspect-ratio">Lock aspect ratio</label>
       </DemoControl>
 
@@ -111,7 +112,7 @@ const onResizeEnd = (): void => {
         :class="{
           'bg-primary': isDragging,
           'bg-primary-light': isResizing,
-          'bg-primary-dark': !isDragging && !isResizing
+          'bg-primary-dark': !isDragging && !isResizing,
         }"
       >
         <div>🧩 Drag & Resize me!</div>
@@ -119,8 +120,12 @@ const onResizeEnd = (): void => {
           <div>Position: {{ Math.round(position.x) }}, {{ Math.round(position.y) }}</div>
           <div>Size: {{ Math.round(size.width) }} × {{ Math.round(size.height) }}</div>
         </div>
-        <div v-if="isDragging" class="text-sm opacity-80">Dragging...</div>
-        <div v-else-if="isResizing" class="text-sm opacity-80">Resizing...</div>
+        <div v-if="isDragging" class="text-sm opacity-80">
+          Dragging...
+        </div>
+        <div v-else-if="isResizing" class="text-sm opacity-80">
+          Resizing...
+        </div>
       </div>
     </DnR>
   </DemoBox>

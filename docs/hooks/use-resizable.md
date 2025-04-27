@@ -8,8 +8,8 @@ The `useResizable` hook adds resize functionality to any element.
 
 ```vue
 <script setup>
-import { useResizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { size, isResizing } = useResizable(elementRef, {
@@ -31,7 +31,7 @@ const { size, isResizing } = useResizable(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      position: 'relative'
+      position: 'relative',
     }"
   >
     Resize me using the hook!
@@ -82,8 +82,8 @@ const { size, isResizing } = useResizable(elementRef, {
 
 ```vue
 <script setup>
-import { useResizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { size, isResizing } = useResizable(elementRef, {
@@ -108,7 +108,7 @@ const { size, isResizing } = useResizable(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      position: 'relative'
+      position: 'relative',
     }"
   >
     <div>Size constrained between</div>
@@ -122,8 +122,8 @@ const { size, isResizing } = useResizable(elementRef, {
 
 ```vue
 <script setup>
-import { useResizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { size } = useResizable(elementRef, {
@@ -144,7 +144,7 @@ const { size } = useResizable(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      position: 'relative'
+      position: 'relative',
     }"
   >
     Snaps to 20x20 grid
@@ -156,8 +156,8 @@ const { size } = useResizable(elementRef, {
 
 ```vue
 <script setup>
-import { useResizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { size } = useResizable(elementRef, {
@@ -178,7 +178,7 @@ const { size } = useResizable(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      position: 'relative'
+      position: 'relative',
     }"
   >
     Only corner handles
@@ -190,8 +190,8 @@ const { size } = useResizable(elementRef, {
 
 ```vue
 <script setup>
-import { useResizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const { size } = useResizable(elementRef, {
@@ -212,7 +212,7 @@ const { size } = useResizable(elementRef, {
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: '4px',
-      position: 'relative'
+      position: 'relative',
     }"
   >
     Maintains aspect ratio

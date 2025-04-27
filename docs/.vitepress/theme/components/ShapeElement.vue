@@ -13,12 +13,16 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   color: '#4299e1',
   selected: false,
-  isNew: false
+  isNew: false,
 })
+
+// Generate a unique ID for the gradient based on color
+const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '')}`)
 
 // Generate gradient background based on color
 function generateGradient(baseColor: string, type: ShapeType): string {
-  if (type === 'triangle') return 'transparent'
+  if (type === 'triangle')
+    return 'transparent'
 
   const lighterColor = adjustColor(baseColor, 20)
   const darkerColor = adjustColor(baseColor, -20)
@@ -31,7 +35,8 @@ function generateGradient(baseColor: string, type: ShapeType): string {
       ${baseColor} 45%,
       ${baseColor} 55%,
       ${darkerColor} 100%)`
-  } else if (type === 'circle') {
+  }
+  else if (type === 'circle') {
     return `radial-gradient(circle at 30% 30%,
       ${lighterColor} 0%,
       ${baseColor} 50%,
@@ -44,12 +49,13 @@ function generateGradient(baseColor: string, type: ShapeType): string {
 
 // Generate a complementary accent color
 function generateAccentColor(baseColor: string): string {
-  if (!baseColor.startsWith('#')) return baseColor
+  if (!baseColor.startsWith('#'))
+    return baseColor
 
   // Simple complementary color (not perfect but works for demo)
-  const r = parseInt(baseColor.slice(1, 3), 16)
-  const g = parseInt(baseColor.slice(3, 5), 16)
-  const b = parseInt(baseColor.slice(5, 7), 16)
+  const r = Number.parseInt(baseColor.slice(1, 3), 16)
+  const g = Number.parseInt(baseColor.slice(3, 5), 16)
+  const b = Number.parseInt(baseColor.slice(5, 7), 16)
 
   // Shift hue by adjusting RGB values
   const newR = Math.max(0, Math.min(255, 255 - r + 50))
@@ -107,9 +113,9 @@ function adjustColor(color: string, amount: number): string {
 
 // Adjust hex color brightness
 function adjustHexColor(hex: string, amount: number): string {
-  let r = parseInt(hex.slice(1, 3), 16)
-  let g = parseInt(hex.slice(3, 5), 16)
-  let b = parseInt(hex.slice(5, 7), 16)
+  let r = Number.parseInt(hex.slice(1, 3), 16)
+  let g = Number.parseInt(hex.slice(3, 5), 16)
+  let b = Number.parseInt(hex.slice(5, 7), 16)
 
   r = Math.max(0, Math.min(255, r + amount))
   g = Math.max(0, Math.min(255, g + amount))
@@ -125,7 +131,7 @@ const shapeClass = computed(() => {
     'shape-rectangle': props.type === 'rectangle',
     'shape-circle': props.type === 'circle',
     'shape-selected': props.selected,
-    'shape-new': props.isNew
+    'shape-new': props.isNew,
   }
 })
 
@@ -135,18 +141,18 @@ const triangleProps = computed(() => {
     fill: `url(#${gradientId.value})`,
     stroke: props.selected ? 'var(--color-primary)' : 'none',
     strokeWidth: props.selected ? 2 : 0,
-    filter: 'url(#shadow)'
+    filter: 'url(#shadow)',
   }
 })
-
-// Generate a unique ID for the gradient based on color
-const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '')}`)
 </script>
 
 <template>
   <div class="shape-container">
-    <div v-if="type !== 'triangle'" :class="shapeClass" :style="shapeStyle"></div>
-    <svg v-else :class="['shape-svg', { 'shape-selected': props.selected, 'shape-new': props.isNew }]" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <div v-if="type !== 'triangle'" :class="shapeClass" :style="shapeStyle" />
+    <svg
+      v-else class="shape-svg" :class="[{ 'shape-selected': props.selected, 'shape-new': props.isNew }]"
+      viewBox="0 0 100 100" preserveAspectRatio="none"
+    >
       <!-- SVG Definitions for filters and gradients -->
       <defs>
         <!-- Shadow filter for 3D effect -->
@@ -163,10 +169,7 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
         </linearGradient>
       </defs>
 
-      <polygon
-        points="50,0 0,100 100,100"
-        v-bind="triangleProps"
-      />
+      <polygon points="50,0 0,100 100,100" v-bind="triangleProps" />
     </svg>
   </div>
 </template>
@@ -178,7 +181,8 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 800px; /* Add perspective for 3D effect */
+  perspective: 800px;
+  /* Add perspective for 3D effect */
 }
 
 .shape {
@@ -210,9 +214,9 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
   right: 0;
   height: 40%;
   background: linear-gradient(to bottom,
-    rgba(255, 255, 255, 0.2) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0) 100%);
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
 }
 
@@ -232,9 +236,9 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
   height: 40%;
   border-radius: 50%;
   background: linear-gradient(to bottom,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0.1) 60%,
-    rgba(255, 255, 255, 0) 100%);
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(255, 255, 255, 0.1) 60%,
+      rgba(255, 255, 255, 0) 100%);
   transform: translateY(-30%) scale(1.5, 0.5);
   pointer-events: none;
 }
@@ -267,6 +271,7 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0 2px var(--color-primary, #4299e1);
     filter: brightness(1.05);
   }
+
   100% {
     transform: translateY(-6px) scale(1.04);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), 0 0 0 4px var(--color-primary, #4299e1);
@@ -279,6 +284,7 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
     transform: translateY(-4px) scale(1.02);
     filter: brightness(1.05) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
   }
+
   100% {
     transform: translateY(-6px) scale(1.04);
     filter: brightness(1.15) contrast(1.05) drop-shadow(0 16px 32px rgba(0, 0, 0, 0.3));
@@ -300,15 +306,18 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
     transform: scale(0.5) translateY(20px);
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1) translateY(-10px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   }
+
   75% {
     transform: scale(0.95) translateY(5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   }
+
   100% {
     transform: scale(1) translateY(-2px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
@@ -321,15 +330,18 @@ const gradientId = computed(() => `triangleGradient-${props.color.replace('#', '
     transform: scale(0.5) translateY(20px);
     filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1) translateY(-10px);
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3));
   }
+
   75% {
     transform: scale(0.95) translateY(5px);
     filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
   }
+
   100% {
     transform: scale(1) translateY(-2px);
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));

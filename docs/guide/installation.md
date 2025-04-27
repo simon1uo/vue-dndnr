@@ -30,8 +30,8 @@ You can register all components globally in your main entry file:
 
 ```js
 import { createApp } from 'vue'
-import App from './App.vue'
 import { DnR, Draggable, Resizable } from 'vue-dndnr'
+import App from './App.vue'
 
 const app = createApp(App)
 
@@ -48,7 +48,7 @@ You can also import components on-demand in your Vue components:
 
 ```vue
 <script setup>
-import { Draggable, Resizable, DnR } from 'vue-dndnr'
+import { DnR, Draggable, Resizable } from 'vue-dndnr'
 </script>
 
 <template>

@@ -8,8 +8,8 @@ A dashboard with multiple draggable and resizable widgets.
 
 ```vue
 <script setup>
-import { DnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { DnR } from 'vue-dndnr'
 
 const widgets = ref([
   { id: 1, position: { x: 20, y: 20 }, size: { width: 300, height: 200 }, title: 'Widget 1', color: '#3498db' },
@@ -35,8 +35,8 @@ function updateWidgetSize(id, size) {
 
 <template>
   <div class="dashboard">
-    <DnR 
-      v-for="widget in widgets" 
+    <DnR
+      v-for="widget in widgets"
       :key="widget.id"
       v-model:position="widget.position"
       v-model:size="widget.size"
@@ -105,41 +105,49 @@ A resizable element with custom resize handles.
 
 ```vue
 <script setup>
-import { Resizable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
 
 const size = ref({ width: 300, height: 200 })
 </script>
 
 <template>
   <div class="example-container">
-    <Resizable 
-      v-model:size="size" 
-      :min-width="200" 
+    <Resizable
+      v-model:size="size"
+      :min-width="200"
       :min-height="150"
       class="custom-resizable"
     >
       <template #handle-se>
         <div class="custom-handle custom-handle-se">
-          <div class="handle-icon">↘</div>
+          <div class="handle-icon">
+            ↘
+          </div>
         </div>
       </template>
       <template #handle-sw>
         <div class="custom-handle custom-handle-sw">
-          <div class="handle-icon">↙</div>
+          <div class="handle-icon">
+            ↙
+          </div>
         </div>
       </template>
       <template #handle-ne>
         <div class="custom-handle custom-handle-ne">
-          <div class="handle-icon">↗</div>
+          <div class="handle-icon">
+            ↗
+          </div>
         </div>
       </template>
       <template #handle-nw>
         <div class="custom-handle custom-handle-nw">
-          <div class="handle-icon">↖</div>
+          <div class="handle-icon">
+            ↖
+          </div>
         </div>
       </template>
-      
+
       <div class="content">
         <h3>Custom Resize Handles</h3>
         <div>Size: {{ size.width }} x {{ size.height }}</div>
@@ -222,8 +230,8 @@ An example of nested draggable elements with proper event handling.
 
 ```vue
 <script setup>
-import { Draggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
 
 const outerPosition = ref({ x: 100, y: 100 })
 const innerPosition1 = ref({ x: 20, y: 20 })
@@ -232,38 +240,42 @@ const innerPosition2 = ref({ x: 20, y: 150 })
 
 <template>
   <div class="example-container">
-    <Draggable 
-      v-model:position="outerPosition" 
+    <Draggable
+      v-model:position="outerPosition"
       bounds="parent"
       class="outer-draggable"
     >
       <div class="outer-content">
         <h3>Parent Container</h3>
         <p>Position: {{ outerPosition.x }}, {{ outerPosition.y }}</p>
-        
-        <Draggable 
-          v-model:position="innerPosition1" 
+
+        <Draggable
+          v-model:position="innerPosition1"
           bounds="parent"
           class="inner-draggable"
-          :cancel="'.content'"
+          cancel=".content"
         >
           <div class="inner-content" style="background-color: #2ecc71;">
-            <div class="handle">Drag Here</div>
+            <div class="handle">
+              Drag Here
+            </div>
             <div class="content">
               <p>Child 1</p>
               <p>Position: {{ innerPosition1.x }}, {{ innerPosition1.y }}</p>
             </div>
           </div>
         </Draggable>
-        
-        <Draggable 
-          v-model:position="innerPosition2" 
+
+        <Draggable
+          v-model:position="innerPosition2"
           bounds="parent"
           class="inner-draggable"
-          :cancel="'.content'"
+          cancel=".content"
         >
           <div class="inner-content" style="background-color: #e74c3c;">
-            <div class="handle">Drag Here</div>
+            <div class="handle">
+              Drag Here
+            </div>
             <div class="content">
               <p>Child 2</p>
               <p>Position: {{ innerPosition2.x }}, {{ innerPosition2.y }}</p>
@@ -331,8 +343,8 @@ A simple form builder with draggable and resizable form elements.
 
 ```vue
 <script setup>
-import { Draggable, DnR } from 'vue-dndnr'
 import { ref } from 'vue'
+import { DnR, Draggable } from 'vue-dndnr'
 
 const formElements = ref([
   { id: 1, type: 'text', label: 'Name', position: { x: 50, y: 50 }, size: { width: 300, height: 80 } },
@@ -392,8 +404,8 @@ function getFormElementType(type) {
   <div class="form-builder">
     <div class="toolbox">
       <h3>Form Elements</h3>
-      <div 
-        v-for="item in toolboxItems" 
+      <div
+        v-for="item in toolboxItems"
         :key="item.type"
         class="toolbox-item"
         @click="addFormElement(item.type, item.label)"
@@ -401,10 +413,10 @@ function getFormElementType(type) {
         {{ item.label }}
       </div>
     </div>
-    
+
     <div class="canvas">
-      <DnR 
-        v-for="element in formElements" 
+      <DnR
+        v-for="element in formElements"
         :key="element.id"
         v-model:position="element.position"
         v-model:size="element.size"
@@ -418,8 +430,8 @@ function getFormElementType(type) {
           </div>
           <div class="element-content">
             <label :for="`element-${element.id}`">{{ element.label }}</label>
-            <component 
-              :is="getFormElementComponent(element.type)" 
+            <component
+              :is="getFormElementComponent(element.type)"
               :id="`element-${element.id}`"
               :type="getFormElementType(element.type)"
               :placeholder="`Enter ${element.label.toLowerCase()}`"

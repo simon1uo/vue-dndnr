@@ -1,10 +1,10 @@
 declare module 'vue-dndnr' {
-  import { Component } from 'vue'
-  
+  import type { Component } from 'vue'
+
   export const Draggable: Component
   export const Resizable: Component
   export const DnR: Component
-  
+
   export function useDraggable(
     target: any,
     options?: any
@@ -13,7 +13,7 @@ declare module 'vue-dndnr' {
     isDragging: any
     [key: string]: any
   }
-  
+
   export function useResizable(
     target: any,
     options?: any
@@ -22,7 +22,7 @@ declare module 'vue-dndnr' {
     isResizing: any
     [key: string]: any
   }
-  
+
   export function useDnR(
     target: any,
     options?: any

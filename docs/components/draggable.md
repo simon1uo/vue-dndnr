@@ -8,15 +8,17 @@ The `Draggable` component allows you to make any element draggable.
 
 ```vue
 <script setup>
-import { Draggable } from 'vue-dndnr'
 import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
 
 const position = ref({ x: 100, y: 100 })
 </script>
 
 <template>
   <Draggable v-model:position="position">
-    <div class="draggable-box">Drag me!</div>
+    <div class="draggable-box">
+      Drag me!
+    </div>
   </Draggable>
 </template>
 ```
@@ -58,7 +60,9 @@ const position = ref({ x: 100, y: 100 })
 <template>
   <div class="parent-container">
     <Draggable v-model:position="position" bounds="parent">
-      <div class="draggable-box">Constrained to parent</div>
+      <div class="draggable-box">
+        Constrained to parent
+      </div>
     </Draggable>
   </div>
 </template>
@@ -69,7 +73,9 @@ const position = ref({ x: 100, y: 100 })
 ```vue
 <template>
   <Draggable v-model:position="position" :grid="[20, 20]">
-    <div class="draggable-box">Snaps to 20x20 grid</div>
+    <div class="draggable-box">
+      Snaps to 20x20 grid
+    </div>
   </Draggable>
 </template>
 ```
@@ -80,7 +86,9 @@ const position = ref({ x: 100, y: 100 })
 <template>
   <Draggable v-model:position="position" handle=".handle">
     <div class="draggable-box">
-      <div class="handle">Drag here</div>
+      <div class="handle">
+        Drag here
+      </div>
       <div>Content (not draggable)</div>
     </div>
   </Draggable>
@@ -92,7 +100,9 @@ const position = ref({ x: 100, y: 100 })
 ```vue
 <template>
   <Draggable v-model:position="position" axis="x">
-    <div class="draggable-box">Only moves horizontally</div>
+    <div class="draggable-box">
+      Only moves horizontally
+    </div>
   </Draggable>
 </template>
 ```

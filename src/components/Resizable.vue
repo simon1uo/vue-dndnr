@@ -38,7 +38,6 @@ const preventDefault = computed(() => toValue(props.preventDefault))
 const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
 
-
 const {
   size: currentSize,
   isResizing,
@@ -79,7 +78,6 @@ const {
     }
   },
 })
-
 
 watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)

@@ -13,8 +13,8 @@ export default defineConfig({
     presetWebFonts({
       provider: 'bunny',
       fonts: {
-        heading: ['Mori'],
-        "heading-serif": ['Arbutus Slab']
+        'heading': ['Mori'],
+        'heading-serif': ['Arbutus Slab'],
       },
     }),
   ],

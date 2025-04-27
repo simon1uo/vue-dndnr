@@ -28,17 +28,18 @@ const maxHeight = ref<number>(300)
 const gridOptions: GridType[] = [null, [20, 20], [50, 50]]
 
 // Format grid for display
-const gridDisplay = (grid: GridType): string => {
-  if (!grid) return 'None'
+function gridDisplay(grid: GridType): string {
+  if (!grid)
+    return 'None'
   return `[${grid[0]}, ${grid[1]}]`
 }
 
 // Event handlers
-const onResizeStart = (): void => {
+function onResizeStart(): void {
   isResizing.value = true
 }
 
-const onResizeEnd = (): void => {
+function onResizeEnd(): void {
   isResizing.value = false
 }
 </script>
@@ -47,12 +48,12 @@ const onResizeEnd = (): void => {
   <DemoBox title="Resizable Component">
     <template #controls>
       <DemoControl>
-        <input type="checkbox" id="resizable-disabled" v-model="disabled" />
+        <input id="resizable-disabled" v-model="disabled" type="checkbox">
         <label for="resizable-disabled">Disabled</label>
       </DemoControl>
 
       <DemoControl>
-        <input type="checkbox" id="lock-aspect-ratio" v-model="lockAspectRatio" />
+        <input id="lock-aspect-ratio" v-model="lockAspectRatio" type="checkbox">
         <label for="lock-aspect-ratio">Lock aspect ratio</label>
       </DemoControl>
 
@@ -82,14 +83,16 @@ const onResizeEnd = (): void => {
         :class="isResizing ? 'bg-primary-dark' : 'bg-primary-light'"
         :style="{
           width: `${size.width}px`,
-          height: `${size.height}px`
+          height: `${size.height}px`,
         }"
       >
         <div>↔️ Resize me!</div>
         <div class="text-sm opacity-80">
           Size: {{ Math.round(size.width) }} × {{ Math.round(size.height) }}
         </div>
-        <div v-if="isResizing" class="text-sm opacity-80">Resizing...</div>
+        <div v-if="isResizing" class="text-sm opacity-80">
+          Resizing...
+        </div>
       </div>
     </Resizable>
   </DemoBox>
