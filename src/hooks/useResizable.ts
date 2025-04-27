@@ -1,6 +1,6 @@
+import type { PointerType, Position, ResizableOptions, ResizeHandle, Size } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import type { PointerType, Position, ResizableOptions, ResizeHandle, Size } from '../types'
-import { onMounted, ref, toValue, watch } from 'vue'
+import { useEventListener } from '@/hooks/useEventListener'
 import {
   applyAspectRatioLock,
   applyGrid,
@@ -10,9 +10,9 @@ import {
   getElementPosition,
   getElementSize,
   isClient,
-} from '../utils'
-import { throttle } from '../utils/throttle'
-import { useEventListener } from './useEventListener'
+} from '@/utils'
+import { throttle } from '@/utils/throttle'
+import { onMounted, ref, toValue, watch } from 'vue'
 
 export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
   const {

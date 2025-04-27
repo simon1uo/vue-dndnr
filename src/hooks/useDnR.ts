@@ -1,8 +1,8 @@
+import type { DnROptions, Position, Size } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import type { DnROptions, Position, Size } from '../types'
+import useDraggable from '@/hooks/useDraggable'
+import useResizable from '@/hooks/useResizable'
 import { computed, ref, watch } from 'vue'
-import useDraggable from './useDraggable'
-import useResizable from './useResizable'
 
 /**
  * Combined hook for draggable and resizable functionality

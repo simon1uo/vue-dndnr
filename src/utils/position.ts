@@ -2,7 +2,7 @@
  * Utility functions for position calculations
  */
 
-import type { Position } from '../types'
+import type { Position } from '@/types'
 
 /**
  * Apply grid snapping to a position

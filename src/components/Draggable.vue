@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { DraggableOptions, Position } from '../types'
+import type { DraggableOptions, Position } from '@/types'
+import { useDraggable } from '@/hooks'
 import { computed, ref, toValue, watch } from 'vue'
-import { useDraggable } from '../hooks'
 
 interface DraggableProps extends DraggableOptions {
   position?: Position

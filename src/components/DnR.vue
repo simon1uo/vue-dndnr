@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { DnROptions, Position, ResizeHandle, Size } from '../types'
+import type { DnROptions, Position, ResizeHandle, Size } from '@/types'
+import useDnR from '@/hooks/useDnR'
 import { computed, ref, toValue, watch } from 'vue'
-import useDnR from '../hooks/useDnR'
 
 interface DnRProps extends DnROptions {
   position?: Position

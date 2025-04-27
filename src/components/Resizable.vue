@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { ResizableOptions, ResizeHandle, Size } from '../types'
+import type { ResizableOptions, ResizeHandle, Size } from '@/types'
+import { useResizable } from '@/hooks'
 import { computed, ref, toValue, watch } from 'vue'
-import { useResizable } from '../hooks'
 
 interface ResizableProps extends ResizableOptions {
   size?: Size

@@ -1,4 +1,4 @@
-import type { Size } from '../types'
+import type { Size } from '@/types'
 
 /**
  * Apply min/max constraints to a size

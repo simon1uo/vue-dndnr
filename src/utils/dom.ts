@@ -1,4 +1,4 @@
-import { isClient } from './config'
+import { isClient } from '@/utils/config'
 
 /**
  * Get the computed position of an element

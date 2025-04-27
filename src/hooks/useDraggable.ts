@@ -1,6 +1,6 @@
+import type { DraggableOptions, PointerType, Position } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import type { DraggableOptions, PointerType, Position } from '../types'
-import { computed, ref, toValue } from 'vue'
+import { useEventListener } from '@/hooks/useEventListener'
 import {
   applyAxisConstraint,
   applyBounds,
@@ -10,9 +10,9 @@ import {
   defaultWindow,
   getElementBounds,
   getElementSize,
-} from '../utils'
-import { throttle } from '../utils/throttle'
-import { useEventListener } from './useEventListener'
+} from '@/utils'
+import { throttle } from '@/utils/throttle'
+import { computed, ref, toValue } from 'vue'
 
 export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DraggableOptions = {}) {
   const {
