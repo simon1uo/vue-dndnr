@@ -2,6 +2,11 @@ import type { MaybeRefOrGetter } from 'vue'
 import { isClient } from '@/utils'
 import { getCurrentScope, onScopeDispose, toValue, watch } from 'vue'
 
+/**
+ * Attempts to register a cleanup function in the current scope
+ * @param fn - The cleanup function to register
+ * @returns True if the function was registered, false otherwise
+ */
 function tryOnScopeDispose(fn: () => void) {
   if (getCurrentScope()) {
     onScopeDispose(fn)
@@ -22,12 +27,13 @@ type EventMap = {
 }
 
 /**
- * Hook for adding event listeners with automatic cleanup
- * @param target The event target (can be a ref or a getter)
- * @param event The event name to listen for
- * @param listener The event listener function
- * @param options Optional event listener options
- * @returns A function to stop watching and clean up the event listener
+ * Hook for adding event listeners with automatic cleanup on component unmount
+ * @template K - The type of event to listen for
+ * @param target - The event target (element, window, etc.)
+ * @param event - The event name to listen for
+ * @param listener - The event handler function
+ * @param options - Optional event listener options
+ * @returns A cleanup function that removes the event listener
  */
 export function useEventListener<K extends keyof EventMap>(
   target: MaybeRefOrGetter<EventTarget | null | undefined>,

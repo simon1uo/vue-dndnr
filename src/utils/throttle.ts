@@ -1,8 +1,9 @@
 /**
- * Throttle utility function to limit the rate at which a function can be called
- * @param fn The function to throttle
- * @param delay The delay in milliseconds
- * @returns A throttled version of the function
+ * Creates a throttled version of a function that limits its execution rate
+ * @template T - The type of the function to throttle
+ * @param fn - The function to throttle
+ * @param delay - The minimum time (in milliseconds) that must pass between function calls
+ * @returns A throttled version of the input function that limits execution frequency
  */
 export function throttle<T extends (...args: any[]) => any>(
   fn: T,
@@ -36,10 +37,11 @@ export function throttle<T extends (...args: any[]) => any>(
 }
 
 /**
- * Debounce utility function to delay the execution of a function until after a specified delay
- * @param fn The function to debounce
- * @param delay The delay in milliseconds
- * @returns A debounced version of the function
+ * Creates a debounced version of a function that delays its execution
+ * @template T - The type of the function to debounce
+ * @param fn - The function to debounce
+ * @param delay - The time to wait (in milliseconds) after the last call before executing
+ * @returns A debounced version of the input function
  */
 export function debounce<T extends (...args: any[]) => any>(
   fn: T,

@@ -5,7 +5,19 @@ import useResizable from '@/hooks/useResizable'
 import { computed, ref, watch } from 'vue'
 
 /**
- * Combined hook for draggable and resizable functionality
+ * Combined hook for draggable and resizable functionality (DnR)
+ * @param target - Reference to the element to make draggable and resizable
+ * @param options - Combined configuration options for drag and resize behavior
+ * @returns {object} Object containing:
+ *   - position: Current position of the element
+ *   - size: Current size of the element
+ *   - isDragging: Whether the element is being dragged
+ *   - isResizing: Whether the element is being resized
+ *   - interactionMode: Current interaction state ('idle', 'dragging', or 'resizing')
+ *   - style: Combined style object for positioning and sizing
+ *   - setPosition: Function to programmatically set position
+ *   - setSize: Function to programmatically set size
+ *   - Additional event handlers and utility methods
  */
 export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions) {
   const interactionMode = ref<'idle' | 'dragging' | 'resizing'>('idle')

@@ -1,7 +1,3 @@
-/**
- * Export all types from the types directory
- */
-
 export * from './common'
 export * from './dnr'
 export * from './draggable'

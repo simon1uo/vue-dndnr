@@ -1,7 +1,13 @@
 import type { Size } from '@/types'
 
 /**
- * Apply min/max constraints to a size
+ * Apply minimum and maximum size constraints to a given size object
+ * @param size - The original size object containing width and height
+ * @param minWidth - Optional minimum width constraint
+ * @param minHeight - Optional minimum height constraint
+ * @param maxWidth - Optional maximum width constraint
+ * @param maxHeight - Optional maximum height constraint
+ * @returns A new size object with constraints applied
  */
 export function applyMinMaxConstraints(
   size: Size,
@@ -32,7 +38,11 @@ export function applyMinMaxConstraints(
 }
 
 /**
- * Apply aspect ratio lock to a size
+ * Apply aspect ratio locking to maintain proportions when resizing
+ * @param size - The current size to be adjusted
+ * @param originalSize - The original size used as reference for aspect ratio
+ * @param lockAspectRatio - Whether to enforce aspect ratio locking
+ * @returns A new size object with aspect ratio maintained if locking is enabled
  */
 export function applyAspectRatioLock(
   size: Size,

@@ -14,6 +14,12 @@ import {
 import { throttle } from '@/utils/throttle'
 import { computed, ref, toValue } from 'vue'
 
+/**
+ * Hook that adds drag functionality to an element
+ * @param target - Reference to the element to make draggable
+ * @param options - Configuration options for draggable behavior
+ * @returns Object containing draggable state and methods
+ */
 export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DraggableOptions = {}) {
   const {
     initialPosition = { x: 0, y: 0 },
@@ -49,6 +55,11 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     userSelect: 'none' as const,
   }))
 
+  /**
+   * Filter pointer events based on disabled state and pointer types
+   * @param event - The pointer event to filter
+   * @returns True if the event should be processed, false otherwise
+   */
   const filterEvent = (event: PointerEvent): boolean => {
     if (toValue(disabled))
       return false
@@ -58,6 +69,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     return true
   }
 
+  /**
+   * Handle event prevention and propagation based on options
+   * @param event - The pointer event to handle
+   */
   const handleEvent = (event: PointerEvent) => {
     if (toValue(preventDefault))
       event.preventDefault()
@@ -65,6 +80,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       event.stopPropagation()
   }
 
+  /**
+   * Handle the start of a drag operation
+   * @param event - The pointer event that triggered the drag start
+   */
   const onDragStart = (event: PointerEvent) => {
     const el = toValue(draggingHandle)
     const targetEl = toValue(target)
@@ -79,6 +98,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
+  /**
+   * Update element position during drag
+   * @param event - The pointer event containing new position information
+   */
   const updatePosition = (event: PointerEvent) => {
     const el = toValue(draggingHandle)
     if (!isDragging.value || !startEvent.value || !el)
@@ -151,10 +174,18 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   // Create a throttled version of the updatePosition function
   const throttledUpdatePosition = throttle(updatePosition, toValue(throttleDelay))
 
+  /**
+   * Handle drag movement with throttling
+   * @param event - The pointer event from drag movement
+   */
   const onDrag = (event: PointerEvent) => {
     throttledUpdatePosition(event)
   }
 
+  /**
+   * Handle the end of a drag operation
+   * @param event - The pointer event that triggered the drag end
+   */
   const onDragEnd = (event: PointerEvent) => {
     if (!isDragging.value)
       return
@@ -166,6 +197,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
+  /**
+   * Get event listener configuration based on current options
+   * @returns Event listener options object
+   */
   const getConfig = () => ({
     capture: toValue(capture),
     passive: !toValue(preventDefault),
@@ -175,6 +210,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   useEventListener(draggingElement, 'pointermove', onDrag, getConfig())
   useEventListener(draggingElement, 'pointerup', onDragEnd, getConfig())
 
+  /**
+   * Set the position of the draggable element
+   * @param newPosition - The new position to set
+   */
   const setPosition = (newPosition: Position) => {
     position.value = { ...newPosition }
   }

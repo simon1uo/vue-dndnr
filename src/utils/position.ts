@@ -1,11 +1,10 @@
-/**
- * Utility functions for position calculations
- */
-
 import type { Position } from '@/types'
 
 /**
  * Apply grid snapping to a position
+ * @param position - The original position to snap
+ * @param grid - Optional grid size as [x, y] coordinates
+ * @returns The position snapped to the nearest grid points
  */
 export function applyGrid(position: Position, grid?: [number, number]): Position {
   if (!grid)
@@ -20,6 +19,10 @@ export function applyGrid(position: Position, grid?: [number, number]): Position
 
 /**
  * Apply axis constraint to a position
+ * @param position - The current position to constrain
+ * @param axis - The axis to constrain movement to ('x', 'y', or 'both')
+ * @param startPosition - The starting position for reference
+ * @returns The position constrained to the specified axis
  */
 export function applyAxisConstraint(position: Position, axis?: 'x' | 'y' | 'both', startPosition?: Position): Position {
   if (!axis || axis === 'both')
@@ -35,6 +38,10 @@ export function applyAxisConstraint(position: Position, axis?: 'x' | 'y' | 'both
 
 /**
  * Apply bounds constraint to a position
+ * @param position - The current position to constrain
+ * @param bounds - The bounding element or constraints object
+ * @param elementSize - The size of the element being constrained
+ * @returns The position constrained within the specified bounds
  */
 export function applyBounds(
   position: Position,
@@ -75,7 +82,10 @@ export function applyBounds(
 }
 
 /**
- * Calculate position delta between two positions
+ * Calculate the delta between two positions
+ * @param position1 - The first position
+ * @param position2 - The second position
+ * @returns The difference between the two positions as a Position object
  */
 export function calculateDelta(position1: Position, position2: Position): Position {
   return {
@@ -85,7 +95,10 @@ export function calculateDelta(position1: Position, position2: Position): Positi
 }
 
 /**
- * Calculate position from event and scale
+ * Calculate position from a pointer event with optional scaling
+ * @param event - The pointer event containing position information
+ * @param scale - Optional scale factor to apply to the position
+ * @returns The calculated position coordinates
  */
 export function calculatePosition(event: PointerEvent, scale = 1): Position {
   const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX

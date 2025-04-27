@@ -14,6 +14,12 @@ import {
 import { throttle } from '@/utils/throttle'
 import { onMounted, ref, toValue, watch } from 'vue'
 
+/**
+ * Hook that adds resize functionality to an element
+ * @param target - Reference to the element to make resizable
+ * @param options - Configuration options for resizable behavior
+ * @returns Object containing resizable state and methods
+ */
 export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
   const {
     initialSize = { width: 'auto', height: 'auto' },
@@ -175,6 +181,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     return null
   }
 
+  /**
+   * Handle mouse movement for resize handle detection
+   * @param event - The pointer event from mouse movement
+   */
   const onMouseMove = (event: PointerEvent) => {
     if (isResizing.value || !filterEvent(event)) {
       return
@@ -192,6 +202,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
   }
 
+  /**
+   * Handle the start of a resize operation
+   * @param event - The pointer event that triggered the resize start
+   */
   const onResizeStart = (event: PointerEvent) => {
     const el = toValue(target)
     if (!filterEvent(event) || !el)
@@ -215,6 +229,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
+  /**
+   * Update element size during resize
+   * @param event - The pointer event containing new size information
+   */
   const updateSize = (event: PointerEvent) => {
     const el = toValue(target)
     if (!isResizing.value || !activeHandle.value || !startEvent.value || !el)
@@ -456,6 +474,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     throttledUpdateSize(event)
   }
 
+  /**
+   * Handle the end of a resize operation
+   * @param event - The pointer event that triggered the resize end
+   */
   const onResizeEnd = (event: PointerEvent) => {
     if (!isResizing.value)
       return
@@ -470,6 +492,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleEvent(event)
   }
 
+  /**
+   * Set up initial element size and position
+   */
   const setupElementSize = () => {
     if (!isClient)
       return
@@ -500,6 +525,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
   }
 
+  /**
+   * Get event listener configuration based on current options
+   * @returns Event listener options object
+   */
   const getConfig = () => ({
     capture: toValue(capture),
     passive: !toValue(preventDefault),
@@ -524,12 +553,19 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     applyStyles()
   }, { deep: true })
 
-  // Public methods
+  /**
+   * Set the size of the resizable element
+   * @param newSize - The new size to set
+   */
   const setSize = (newSize: Size) => {
     size.value = { ...newSize }
     applyStyles()
   }
 
+  /**
+   * Set the position of the resizable element
+   * @param newPosition - The new position to set
+   */
   const setPosition = (newPosition: Position) => {
     const el = toValue(target)
     if (!el)

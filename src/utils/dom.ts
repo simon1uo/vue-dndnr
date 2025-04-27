@@ -1,7 +1,9 @@
 import { isClient } from '@/utils/config'
 
 /**
- * Get the computed position of an element
+ * Get the computed position of an element relative to its container
+ * @param element - The target HTML or SVG element
+ * @returns The computed x and y coordinates of the element
  */
 export function getElementPosition(element: HTMLElement | SVGElement): { x: number, y: number } {
   if (!isClient)
@@ -25,7 +27,9 @@ export function getElementPosition(element: HTMLElement | SVGElement): { x: numb
 }
 
 /**
- * Get the computed size of an element
+ * Get the computed size (width and height) of an element
+ * @param element - The target HTML or SVG element
+ * @returns The computed width and height of the element
  */
 export function getElementSize(element: HTMLElement | SVGElement): { width: number, height: number } {
   if (!isClient)
@@ -39,7 +43,10 @@ export function getElementSize(element: HTMLElement | SVGElement): { width: numb
 }
 
 /**
- * Check if an element matches a selector
+ * Check if an element matches a CSS selector
+ * @param element - The target HTML or SVG element
+ * @param selector - The CSS selector string to match against
+ * @returns True if the element matches the selector, false otherwise
  */
 export function matchesSelector(element: HTMLElement | SVGElement, selector: string): boolean {
   const matchesMethod
@@ -54,7 +61,10 @@ export function matchesSelector(element: HTMLElement | SVGElement, selector: str
 }
 
 /**
- * Check if an element or its parents match a selector
+ * Check if an element or any of its parent elements match a CSS selector
+ * @param element - The target HTML or SVG element to start checking from
+ * @param selector - The CSS selector string to match against
+ * @returns True if the element or any of its parents match the selector, false otherwise
  */
 export function matchesSelectorAndParents(element: HTMLElement | SVGElement, selector: string): boolean {
   let target: HTMLElement | SVGElement | null = element
@@ -69,7 +79,9 @@ export function matchesSelectorAndParents(element: HTMLElement | SVGElement, sel
 }
 
 /**
- * Get the bounds of an element
+ * Get the bounding rectangle coordinates of an element
+ * @param element - The target HTML or SVG element
+ * @returns An object containing the left, top, right, and bottom coordinates of the element's bounding rectangle
  */
 export function getElementBounds(element: HTMLElement | SVGElement): {
   left: number

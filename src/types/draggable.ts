@@ -1,42 +1,49 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { PointerType, Position } from './common'
 
+/**
+ * Configuration options for draggable functionality
+ */
 export interface DraggableOptions {
   /**
    * Initial position of the element
+   * @default { x: 0, y: 0 }
    */
   initialPosition?: Position
 
   /**
    * Element or selector to use as bounds for the draggable element
+   * Can be an HTML element, 'parent', or an object with explicit bounds
    */
   bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number } | null | undefined>
 
   /**
-   * Grid size for snapping during drag [x, y]
+   * Grid size for snapping during drag
+   * @type [number, number] - [x, y] coordinates for grid spacing
    */
   grid?: MaybeRefOrGetter<[number, number] | undefined | null>
 
   /**
-   * Axis to drag on
+   * Axis to constrain dragging movement
    * @default 'both'
    */
   axis?: MaybeRefOrGetter<'x' | 'y' | 'both'>
 
   /**
-   * Element for the drag handle
+   * Element that triggers dragging (drag handle)
+   * @default the draggable element itself
    */
   handle?: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>
 
   /**
-   * Element to attach `pointermove` and `pointerup` events to.
-   *
+   * Element to attach pointer event listeners to
    * @default window
    */
   draggingElement?: MaybeRefOrGetter<HTMLElement | SVGElement | Window | Document | null | undefined>
 
   /**
-   * Scale factor for the draggable element (useful for transformed parents)
+   * Scale factor for the draggable element
+   * Useful when the element is within a transformed container
    * @default 1
    */
   scale?: MaybeRefOrGetter<number>
@@ -48,60 +55,70 @@ export interface DraggableOptions {
   disabled?: MaybeRefOrGetter<boolean>
 
   /**
-   * Pointer types that listen to
+   * Types of pointer events to respond to
    * @default ['mouse', 'touch', 'pen']
    */
   pointerTypes?: MaybeRefOrGetter<PointerType[] | null | undefined>
 
   /**
-   * Whether to prevent default events
+   * Whether to prevent default browser events
    * @default true
    */
   preventDefault?: MaybeRefOrGetter<boolean>
 
   /**
-   * Whether to stop event propagation
+   * Whether to stop event propagation to parent elements
    * @default false
    */
   stopPropagation?: MaybeRefOrGetter<boolean>
 
   /**
-   * Whether to dispatch events in capturing phase
+   * Whether to use event capturing phase
    * @default true
    */
   capture?: MaybeRefOrGetter<boolean>
 
   /**
-   * Throttle delay in milliseconds for drag events
+   * Delay in milliseconds for throttling drag events
    * @default 16 (approximately 60fps)
    */
   throttleDelay?: MaybeRefOrGetter<number>
 
   /**
    * Called when dragging starts
-   * @param position Current position of the element
-   * @param event The mouse or touch event
+   * @param position - Current position of the element
+   * @param event - The pointer event that triggered the start
+   * @returns {boolean|void} Return false to prevent dragging
    */
   onDragStart?: (position: Position, event: PointerEvent) => void | boolean
 
   /**
    * Called during dragging
-   * @param position Current position of the element
-   * @param event The mouse or touch event
+   * @param position - Current position of the element
+   * @param event - The pointer event during dragging
+   * @returns {boolean|void} Return false to stop dragging
    */
   onDrag?: (position: Position, event: PointerEvent) => void | boolean
 
   /**
    * Called when dragging ends
-   * @param position Final position of the element
-   * @param event The mouse or touch event
+   * @param position - Final position of the element
+   * @param event - The pointer event that triggered the end
+   * @returns {boolean|void} Return false to prevent position update
    */
   onDragEnd?: (position: Position, event: PointerEvent) => void | boolean
 }
 
+/**
+ * Represents a draggable element with its state
+ */
 export interface DraggableElement {
+  /** Unique identifier for the draggable element */
   id: string
+  /** Reference to the HTML element being made draggable */
   element: HTMLElement
+  /** Current position of the element */
   position: Position
+  /** Whether the element is currently being dragged */
   isDragging: boolean
 }
