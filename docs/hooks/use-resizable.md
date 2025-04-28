@@ -2,6 +2,49 @@
 
 The `useResizable` hook adds resize functionality to any element.
 
+## Basic Usage Demo
+
+<script setup>
+import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
+
+const resizableRef = ref(null)
+const { style, size } = useResizable(resizableRef, {
+  initialSize: { width: 200, height: 150 },
+  minWidth: 100,
+  minHeight: 100,
+  bounds: 'parent'
+})
+</script>
+
+<DemoContainer>
+  <div ref="resizableRef" class="resizable-box" :style="style">
+    Resize me!
+    <div class="text-xs mt-1">{{ size.width }} x {{ size.height }}</div>
+  </div>
+</DemoContainer>
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useResizable } from 'vue-dndnr'
+
+const resizableRef = ref<HTMLElement | null>(null)
+const { style } = useResizable(resizableRef, {
+  initialSize: { width: 200, height: 150 },
+  minWidth: 100,
+  minHeight: 100,
+  bounds: 'parent'
+})
+</script>
+
+<template>
+  <div ref="resizableRef" class="resizable-box" :style="style">
+    Resize me!
+  </div>
+</template>
+```
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -68,147 +111,3 @@ The `useResizable` hook adds resize functionality to any element.
 | `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
 | `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |
 | `detectBoundary` | `(event: PointerEvent, element: HTMLElement) => ResizeHandle \| null` | Function to detect handle at pointer position. |
-
-## Examples
-
-### With Min/Max Constraints
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useResizable } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { size, isResizing } = useResizable(elementRef, {
-  initialSize: { width: 200, height: 150 },
-  minWidth: 100,
-  minHeight: 100,
-  maxWidth: 500,
-  maxHeight: 400,
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: isResizing ? '#e74c3c' : '#3498db',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      position: 'relative',
-    }"
-  >
-    <div>Size constrained between</div>
-    <div>100x100 and 500x400</div>
-    <div>Current: {{ size.width }} x {{ size.height }}</div>
-  </div>
-</template>
-```
-
-### With Grid Snapping
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useResizable } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { size } = useResizable(elementRef, {
-  initialSize: { width: 200, height: 150 },
-  grid: [20, 20],
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: '#3498db',
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      position: 'relative',
-    }"
-  >
-    Snaps to 20x20 grid
-  </div>
-</template>
-```
-
-### With Specific Handles
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useResizable } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { size } = useResizable(elementRef, {
-  initialSize: { width: 200, height: 150 },
-  handles: ['se', 'sw', 'ne', 'nw'],
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: '#3498db',
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      position: 'relative',
-    }"
-  >
-    Only corner handles
-  </div>
-</template>
-```
-
-### With Aspect Ratio Lock
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useResizable } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { size } = useResizable(elementRef, {
-  initialSize: { width: 200, height: 150 },
-  lockAspectRatio: true,
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: '#3498db',
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      position: 'relative',
-    }"
-  >
-    Maintains aspect ratio
-  </div>
-</template>
-```

@@ -2,6 +2,46 @@
 
 The `useDraggable` hook adds drag functionality to any element.
 
+## Basic Usage Demo
+
+<DemoContainer>
+  <div ref="draggableRef" class="draggable-box" :style="style">
+    Drag me!
+    <span class="text-sm color-text-light">({{ position.x }}, {{ position.y }})</span>
+  </div>
+</DemoContainer>
+
+<script setup>
+import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
+
+const draggableRef = ref(null)
+const { style, position } = useDraggable(draggableRef, {
+  initialPosition: { x: 0, y: 0 }
+})
+</script>
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useDraggable } from 'vue-dndnr'
+
+const draggableRef = ref<HTMLElement | null>(null)
+const { style } = useDraggable(draggableRef, {
+  initialPosition: { x: 0, y: 0 }
+})
+</script>
+
+<template>
+  <div ref="draggableRef" class="draggable-box" :style="style">
+    Drag me!
+    <div>
+      {{ position.x }}, {{ position.y }}
+    </div>
+  </div>
+</template>
+```
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -65,9 +105,3 @@ The `useDraggable` hook adds drag functionality to any element.
 | `onDragStart` | `(event: PointerEvent) => void` | Handler for drag start event. |
 | `onDrag` | `(event: PointerEvent) => void` | Handler for drag event. |
 | `onDragEnd` | `(event: PointerEvent) => void` | Handler for drag end event. |
-
-## Examples
-
-### With Bounds
-
-```

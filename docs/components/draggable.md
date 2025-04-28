@@ -2,6 +2,39 @@
 
 The `Draggable` component allows you to make any element draggable.
 
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
+
+const position = ref({ x: 0, y: 0 })
+</script>
+## Basic Usage Demo
+
+<DemoContainer>
+  <Draggable v-model:position="position">
+    <div class="draggable-box">
+      Drag me!
+      <span class="color-text-light text-sm">({{ position.x }}, {{ position.y }})</span>
+    </div>
+  </Draggable>
+</DemoContainer>
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Draggable } from 'vue-dndnr'
+
+const position = ref({ x: 0, y: 0 })
+</script>
+
+<template>
+  <Draggable v-model:position="position">
+    Drag me!
+    {{ position.x }}, {{ position.y }}
+  </Draggable>
+</template>
+```
+
 ## Props
 
 ### Model Values
@@ -63,58 +96,3 @@ The `Draggable` component allows you to make any element draggable.
 | Slot | Props | Description |
 |------|-------|-------------|
 | default | `{ position, isDragging }` | The content to be made draggable. |
-
-## Examples
-
-### With Bounds
-
-```vue
-<template>
-  <div class="parent-container">
-    <Draggable v-model:position="position" bounds="parent">
-      <div class="draggable-box">
-        Constrained to parent
-      </div>
-    </Draggable>
-  </div>
-</template>
-```
-
-### With Grid Snapping
-
-```vue
-<template>
-  <Draggable v-model:position="position" :grid="[20, 20]">
-    <div class="draggable-box">
-      Snaps to 20x20 grid
-    </div>
-  </Draggable>
-</template>
-```
-
-### With Handle
-
-```vue
-<template>
-  <Draggable v-model:position="position" handle=".handle">
-    <div class="draggable-box">
-      <div class="handle">
-        Drag here
-      </div>
-      <div>Content (not draggable)</div>
-    </div>
-  </Draggable>
-</template>
-```
-
-### Axis Constraint
-
-```vue
-<template>
-  <Draggable v-model:position="position" axis="x">
-    <div class="draggable-box">
-      Only moves horizontally
-    </div>
-  </Draggable>
-</template>
-```

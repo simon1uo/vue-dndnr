@@ -2,6 +2,46 @@
 
 The `DnR` (Draggable and Resizable) component combines both draggable and resizable functionality into a single component.
 
+<script setup>
+import { ref } from 'vue'
+import { DnR } from 'vue-dndnr'
+
+const position = ref({ x: 100, y: 100 })
+const size = ref({ width: 200, height: 200 })
+</script>
+
+## Basic Usage Demo
+
+<DemoContainer>
+  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+    <div class="dnr-box">Drag & Resize me!
+      <div class="text-sm color-text-light">
+        position: {{ position.x }}, {{ position.y }}
+      </div>
+      <div class="text-sm color-text-light">
+        size: {{ size.width }} x {{ size.height }}
+      </div>
+    </div>
+  </DnR>
+</DemoContainer>
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const position = ref({ x: 0, y: 0 })
+const size = ref({ width: 200, height: 150 })
+</script>
+
+<template>
+  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+    Drag & Resize me!
+    position: {{ position.x }}, {{ position.y }}
+    size: {{ size.width }} x {{ size.height }}
+  </DnR>
+</template>
+```
+
 ## Props
 
 The `DnR` component combines all props from both the `Draggable` and `Resizable` components.

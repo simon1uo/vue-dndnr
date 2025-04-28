@@ -2,6 +2,62 @@
 
 The `useDnR` hook combines both drag and resize functionality into a single hook.
 
+## Basic Usage Demo
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useDnR } from 'vue-dndnr'
+
+const dnrRef = ref(null)
+const { style, position, size } = useDnR(dnrRef, {
+  initialPosition: { x: 0, y: 0 },
+  initialSize: { width: 200, height: 150 },
+  minWidth: 100,
+  minHeight: 100,
+  bounds: 'parent'
+})
+</script>
+
+<DemoContainer>
+  <div ref="dnrRef":style="style">
+    <div class="dnr-box">
+      Drag & Resize me!
+      <div class="text-sm color-text-light">Position: {{ position.x }}, {{ position.y }}</div>
+      <div class="text-sm color-text-light">Size: {{ size.width }} x {{ size.height }}</div>
+    </div>
+  </div>
+</DemoContainer>
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useDnR } from 'vue-dndnr'
+
+const dnrRef = ref<HTMLElement | null>(null)
+const { style } = useDnR(dnrRef, {
+  initialPosition: { x: 0, y: 0 },
+  initialSize: { width: 200, height: 150 },
+  minWidth: 100,
+  minHeight: 100,
+  bounds: 'parent'
+})
+</script>
+
+<template>
+  <div ref="dnrRef" :style="style">
+    <div class="dnr-box">
+      Drag & Resize me!
+      <div>
+        Position: {{ position.x }}, {{ position.y }}
+      </div>
+      <div>
+        Size: {{ size.width }} x {{ size.height }}
+      </div>
+    </div>
+  </div>
+</template>
+```
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -89,163 +145,3 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 | `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
 | `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |
 | `detectBoundary` | `() => void` | Function to detect and enforce boundary constraints. |
-
-## Examples
-
-### With Bounds and Size Constraints
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useDnR } from 'vue-dndnr'
-
-const containerRef = ref(null)
-const elementRef = ref(null)
-const { position, size, isDragging, isResizing } = useDnR(elementRef, {
-  initialPosition: { x: 50, y: 50 },
-  initialSize: { width: 200, height: 150 },
-  bounds: 'parent',
-  minWidth: 100,
-  minHeight: 100,
-  maxWidth: 400,
-  maxHeight: 300,
-})
-</script>
-
-<template>
-  <div
-    ref="containerRef"
-    style="position: relative; width: 600px; height: 400px; border: 2px solid #ccc;"
-  >
-    <div
-      ref="elementRef"
-      :style="{
-        position: 'absolute',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-        backgroundColor: isDragging || isResizing ? '#e74c3c' : '#3498db',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: '4px',
-        cursor: isDragging ? 'move' : 'default',
-      }"
-    >
-      <div>Constrained within parent</div>
-      <div>Size between 100x100 and 400x300</div>
-    </div>
-  </div>
-</template>
-```
-
-### With Grid Snapping
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useDnR } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { position, size } = useDnR(elementRef, {
-  initialPosition: { x: 100, y: 100 },
-  initialSize: { width: 200, height: 150 },
-  grid: [20, 20],
-})
-</script>
-
-<template>
-  <div
-    ref="elementRef"
-    :style="{
-      position: 'absolute',
-      left: `${position.x}px`,
-      top: `${position.y}px`,
-      width: `${size.width}px`,
-      height: `${size.height}px`,
-      backgroundColor: '#3498db',
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: '4px',
-      cursor: 'move',
-    }"
-  >
-    Snaps to 20x20 grid
-  </div>
-</template>
-```
-
-### Programmatically Controlling Position and Size
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { useDnR } from 'vue-dndnr'
-
-const elementRef = ref(null)
-const { position, size, setPosition, setSize, reset } = useDnR(elementRef, {
-  initialPosition: { x: 100, y: 100 },
-  initialSize: { width: 200, height: 150 },
-})
-
-function moveToCenter() {
-  setPosition({ x: 200, y: 200 })
-}
-
-function makeSmaller() {
-  setSize({ width: size.value.width * 0.8, height: size.value.height * 0.8 })
-}
-
-function makeLarger() {
-  setSize({ width: size.value.width * 1.2, height: size.value.height * 1.2 })
-}
-
-function resetElement() {
-  reset()
-}
-</script>
-
-<template>
-  <div>
-    <div
-      ref="elementRef"
-      :style="{
-        position: 'absolute',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-        backgroundColor: '#3498db',
-        color: 'white',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: '4px',
-        cursor: 'move',
-      }"
-    >
-      Drag and resize me!
-    </div>
-
-    <div style="position: fixed; bottom: 20px; left: 20px;">
-      <button @click="moveToCenter">
-        Center
-      </button>
-      <button @click="makeSmaller">
-        Smaller
-      </button>
-      <button @click="makeLarger">
-        Larger
-      </button>
-      <button @click="resetElement">
-        Reset
-      </button>
-    </div>
-  </div>
-</template>
-```

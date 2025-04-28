@@ -52,13 +52,9 @@ export default defineConfig({
     'card-hover': 'hover:shadow-lg transition-shadow duration-300',
     'input': 'border border-border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary',
 
-    // Demo components
-    'demo-box': 'p-4 rounded-lg text-white flex flex-col items-center gap-2 transition-colors duration-200',
-    'demo-control': 'flex items-center gap-2',
-
-    // Element styles
-    'draggable-box': 'p-4 rounded-lg bg-primary text-white cursor-move select-none flex flex-col items-center gap-2 transition-colors duration-200',
-    'resizable-box': 'p-4 rounded-lg bg-primary-light text-white flex flex-col items-center justify-center gap-2 transition-colors duration-200',
-    'dnr-box': 'p-4 rounded-lg bg-primary-dark text-white cursor-move select-none flex flex-col items-center justify-center gap-2 transition-colors duration-200',
+    'box': 'rounded-xl shadow-xl overflow-hidden p-3',
+    'draggable-box': 'box w-50 h-20 dark:bg-amber-900 bg-amber-200 cursor-move',
+    'resizable-box': 'box relative w-full h-full dark:bg-sky-900 bg-sky-200',
+    'dnr-box': 'draggable-box resizable-box dark:bg-violet-900 bg-violet-200 cursor-move',
   },
 })

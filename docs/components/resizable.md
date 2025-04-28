@@ -2,6 +2,41 @@
 
 The `Resizable` component allows you to make any element resizable.
 
+## Basic Usage Demo
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
+
+const size = ref({ width: 200, height: 150 })
+</script>
+
+<DemoContainer>
+  <Resizable v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+    <div class="resizable-box">
+      Resize me!
+      <div class="text-sm color-text-light">
+        {{ size.width }} x {{ size.height }}
+      </div>
+    </div>
+  </Resizable>
+</DemoContainer>
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
+
+const size = ref({ width: 200, height: 150 })
+</script>
+
+<template>
+  <Resizable v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+    Resize me!
+    {{ size.width }} x {{ size.height }}
+  </Resizable>
+</template>
+```
+
 ## Props
 
 ### Model Values
@@ -64,59 +99,3 @@ The `Resizable` component allows you to make any element resizable.
 | Slot | Props | Description |
 |------|-------|-------------|
 | default | `{ size, isResizing }` | The content to be made resizable. |
-
-## Examples
-
-### With Min/Max Constraints
-
-```vue
-<template>
-  <Resizable
-    v-model:size="size"
-    :min-width="100"
-    :min-height="100"
-    :max-width="500"
-    :max-height="400"
-  >
-    <div class="resizable-box">
-      Size constrained between 100x100 and 500x400
-    </div>
-  </Resizable>
-</template>
-```
-
-### With Grid Snapping
-
-```vue
-<template>
-  <Resizable v-model:size="size" :grid="[20, 20]">
-    <div class="resizable-box">
-      Snaps to 20x20 grid
-    </div>
-  </Resizable>
-</template>
-```
-
-### With Specific Handles
-
-```vue
-<template>
-  <Resizable v-model:size="size" :handles="['se', 'sw', 'ne', 'nw']">
-    <div class="resizable-box">
-      Only corner handles
-    </div>
-  </Resizable>
-</template>
-```
-
-### With Aspect Ratio Lock
-
-```vue
-<template>
-  <Resizable v-model:size="size" :lock-aspect-ratio="true">
-    <div class="resizable-box">
-      Maintains aspect ratio
-    </div>
-  </Resizable>
-</template>
-```
