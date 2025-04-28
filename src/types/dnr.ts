@@ -11,7 +11,7 @@ export interface DnROptions extends DraggableOptions, ResizableOptions {
    * Required bounds for the DnR element
    * Must be either an HTML element or 'parent'
    */
-  bounds: MaybeRefOrGetter<
-    HTMLElement | 'parent'
+  bounds?: MaybeRefOrGetter<
+    HTMLElement | 'parent' | null | undefined
   >
 }
