@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Vue DNDNR',
-  description: 'Vue 3 Draggable and Resizable Component Library',
+  description: 'Vue 3 Draggable and Resizable Components and Hooks Library with TypeScript Support',
   // When deploying to GitHub Pages, set the base path to '/vue-dndnr/'
   // When deploying to Vercel or other platforms that serve from the root, remove the base path
   // base: '/vue-dndnr/',
