@@ -1,4 +1,4 @@
-# Vue DnDnR Development Guidelines
+# Development Guidelines
 
 This document outlines the coding standards and best practices for contributing to the Vue DnDnR project.
 

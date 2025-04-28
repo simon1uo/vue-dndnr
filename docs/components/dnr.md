@@ -77,7 +77,6 @@ The `DnR` component combines all props from both the `Draggable` and `Resizable`
 | `cancel` | `String\|null` | `null` | CSS selector for elements that should not trigger dragging. |
 | `axis` | `String\|null` | `null` | Constrains movement to an axis. Can be 'x', 'y', or null for both. |
 | `scale` | `Number` | `1` | Scale factor for the element. |
-| `zIndex` | `Number\|null` | `null` | Z-index applied while dragging. |
 
 ### Resizable Props
 
@@ -107,17 +106,17 @@ The `DnR` component emits all events from both the `Draggable` and `Resizable` c
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `dragStart` | `{ event, position }` | Emitted when dragging starts. |
-| `drag` | `{ event, position }` | Emitted during dragging. |
-| `dragEnd` | `{ event, position }` | Emitted when dragging ends. |
+| `dragStart` | `position, event` | Emitted when dragging starts. |
+| `drag` | `position, event` | Emitted during dragging. |
+| `dragEnd` | `position, event` | Emitted when dragging ends. |
 
 ### Resizable Events
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `resizeStart` | `{ event, size }` | Emitted when resizing starts. |
-| `resize` | `{ event, size }` | Emitted during resizing. |
-| `resizeEnd` | `{ event, size }` | Emitted when resizing ends. |
+| `resizeStart` | `size, event` | Emitted when resizing starts. |
+| `resize` | `size, event` | Emitted during resizing. |
+| `resizeEnd` | `size, event` | Emitted when resizing ends. |
 
 ## Slots
 

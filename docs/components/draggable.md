@@ -62,7 +62,6 @@ const position = ref({ x: 0, y: 0 })
 | `cancel` | `String\|null` | `null` | CSS selector for elements that should not trigger dragging. |
 | `axis` | `String` | `'both'` | Constrains movement to an axis. Can be 'x', 'y', or 'both'. |
 | `scale` | `Number` | `1` | Scale factor for the draggable element. |
-| `zIndex` | `Number\|null` | `null` | Z-index applied while dragging. |
 
 ### Event Control Props
 
@@ -87,9 +86,9 @@ const position = ref({ x: 0, y: 0 })
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `dragStart` | `{ event, position }` | Emitted when dragging starts. |
-| `drag` | `{ event, position }` | Emitted during dragging. |
-| `dragEnd` | `{ event, position }` | Emitted when dragging ends. |
+| `dragStart` | `position, event` | Emitted when dragging starts. |
+| `drag` | `position, event` | Emitted during dragging. |
+| `dragEnd` | `position, event` | Emitted when dragging ends. |
 
 ## Slots
 

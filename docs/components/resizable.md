@@ -90,9 +90,9 @@ const size = ref({ width: 200, height: 150 })
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `resizeStart` | `{ event, size }` | Emitted when resizing starts. |
-| `resize` | `{ event, size }` | Emitted during resizing. |
-| `resizeEnd` | `{ event, size }` | Emitted when resizing ends. |
+| `resizeStart` | `size, event` | Emitted when resizing starts. |
+| `resize` | `size, event` | Emitted during resizing. |
+| `resizeEnd` | `size, event` | Emitted when resizing ends. |
 
 ## Slots
 

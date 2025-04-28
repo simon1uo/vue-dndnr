@@ -9,7 +9,7 @@ import { ref } from 'vue'
 import { useResizable } from 'vue-dndnr'
 
 const resizableRef = ref(null)
-const { style, size } = useResizable(resizableRef, {
+const { size } = useResizable(resizableRef, {
   initialSize: { width: 200, height: 150 },
   minWidth: 100,
   minHeight: 100,
@@ -18,7 +18,7 @@ const { style, size } = useResizable(resizableRef, {
 </script>
 
 <DemoContainer>
-  <div ref="resizableRef" class="resizable-box" :style="style">
+  <div ref="resizableRef" class="resizable-box">
     Resize me!
     <div class="text-sm color-text-light">{{ size.width }} x {{ size.height }}</div>
   </div>
@@ -30,7 +30,7 @@ import { ref } from 'vue'
 import { useResizable } from 'vue-dndnr'
 
 const resizableRef = ref<HTMLElement | null>(null)
-const { style } = useResizable(resizableRef, {
+const { size } = useResizable(resizableRef, {
   initialSize: { width: 200, height: 150 },
   minWidth: 100,
   minHeight: 100,
@@ -39,7 +39,7 @@ const { style } = useResizable(resizableRef, {
 </script>
 
 <template>
-  <div ref="resizableRef" class="resizable-box" :style="style">
+  <div ref="resizableRef" class="resizable-box">
     Resize me!
   </div>
 </template>
@@ -49,8 +49,8 @@ const { style } = useResizable(resizableRef, {
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `elementRef` | `Ref<HTMLElement>` | Reference to the element to make resizable. |
-| `options` | `Object` | Configuration options for the resizable behavior. |
+| `target` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | Reference to the element to make resizable. |
+| `options` | `ResizableOptions` | Configuration options for the resizable behavior. |
 
 ### Options
 
@@ -58,56 +58,81 @@ const { style } = useResizable(resizableRef, {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `initialSize` | `Object` | `{ width: 'auto', height: 'auto' }` | Initial size of the element. |
-| `minWidth` | `Number` | `10` | Minimum width in pixels. |
-| `minHeight` | `Number` | `10` | Minimum height in pixels. |
-| `maxWidth` | `Number\|null` | `null` | Maximum width in pixels. |
-| `maxHeight` | `Number\|null` | `null` | Maximum height in pixels. |
-| `disabled` | `Boolean` | `false` | Whether resizing is disabled. |
-| `grid` | `Array\|null` | `null` | Snaps the element to a grid. Format: `[width, height]`. |
-| `handles` | `Array` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Array of handles to display. |
-| `lockAspectRatio` | `Boolean` | `false` | Whether to maintain the aspect ratio when resizing. |
-| `scale` | `Number` | `1` | Scale factor for the resizable element. |
+| `initialSize` | `Size` | `{ width: 'auto', height: 'auto' }` | Initial size of the resizable element. |
+| `minWidth` | `MaybeRefOrGetter<number>` | `0` | Minimum width constraint in pixels. |
+| `minHeight` | `MaybeRefOrGetter<number>` | `0` | Minimum height constraint in pixels. |
+| `maxWidth` | `MaybeRefOrGetter<number>` | `Infinity` | Maximum width constraint in pixels. |
+| `maxHeight` | `MaybeRefOrGetter<number>` | `Infinity` | Maximum height constraint in pixels. |
+| `grid` | `MaybeRefOrGetter<[number, number] \| undefined \| null>` | `undefined` | Grid size for snapping during resize. Format: `[width, height]`. |
+| `lockAspectRatio` | `MaybeRefOrGetter<boolean>` | `false` | Whether to maintain aspect ratio during resizing. |
+| `handles` | `MaybeRefOrGetter<ResizeHandle[]>` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Active resize handles to enable. |
+| `bounds` | `MaybeRefOrGetter<HTMLElement \| 'parent' \| null \| undefined>` | `undefined` | Element or selector to use as bounds for the resizable element. |
+| `disabled` | `MaybeRefOrGetter<boolean>` | `false` | Whether resizing is disabled. |
 
 #### Event Control Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `pointerTypes` | `Array` | `['mouse', 'touch', 'pen']` | Array of supported pointer types. |
-| `preventDefault` | `Boolean` | `true` | Whether to prevent default event behavior. |
-| `stopPropagation` | `Boolean` | `false` | Whether to stop event propagation. |
-| `capture` | `Boolean` | `true` | Whether to use event capture phase. |
-| `boundaryThreshold` | `Number` | `8` | Threshold in pixels for handle detection. |
-| `throttleDelay` | `Number` | `16` | Throttle delay in milliseconds for resize events. |
+| `pointerTypes` | `MaybeRefOrGetter<PointerType[] \| null \| undefined>` | `['mouse', 'touch', 'pen']` | Types of pointer events to respond to. |
+| `preventDefault` | `MaybeRefOrGetter<boolean>` | `true` | Whether to prevent default browser events during resize. |
+| `stopPropagation` | `MaybeRefOrGetter<boolean>` | `false` | Whether to stop event propagation to parent elements. |
+| `capture` | `MaybeRefOrGetter<boolean>` | `true` | Whether to use event capturing phase. |
+| `boundaryThreshold` | `MaybeRefOrGetter<number>` | `8` | Distance in pixels from edges to detect resize handles. |
+| `throttleDelay` | `MaybeRefOrGetter<number>` | `16` | Delay in milliseconds for throttling resize events (approximately 60fps). |
 
 #### Callback Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `onResizeStart` | `Function` | `null` | Callback function called when resizing starts. |
-| `onResize` | `Function` | `null` | Callback function called during resizing. |
-| `onResizeEnd` | `Function` | `null` | Callback function called when resizing ends. |
+| `onResizeStart` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called when resizing starts. |
+| `onResize` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called during resizing. |
+| `onResizeEnd` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called when resizing ends. |
 
 ## Return Value
 
-### State
+The `useResizable` hook returns an object with the following properties and methods:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `size` | `Ref<{ width: number\|string, height: number\|string }>` | Current size of the element. |
-| `position` | `Ref<{ x: number, y: number }>` | Current position of the element. |
+::: warning Important Note
+Unlike what some examples might suggest, the `useResizable` hook does not return a `style` object. Instead, it directly applies styles to the target element. The examples in the documentation that use `:style="style"` are incorrect and will be updated.
+:::
+
+| Property/Method | Type | Description |
+|-----------------|------|-------------|
+| `size` | `Ref<Size>` | Current size of the element. |
+| `position` | `Ref<Position>` | Current position of the element (when using absolute positioning). |
 | `isResizing` | `Ref<boolean>` | Whether the element is currently being resized. |
 | `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
 | `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
 | `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
 
-### Methods
-
-| Method | Type | Description |
-|--------|------|-------------|
-| `setSize` | `(size: { width: number\|string, height: number\|string }) => void` | Function to programmatically set the size. |
-| `setPosition` | `(position: { x: number, y: number }) => void` | Function to programmatically set the position. |
+| `setSize` | `(newSize: Size) => void` | Function to programmatically set the size. |
+| `setPosition` | `(newPosition: Position) => void` | Function to programmatically set the position. |
 | `onResizeStart` | `(event: PointerEvent) => void` | Handler for resize start event. |
 | `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
 | `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |
 | `detectBoundary` | `(event: PointerEvent, element: HTMLElement) => ResizeHandle \| null` | Function to detect handle at pointer position. |
+
+::: details Show Type Definitions
+
+```typescript
+interface Size {
+  /** The width value (can be a number in pixels or a CSS string value) */
+  width: number | string
+  /** The height value (can be a number in pixels or a CSS string value) */
+  height: number | string
+}
+
+interface Position {
+  /** The horizontal coordinate */
+  x: number
+  /** The vertical coordinate */
+  y: number
+}
+
+type ResizeHandle = 't' | 'b' | 'r' | 'l' | 'tr' | 'tl' | 'br' | 'bl' |
+  'top' | 'bottom' | 'right' | 'left' |
+  'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+
+type PointerType = 'mouse' | 'touch' | 'pen'
+```
+:::

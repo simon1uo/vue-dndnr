@@ -46,7 +46,7 @@ export default defineConfig({
         items: [
           { text: 'Getting Started', link: '/guide/' },
           { text: 'Installation', link: '/guide/installation' },
-          { text: 'Basic Usage', link: '/guide/basic-usage' },
+          { text: 'Guidelines', link: '/guide/guidelines' },
         ],
       },
       {
@@ -84,7 +84,7 @@ export default defineConfig({
           items: [
             { text: 'Getting Started', link: '/guide/' },
             { text: 'Installation', link: '/guide/installation' },
-            { text: 'Basic Usage', link: '/guide/basic-usage' },
+            { text: 'Guidelines', link: '/guide/guidelines' },
           ],
         },
       ],

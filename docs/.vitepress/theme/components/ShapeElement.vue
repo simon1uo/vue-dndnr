@@ -78,15 +78,14 @@ const shapeStyle = computed(() => {
   // Base transform - will be overridden by CSS for selected state
   const baseTransform = props.selected
     ? 'translateY(-4px) scale(1.02)'
-    : 'translateY(-2px)'
+    : 'translateY(-2px) scale(1)'
 
   // Base shadow - will be enhanced by CSS for selected state
   const baseShadow = props.selected
     ? `0 12px 24px rgba(0, 0, 0, 0.25),
-       inset 0 -6px 0 ${darkerColor},
        0 0 0 2px var(--color-primary, #4299e1)`
     : `0 8px 16px rgba(0, 0, 0, 0.2),
-       inset 0 -4px 0 ${darkerColor}`
+       0 0 0 1px ${darkerColor}`
 
   const style = {
     background: gradientBg,
@@ -137,10 +136,11 @@ const shapeClass = computed(() => {
 
 // SVG properties for triangle
 const triangleProps = computed(() => {
+  // Use the same border approach as other shapes
   return {
     fill: `url(#${gradientId.value})`,
-    stroke: props.selected ? 'var(--color-primary)' : 'none',
-    strokeWidth: props.selected ? 2 : 0,
+    stroke: props.selected ? 'var(--color-primary)' : adjustColor(props.color, -20),
+    strokeWidth: props.selected ? 2 : 1, // Always have a border, thicker when selected
     filter: 'url(#shadow)',
   }
 })
@@ -149,15 +149,13 @@ const triangleProps = computed(() => {
 <template>
   <div class="shape-container">
     <div v-if="type !== 'triangle'" :class="shapeClass" :style="shapeStyle" />
-    <svg
-      v-else class="shape-svg" :class="[{ 'shape-selected': props.selected, 'shape-new': props.isNew }]"
-      viewBox="0 0 100 100" preserveAspectRatio="none"
-    >
+    <svg v-else class="shape-svg" :class="[{ 'shape-selected': props.selected, 'shape-new': props.isNew }]"
+      viewBox="0 0 100 100" preserveAspectRatio="none">
       <!-- SVG Definitions for filters and gradients -->
       <defs>
-        <!-- Shadow filter for 3D effect -->
+        <!-- Shadow filter for 3D effect - only external shadow -->
         <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="8" stdDeviation="5" flood-opacity="0.3" />
+          <feDropShadow dx="0" dy="8" stdDeviation="5" flood-opacity="0.2" />
         </filter>
 
         <!-- Enhanced gradient for triangle -->
@@ -194,9 +192,7 @@ const triangleProps = computed(() => {
 }
 
 .shape:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25), inset 0 -6px 0 rgba(0, 0, 0, 0.2);
-  filter: brightness(1.1) contrast(1.05);
+  animation: hoverEffect 0.3s forwards ease-out;
 }
 
 .shape-rectangle {
@@ -251,8 +247,13 @@ const triangleProps = computed(() => {
 }
 
 .shape-svg:hover {
-  transform: translateY(-4px) scale(1.02);
-  filter: brightness(1.1) contrast(1.05) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
+  animation: svgHoverEffect 0.3s forwards ease-out;
+}
+
+/* Add a specific style for the triangle polygon on hover to enhance border */
+.shape-svg:hover polygon {
+  stroke-width: 1.5px;
+  /* Slightly thicker border on hover, matching other shapes */
 }
 
 /* Add animation for selected state */
@@ -274,7 +275,7 @@ const triangleProps = computed(() => {
 
   100% {
     transform: translateY(-6px) scale(1.04);
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), 0 0 0 4px var(--color-primary, #4299e1);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), 0 0 0 3px var(--color-primary, #4299e1);
     filter: brightness(1.15) contrast(1.05);
   }
 }
@@ -345,6 +346,33 @@ const triangleProps = computed(() => {
   100% {
     transform: scale(1) translateY(-2px);
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+  }
+}
+
+/* Unified hover animations for all shapes */
+@keyframes hoverEffect {
+  0% {
+    transform: translateY(-2px) scale(1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.2);
+    filter: brightness(1) contrast(1);
+  }
+
+  100% {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25), 0 0 0 1.5px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1) contrast(1.05);
+  }
+}
+
+@keyframes svgHoverEffect {
+  0% {
+    transform: translateY(-2px) scale(1);
+    filter: brightness(1) contrast(1) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+  }
+
+  100% {
+    transform: translateY(-4px) scale(1.02);
+    filter: brightness(1.1) contrast(1.05) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
   }
 }
 </style>
