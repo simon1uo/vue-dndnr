@@ -67,6 +67,15 @@ export default defineConfig({
           { text: 'useDnR', link: '/hooks/use-dnr' },
         ],
       },
+      {
+        text: 'Examples',
+        items: [
+          { text: 'Overview', link: '/examples/' },
+          { text: 'Draggable Examples', link: '/examples/Draggable/' },
+          { text: 'Resizable Examples', link: '/examples/Resizable/' },
+          { text: 'DnR Examples', link: '/examples/DnR/' },
+        ],
+      },
     ],
     sidebar: {
       '/guide/': [
@@ -105,10 +114,47 @@ export default defineConfig({
         {
           text: 'Examples',
           items: [
-            { text: 'Basic Examples', link: '/examples/' },
-            { text: 'Advanced Examples', link: '/examples/advanced' },
+            { text: 'Overview', link: '/examples/' },
           ],
         },
+        {
+          text: 'Draggable Examples',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/examples/Draggable/' },
+            { text: 'Basic Usage', link: '/examples/Draggable/basic' },
+            { text: 'Constrained Dragging', link: '/examples/Draggable/constrained' },
+            { text: 'Grid Alignment', link: '/examples/Draggable/grid' },
+            { text: 'Custom Handle', link: '/examples/Draggable/handle' },
+            { text: 'Axis Constraint', link: '/examples/Draggable/axis' },
+            { text: 'Event Handling', link: '/examples/Draggable/events' },
+          ],
+        },
+        {
+          text: 'Resizable Examples',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/examples/Resizable/' },
+            { text: 'Basic Usage', link: '/examples/Resizable/basic' },
+            { text: 'Constrained Resizing', link: '/examples/Resizable/constrained' },
+            { text: 'Custom Handles', link: '/examples/Resizable/handles' },
+            { text: 'Aspect Ratio Lock', link: '/examples/Resizable/aspect-ratio' },
+            { text: 'Event Handling', link: '/examples/Resizable/events' },
+          ],
+        },
+        {
+          text: 'DnR Examples',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/examples/DnR/' },
+            { text: 'Basic Usage', link: '/examples/DnR/basic' },
+            { text: 'Constrained DnR', link: '/examples/DnR/constrained' },
+            { text: 'Custom Handle', link: '/examples/DnR/handle' },
+            { text: 'Window Style', link: '/examples/DnR/window' },
+            { text: 'Event Handling', link: '/examples/DnR/events' },
+          ],
+        },
+
       ],
     },
     socialLinks: [

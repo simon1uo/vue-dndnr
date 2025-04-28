@@ -20,7 +20,7 @@ const { style, size } = useResizable(resizableRef, {
 <DemoContainer>
   <div ref="resizableRef" class="resizable-box" :style="style">
     Resize me!
-    <div class="text-xs mt-1">{{ size.width }} x {{ size.height }}</div>
+    <div class="text-sm color-text-light">{{ size.width }} x {{ size.height }}</div>
   </div>
 </DemoContainer>
 
