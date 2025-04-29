@@ -60,9 +60,11 @@
     "@vue/tsconfig": "^0.7.0",
     "changelogithub": "^0.13.11",
     "eslint": "^9.24.0",
+    "lint-staged": "^15.5.1",
     "npm-run-all2": "^7.0.2",
     "picocolors": "^1.1.1",
     "prompts": "^2.4.2",
+    "simple-git-hooks": "^2.13.0",
     "terser": "^5.39.0",
     "tsx": "^4.19.3",
     "typescript": "~5.8.0",
@@ -73,5 +75,11 @@
     "vitepress": "^1.6.3",
     "vue": "^3.5.13",
     "vue-tsc": "^2.2.8"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue,jsx,tsx}": "eslint --cache --fix"
   }
 }
