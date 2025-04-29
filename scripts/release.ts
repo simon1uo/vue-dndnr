@@ -1,11 +1,12 @@
+import type { ReleaseType } from 'semver'
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import process from 'node:process'
 import colors from 'picocolors'
 import prompts from 'prompts'
+import semver from 'semver'
 
-const currentVersion = JSON.parse(
-  execSync('pnpm pkg get version --json').toString().trim(),
-).version
+const { version: currentVersion } = JSON.parse(readFileSync('package.json', { encoding: 'utf8' }))
 
 const versionIncrements = [
   'patch',
@@ -15,27 +16,25 @@ const versionIncrements = [
   'preminor',
   'premajor',
   'prerelease',
-]
+] as const
 
-function inc(i) {
-  return execSync(`npm --no-git-tag-version version ${i}`).toString().trim()
+type VersionIncrement = typeof versionIncrements[number]
+
+function getNewVersion(i: VersionIncrement): string | null {
+  return semver.inc(currentVersion, i as ReleaseType)
 }
 
-function run(cmd, args) {
-  return execSync(`${cmd} ${args.join(' ')}`, { stdio: 'inherit' })
-}
-
-const step = msg => console.log(colors.cyan(msg))
+const step = (msg: string): void => console.log(colors.cyan(msg))
 
 async function main() {
-  let targetVersion
+  let targetVersion: string
 
   const { release } = await prompts({
     type: 'select',
     name: 'release',
     message: 'Select release type',
     choices: versionIncrements
-      .map(i => `${i} (${inc(i)})`)
+      .map(i => `${i} (${getNewVersion(i) || ''})`)
       .map(name => ({ title: name, value: name.split(' ')[0] }))
       .concat([{ title: 'custom', value: 'custom' }]),
   })
@@ -50,7 +49,12 @@ async function main() {
     targetVersion = version
   }
   else {
-    targetVersion = inc(release)
+    const newVersion = getNewVersion(release as VersionIncrement)
+    if (!newVersion) {
+      console.log(colors.red(`Invalid version increment: ${release}`))
+      process.exit(1)
+    }
+    targetVersion = newVersion
   }
 
   const { confirm } = await prompts({
@@ -65,29 +69,20 @@ async function main() {
 
   // 构建包
   step('\nBuilding package...')
-  run('pnpm', ['build'])
+  execSync('pnpm build', { stdio: 'inherit' })
 
   // 更新版本
   step('\nUpdating version...')
-  run('npm', ['--no-git-tag-version', 'version', targetVersion])
-
-  // 生成 changelog
-  step('\nGenerating changelog...')
-  try {
-    run('pnpm', ['changelog'])
-  }
-  catch {
-    console.log(colors.yellow('Changelog generation failed, skipping...'))
-  }
+  execSync(`npm --no-git-tag-version version ${targetVersion}`, { stdio: 'inherit' })
 
   // 提交更改
   step('\nCommitting changes...')
-  run('git', ['add', '-A'])
-  run('git', ['commit', '-m', `release: v${targetVersion}`])
+  execSync('git add -A', { stdio: 'inherit' })
+  execSync(`git commit -m "release: v${targetVersion}"`, { stdio: 'inherit' })
 
   // 创建标签
   step('\nCreating tag...')
-  run('git', ['tag', `v${targetVersion}`])
+  execSync(`git tag v${targetVersion}`, { stdio: 'inherit' })
 
   // 推送到远程
   const { pushRemote } = await prompts({
@@ -98,8 +93,8 @@ async function main() {
 
   if (pushRemote) {
     step('\nPushing to remote...')
-    run('git', ['push', 'origin', 'main'])
-    run('git', ['push', 'origin', `v${targetVersion}`])
+    execSync('git push origin main', { stdio: 'inherit' })
+    execSync(`git push origin v${targetVersion}`, { stdio: 'inherit' })
     console.log(colors.green(`\nPushed, GitHub Actions will handle the release.`))
   }
   else {

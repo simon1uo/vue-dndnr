@@ -1,7 +1,7 @@
 {
   "name": "vue-dndnr",
   "type": "module",
-  "version": "0.0.1",
+  "version": "1.1.0",
   "description": "Vue 3 Draggable and Resizable Component Library",
   "author": "simon1uo",
   "license": "MIT",
@@ -37,8 +37,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "changelog": "tsx scripts/changelog.ts",
-    "release": "tsx scripts/release.ts"
+    "release": "bumpp"
   },
   "peerDependencies": {
     "vue": "^3.0.0"
@@ -51,6 +50,8 @@
     "@iconify-json/lucide": "^1.2.37",
     "@tsconfig/node22": "^22.0.1",
     "@types/node": "^22.14.0",
+    "@types/prompts": "^2.4.9",
+    "@types/semver": "^7.7.0",
     "@unocss/preset-attributify": "66.1.0-beta.12",
     "@unocss/preset-icons": "66.1.0-beta.12",
     "@unocss/preset-uno": "66.1.0-beta.12",
@@ -58,12 +59,14 @@
     "@vitejs/plugin-vue": "^5.2.3",
     "@vitejs/plugin-vue-jsx": "^4.1.2",
     "@vue/tsconfig": "^0.7.0",
-    "changelogithub": "^0.13.11",
+    "bumpp": "^10.1.0",
+    "changelogithub": "^13.13.0",
     "eslint": "^9.24.0",
     "lint-staged": "^15.5.1",
     "npm-run-all2": "^7.0.2",
     "picocolors": "^1.1.1",
     "prompts": "^2.4.2",
+    "semver": "^7.7.1",
     "simple-git-hooks": "^2.13.0",
     "terser": "^5.39.0",
     "tsx": "^4.19.3",
