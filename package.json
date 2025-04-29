@@ -32,11 +32,14 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "eslint . --fix",
+    "lint": "eslint --cache .",
+    "lint:fix": "nr lint --fix",
     "prepublishOnly": "npm run build",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "changelog": "tsx scripts/changelog.ts",
+    "release": "tsx scripts/release.ts"
   },
   "peerDependencies": {
     "vue": "^3.0.0"
@@ -56,9 +59,13 @@
     "@vitejs/plugin-vue": "^5.2.3",
     "@vitejs/plugin-vue-jsx": "^4.1.2",
     "@vue/tsconfig": "^0.7.0",
+    "changelogithub": "^0.13.11",
     "eslint": "^9.24.0",
     "npm-run-all2": "^7.0.2",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2",
     "terser": "^5.39.0",
+    "tsx": "^4.19.3",
     "typescript": "~5.8.0",
     "unocss": "66.1.0-beta.12",
     "vite": "^6.2.4",
