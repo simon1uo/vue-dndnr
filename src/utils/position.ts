@@ -41,6 +41,8 @@ export function applyAxisConstraint(position: Position, axis?: 'x' | 'y' | 'both
  * @param position - The current position to constrain
  * @param bounds - The bounding element or constraints object
  * @param elementSize - The size of the element being constrained
+ * @param elementSize.width - The width of the element being constrained
+ * @param elementSize.height - The height of the element being constrained
  * @returns The position constrained within the specified bounds
  */
 export function applyBounds(
