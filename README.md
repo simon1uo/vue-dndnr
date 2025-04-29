@@ -1,18 +1,19 @@
 # Vue DNDNR
 
-Vue DNDNR is a Vue 3 component library for draggable and resizable elements with TypeScript support.
+Vue DNDNR is a powerful, flexible, and type-safe Vue 3 component library for draggable and resizable elements.
 
 ## Features
 
-- **Draggable**: Elements that can be moved around the screen
-- **Resizable**: Elements that can be resized from different handles
-- **Combined functionality**: Elements that can be both dragged and resized
-- **TypeScript hooks**: Custom hooks for implementing drag-and-drop functionality
-- **Customizable styling**: Support for custom styling and theming
-- **Grid snapping**: Ability to snap elements to a grid
-- **Bounds constraints**: Restrict movement and resizing within bounds
-- **Touch support**: Support for touch devices
-- **Accessibility**: Keyboard navigation and ARIA attributes
+- 🖱️ **Draggable**: Easily add drag functionality to any element with customizable constraints and events.
+- ↔️ **Resizable**: Resize elements from any edge or corner with configurable minimum and maximum dimensions.
+- 🧩 **Composable**: Use components directly or leverage TypeScript hooks for custom implementations.
+- 📱 **Responsive**: Works on both desktop and mobile devices with touch support.
+- 🔧 **Customizable**: Extensive styling options and configuration to match your design system.
+- 📦 **Lightweight**: Minimal dependencies and tree-shakable for optimal bundle size.
+- 🔒 **Type-Safe**: Built with TypeScript for better development experience and code reliability.
+- 🎯 **Grid Snapping**: Ability to snap elements to a grid for precise positioning.
+- 📏 **Bounds Constraints**: Restrict movement and resizing within defined boundaries.
+- ♿ **Accessibility**: Enhanced keyboard navigation and ARIA attributes support.
 
 ## Installation
 

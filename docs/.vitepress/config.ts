@@ -47,6 +47,7 @@ export default defineConfig({
           { text: 'Getting Started', link: '/guide/' },
           { text: 'Installation', link: '/guide/installation' },
           { text: 'Guidelines', link: '/guide/guidelines' },
+          { text: 'Project Progress', link: '/guide/progress' },
         ],
       },
       {
@@ -85,6 +86,7 @@ export default defineConfig({
             { text: 'Getting Started', link: '/guide/' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Guidelines', link: '/guide/guidelines' },
+            { text: 'Project Progress', link: '/guide/progress' },
           ],
         },
       ],
