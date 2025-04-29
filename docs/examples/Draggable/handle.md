@@ -61,9 +61,15 @@ const handleRef = ref(null)
 <template>
   <Draggable v-model:position="position" :handle="handleRef">
     <div class="draggable-element">
-      <div class="drag-handle" ref="handleRef">Drag Handle</div>
-      <div class="content">Drag only by handle</div>
-      <div class="position">Position: {{ position.x }}, {{ position.y }}</div>
+      <div ref="handleRef" class="drag-handle">
+        Drag Handle
+      </div>
+      <div class="content">
+        Drag only by handle
+      </div>
+      <div class="position">
+        Position: {{ position.x }}, {{ position.y }}
+      </div>
     </div>
   </Draggable>
 </template>
@@ -125,9 +131,15 @@ const { position, style } = useDraggable(elementRef, {
       :style="style"
       class="draggable-element"
     >
-      <div class="drag-handle" ref="handleRef">Drag Handle</div>
-      <div class="content">Drag only by handle</div>
-      <div class="position">Position: {{ position.x }}, {{ position.y }}</div>
+      <div ref="handleRef" class="drag-handle">
+        Drag Handle
+      </div>
+      <div class="content">
+        Drag only by handle
+      </div>
+      <div class="position">
+        Position: {{ position.x }}, {{ position.y }}
+      </div>
     </div>
   </div>
 </template>
@@ -177,25 +189,12 @@ Both the component and hook support several types of handle values:
 <!-- Component approach -->
 <script setup>
 import { ref } from 'vue'
-import { Draggable } from 'vue-dndnr'
-
-const position = ref({ x: 50, y: 50 })
-const handleRef = ref(null)
+import { Draggable, useDraggable } from 'vue-dndnr'
 </script>
 
-<template>
-  <Draggable v-model:position="position" :handle="handleRef">
-    <div class="draggable-element">
-      <div class="drag-handle" ref="handleRef">Drag Handle</div>
-      <!-- Rest of your content -->
-    </div>
-  </Draggable>
-</template>
-
-<!-- Hook approach -->
 <script setup>
-import { ref } from 'vue'
-import { useDraggable } from 'vue-dndnr'
+const position = ref({ x: 50, y: 50 })
+const handleRef = ref(null)
 
 const elementRef = ref(null)
 const handleRef = ref(null)
@@ -204,6 +203,18 @@ const { position, style } = useDraggable(elementRef, {
   handle: handleRef
 })
 </script>
+
+<!-- Hook approach -->
+<template>
+  <Draggable v-model:position="position" :handle="handleRef">
+    <div class="draggable-element">
+      <div ref="handleRef" class="drag-handle">
+        Drag Handle
+      </div>
+      <!-- Rest of your content -->
+    </div>
+  </Draggable>
+</template>
 
 <template>
   <div>
@@ -221,16 +232,6 @@ This approach uses a Vue ref to specify the handle element.
 
 ```vue
 <!-- Component approach -->
-<template>
-  <Draggable v-model:position="position" handle=".drag-handle">
-    <div class="draggable-element">
-      <div class="drag-handle">Drag Handle</div>
-      <!-- Rest of your content -->
-    </div>
-  </Draggable>
-</template>
-
-<!-- Hook approach -->
 <script setup>
 import { ref } from 'vue'
 import { useDraggable } from 'vue-dndnr'
@@ -241,6 +242,18 @@ const { position, style } = useDraggable(elementRef, {
   handle: '.drag-handle'
 })
 </script>
+
+<!-- Hook approach -->
+<template>
+  <Draggable v-model:position="position" handle=".drag-handle">
+    <div class="draggable-element">
+      <div class="drag-handle">
+        Drag Handle
+      </div>
+      <!-- Rest of your content -->
+    </div>
+  </Draggable>
+</template>
 
 <template>
   <div>
@@ -261,30 +274,17 @@ You can also pass an HTMLElement directly if you have access to it:
 ```vue
 <!-- Component approach -->
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Draggable } from 'vue-dndnr'
+import { onMounted, ref } from 'vue'
+import { Draggable, useDraggable } from 'vue-dndnr'
+</script>
 
+<script setup>
 const position = ref({ x: 50, y: 50 })
 const handleElement = ref(null)
 
 onMounted(() => {
   handleElement.value = document.querySelector('.drag-handle')
 })
-</script>
-
-<template>
-  <Draggable v-model:position="position" :handle="handleElement">
-    <div class="draggable-element">
-      <div class="drag-handle">Drag Handle</div>
-      <!-- Rest of your content -->
-    </div>
-  </Draggable>
-</template>
-
-<!-- Hook approach -->
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useDraggable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const handleElement = ref(null)
@@ -298,6 +298,18 @@ const { position, style } = useDraggable(elementRef, {
   handle: handleElement
 })
 </script>
+
+<!-- Hook approach -->
+<template>
+  <Draggable v-model:position="position" :handle="handleElement">
+    <div class="draggable-element">
+      <div class="drag-handle">
+        Drag Handle
+      </div>
+      <!-- Rest of your content -->
+    </div>
+  </Draggable>
+</template>
 
 <template>
   <div>

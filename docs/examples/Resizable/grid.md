@@ -25,7 +25,7 @@ const size = shallowRef({ width: 200, height: 160 })
 
 <style>
 .grid-background {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
@@ -48,7 +48,9 @@ const size = ref({ width: 200, height: 160 })
       <div class="resizable-element" :style="{ width: `${size.width}px`, height: `${size.height}px` }">
         Resize me along the grid!
         <div>Size: {{ size.width }} x {{ size.height }}</div>
-        <div class="grid-info">Grid: 20x20</div>
+        <div class="grid-info">
+          Grid: 20x20
+        </div>
       </div>
     </Resizable>
   </div>
@@ -63,7 +65,7 @@ const size = ref({ width: 200, height: 160 })
   border-radius: 0.5rem;
   overflow: hidden;
   /* Grid background */
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
@@ -119,8 +121,8 @@ You can combine grid snapping with other features:
 ### With Size Constraints
 
 ```vue
-<Resizable 
-  v-model:size="size" 
+<Resizable
+  v-model:size="size"
   :grid="[20, 20]"
   :min-width="100"
   :min-height="100"
@@ -136,8 +138,8 @@ This will make the element snap to the grid while also respecting the size const
 ### With Aspect Ratio Lock
 
 ```vue
-<Resizable 
-  v-model:size="size" 
+<Resizable
+  v-model:size="size"
   :grid="[20, 20]"
   :lock-aspect-ratio="true"
 >
@@ -150,8 +152,8 @@ When combining grid snapping with aspect ratio locking, the component will try t
 ### With Custom Handles
 
 ```vue
-<Resizable 
-  v-model:size="size" 
+<Resizable
+  v-model:size="size"
   :grid="[20, 20]"
   :handles="['br', 'tr', 'bl', 'tl']"
 >

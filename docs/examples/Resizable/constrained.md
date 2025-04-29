@@ -66,7 +66,9 @@ const size = ref({ width: 200, height: 150 })
     <div class="resizable-element" :style="{ width: `${size.width}px`, height: `${size.height}px` }">
       Resize me within constraints!
       <div>Size: {{ size.width }} x {{ size.height }}</div>
-      <div class="constraints">Constraints: 100x100 to 400x300</div>
+      <div class="constraints">
+        Constraints: 100x100 to 400x300
+      </div>
     </div>
   </Resizable>
 </template>
@@ -118,7 +120,9 @@ const { size, style } = useResizable(elementRef, {
   >
     Resize me within constraints!
     <div>Size: {{ size.width }} x {{ size.height }}</div>
-    <div class="constraints">Constraints: 100x100 to 400x300</div>
+    <div class="constraints">
+      Constraints: 100x100 to 400x300
+    </div>
   </div>
 </template>
 

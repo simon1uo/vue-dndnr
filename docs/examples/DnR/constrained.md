@@ -89,7 +89,9 @@ const size = ref({ width: 200, height: 150 })
         Drag and resize within constraints!
         <div>Position: {{ position.x }}, {{ position.y }}</div>
         <div>Size: {{ size.width }} x {{ size.height }}</div>
-        <div class="constraints">Constraints: 100x100 to 300x200</div>
+        <div class="constraints">
+          Constraints: 100x100 to 300x200
+        </div>
       </div>
     </DnR>
   </div>
@@ -147,7 +149,7 @@ const { position, size, style } = useDnR(elementRef, {
 </script>
 
 <template>
-  <div class="container" ref="containerRef">
+  <div ref="containerRef" class="container">
     <div
       ref="elementRef"
       :style="style"
@@ -156,7 +158,9 @@ const { position, size, style } = useDnR(elementRef, {
       Drag and resize within constraints!
       <div>Position: {{ position.x }}, {{ position.y }}</div>
       <div>Size: {{ size.width }} x {{ size.height }}</div>
-      <div class="constraints">Constraints: 100x100 to 300x200</div>
+      <div class="constraints">
+        Constraints: 100x100 to 300x200
+      </div>
     </div>
   </div>
 </template>

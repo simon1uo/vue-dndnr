@@ -149,8 +149,10 @@ const triangleProps = computed(() => {
 <template>
   <div class="shape-container">
     <div v-if="type !== 'triangle'" :class="shapeClass" :style="shapeStyle" />
-    <svg v-else class="shape-svg" :class="[{ 'shape-selected': props.selected, 'shape-new': props.isNew }]"
-      viewBox="0 0 100 100" preserveAspectRatio="none">
+    <svg
+      v-else class="shape-svg" :class="[{ 'shape-selected': props.selected, 'shape-new': props.isNew }]"
+      viewBox="0 0 100 100" preserveAspectRatio="none"
+    >
       <!-- SVG Definitions for filters and gradients -->
       <defs>
         <!-- Shadow filter for 3D effect - only external shadow -->

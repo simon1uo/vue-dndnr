@@ -95,20 +95,26 @@ const handleRef = ref(null)
     :handle="handleRef"
   >
     <div class="window" :style="{ width: `${size.width}px`, height: `${size.height}px` }">
-      <div class="window-header" ref="handleRef">
+      <div ref="handleRef" class="window-header">
         <div class="window-controls">
-          <div class="control red"></div>
-          <div class="control yellow"></div>
-          <div class="control green"></div>
+          <div class="control red" />
+          <div class="control yellow" />
+          <div class="control green" />
         </div>
-        <div class="window-title">Window Example</div>
-        <div class="window-spacer"></div>
+        <div class="window-title">
+          Window Example
+        </div>
+        <div class="window-spacer" />
       </div>
       <div class="window-content">
         <div class="window-body">
           <div>Draggable and resizable window</div>
-          <div class="window-info">Position: {{ position.x }}, {{ position.y }}</div>
-          <div class="window-info">Size: {{ size.width }} x {{ size.height }}</div>
+          <div class="window-info">
+            Position: {{ position.x }}, {{ position.y }}
+          </div>
+          <div class="window-info">
+            Size: {{ size.width }} x {{ size.height }}
+          </div>
         </div>
       </div>
     </div>
@@ -216,20 +222,26 @@ const { position, size, style } = useDnR(elementRef, {
     :style="style"
     class="window"
   >
-    <div class="window-header" ref="handleRef">
+    <div ref="handleRef" class="window-header">
       <div class="window-controls">
-        <div class="control red"></div>
-        <div class="control yellow"></div>
-        <div class="control green"></div>
+        <div class="control red" />
+        <div class="control yellow" />
+        <div class="control green" />
       </div>
-      <div class="window-title">Window Example</div>
-      <div class="window-spacer"></div>
+      <div class="window-title">
+        Window Example
+      </div>
+      <div class="window-spacer" />
     </div>
     <div class="window-content">
       <div class="window-body">
         <div>Draggable and resizable window</div>
-        <div class="window-info">Position: {{ position.x }}, {{ position.y }}</div>
-        <div class="window-info">Size: {{ size.width }} x {{ size.height }}</div>
+        <div class="window-info">
+          Position: {{ position.x }}, {{ position.y }}
+        </div>
+        <div class="window-info">
+          Size: {{ size.width }} x {{ size.height }}
+        </div>
       </div>
     </div>
   </div>

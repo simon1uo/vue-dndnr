@@ -110,7 +110,7 @@ const { position, style } = useDraggable(elementRef, {
 </script>
 
 <template>
-  <div class="container" ref="containerRef">
+  <div ref="containerRef" class="container">
     <div
       ref="elementRef"
       :style="style"
@@ -194,24 +194,12 @@ This constrains the draggable element within the element matching the selector.
 <!-- Component approach -->
 <script setup>
 import { ref } from 'vue'
-import { Draggable } from 'vue-dndnr'
-
-const position = ref({ x: 50, y: 50 })
-const boundaryRef = ref(null)
+import { Draggable, useDraggable } from 'vue-dndnr'
 </script>
 
-<template>
-  <div ref="boundaryRef" class="boundary">
-    <Draggable v-model:position="position" :bounds="boundaryRef">
-      <!-- Your content -->
-    </Draggable>
-  </div>
-</template>
-
-<!-- Hook approach -->
 <script setup>
-import { ref } from 'vue'
-import { useDraggable } from 'vue-dndnr'
+const position = ref({ x: 50, y: 50 })
+const boundaryRef = ref(null)
 
 const boundaryRef = ref(null)
 const elementRef = ref(null)
@@ -220,6 +208,15 @@ const { position, style } = useDraggable(elementRef, {
   bounds: boundaryRef
 })
 </script>
+
+<!-- Hook approach -->
+<template>
+  <div ref="boundaryRef" class="boundary">
+    <Draggable v-model:position="position" :bounds="boundaryRef">
+      <!-- Your content -->
+    </Draggable>
+  </div>
+</template>
 
 <template>
   <div ref="boundaryRef" class="boundary">
@@ -236,8 +233,10 @@ const { position, style } = useDraggable(elementRef, {
 <!-- Component approach -->
 <script setup>
 import { ref } from 'vue'
-import { Draggable } from 'vue-dndnr'
+import { Draggable, useDraggable } from 'vue-dndnr'
+</script>
 
+<script setup>
 const position = ref({ x: 50, y: 50 })
 const customBounds = {
   left: 0,
@@ -245,18 +244,6 @@ const customBounds = {
   right: 500,
   bottom: 300
 }
-</script>
-
-<template>
-  <Draggable v-model:position="position" :bounds="customBounds">
-    <!-- Your content -->
-  </Draggable>
-</template>
-
-<!-- Hook approach -->
-<script setup>
-import { ref } from 'vue'
-import { useDraggable } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const customBounds = {
@@ -270,6 +257,13 @@ const { position, style } = useDraggable(elementRef, {
   bounds: customBounds
 })
 </script>
+
+<!-- Hook approach -->
+<template>
+  <Draggable v-model:position="position" :bounds="customBounds">
+    <!-- Your content -->
+  </Draggable>
+</template>
 
 <template>
   <div>

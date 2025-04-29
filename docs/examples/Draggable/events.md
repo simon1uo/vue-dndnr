@@ -142,9 +142,9 @@ function onDragEnd(pos, event) {
 
     <Draggable
       v-model:position="position"
-      @dragStart="onDragStart"
+      @drag-start="onDragStart"
       @drag="onDrag"
-      @dragEnd="onDragEnd"
+      @drag-end="onDragEnd"
     >
       <div class="draggable-element">
         Drag me!
@@ -220,14 +220,16 @@ const { position, style, isDragging } = useDraggable(elementRef, {
   initialPosition: { x: 50, y: 50 },
   onDragStart: (pos, event) => {
     eventLog.value.push(`Drag started at x: ${pos.x}, y: ${pos.y}`)
-    if (eventLog.value.length > 5) eventLog.value.shift()
+    if (eventLog.value.length > 5)
+      eventLog.value.shift()
   },
   onDrag: (pos, event) => {
     eventLog.value[eventLog.value.length - 1] = `Dragging at x: ${pos.x}, y: ${pos.y}`
   },
   onDragEnd: (pos, event) => {
     eventLog.value.push(`Drag ended at x: ${pos.x}, y: ${pos.y}`)
-    if (eventLog.value.length > 5) eventLog.value.shift()
+    if (eventLog.value.length > 5)
+      eventLog.value.shift()
   }
 })
 </script>
@@ -250,7 +252,7 @@ const { position, style, isDragging } = useDraggable(elementRef, {
       ref="elementRef"
       :style="style"
       class="draggable-element"
-      :class="{ 'dragging': isDragging }"
+      :class="{ dragging: isDragging }"
     >
       Drag me!
       <div>Position: {{ position.x }}, {{ position.y }}</div>

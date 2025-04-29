@@ -141,13 +141,15 @@ function onResizeEnd() {
   <Resizable
     v-model:size="size"
     :handles="['br']"
-    @resizeStart="onResizeStart"
-    @resizeEnd="onResizeEnd"
+    @resize-start="onResizeStart"
+    @resize-end="onResizeEnd"
   >
     <div class="resizable-element" :style="{ width: `${size.width}px`, height: `${size.height}px` }">
       Resize from bottom-right corner only!
       <div>Size: {{ size.width }} x {{ size.height }}</div>
-      <div v-if="activeHandle">Active handle: {{ activeHandle }}</div>
+      <div v-if="activeHandle">
+        Active handle: {{ activeHandle }}
+      </div>
     </div>
   </Resizable>
 </template>
@@ -199,7 +201,9 @@ const { size, style } = useResizable(elementRef, {
   >
     Resize from bottom-right corner only!
     <div>Size: {{ size.width }} x {{ size.height }}</div>
-    <div v-if="activeHandle">Active handle: {{ activeHandle }}</div>
+    <div v-if="activeHandle">
+      Active handle: {{ activeHandle }}
+    </div>
   </div>
 </template>
 

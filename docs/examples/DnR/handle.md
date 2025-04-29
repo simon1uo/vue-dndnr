@@ -75,7 +75,9 @@ const handleRef = ref(null)
     :handle="handleRef"
   >
     <div class="dnr-element" :style="{ width: `${size.width}px`, height: `${size.height}px` }">
-      <div class="drag-handle" ref="handleRef">Drag Handle</div>
+      <div ref="handleRef" class="drag-handle">
+        Drag Handle
+      </div>
       <div class="content">
         <div>Drag only by handle</div>
         <div>Position: {{ position.x }}, {{ position.y }}</div>
@@ -139,7 +141,9 @@ const { position, size, style } = useDnR(elementRef, {
     :style="style"
     class="dnr-element"
   >
-    <div class="drag-handle" ref="handleRef">Drag Handle</div>
+    <div ref="handleRef" class="drag-handle">
+      Drag Handle
+    </div>
     <div class="content">
       <div>Drag only by handle</div>
       <div>Position: {{ position.x }}, {{ position.y }}</div>

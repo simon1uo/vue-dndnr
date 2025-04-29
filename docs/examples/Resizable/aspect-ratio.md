@@ -49,7 +49,7 @@ const hookInitialRatio = 200 / 150
 ::: details View Component Code
 ```vue
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Resizable } from 'vue-dndnr'
 
 const size = ref({ width: 200, height: 150 })
@@ -62,7 +62,9 @@ const initialRatio = 200 / 150
     <div class="resizable-element" :style="{ width: `${size.width}px`, height: `${size.height}px` }">
       Resize while maintaining aspect ratio!
       <div>Size: {{ size.width }} x {{ size.height }}</div>
-      <div class="ratio">Ratio: {{ aspectRatio }} (Initial: {{ initialRatio.toFixed(2) }})</div>
+      <div class="ratio">
+        Ratio: {{ aspectRatio }} (Initial: {{ initialRatio.toFixed(2) }})
+      </div>
     </div>
   </Resizable>
 </template>
@@ -93,7 +95,7 @@ const initialRatio = 200 / 150
 ::: details View Hook Code
 ```vue
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
@@ -113,7 +115,9 @@ const initialRatio = 200 / 150
   >
     Resize while maintaining aspect ratio!
     <div>Size: {{ size.width }} x {{ size.height }}</div>
-    <div class="ratio">Ratio: {{ aspectRatio }} (Initial: {{ initialRatio.toFixed(2) }})</div>
+    <div class="ratio">
+      Ratio: {{ aspectRatio }} (Initial: {{ initialRatio.toFixed(2) }})
+    </div>
   </div>
 </template>
 
