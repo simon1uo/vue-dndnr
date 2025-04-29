@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import process from 'node:process'
 import colors from 'picocolors'
 import prompts from 'prompts'
 
@@ -75,7 +76,7 @@ async function main() {
   try {
     run('pnpm', ['changelog'])
   }
-  catch (e) {
+  catch {
     console.log(colors.yellow('Changelog generation failed, skipping...'))
   }
 
