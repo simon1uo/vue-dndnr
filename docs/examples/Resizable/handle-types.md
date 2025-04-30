@@ -335,15 +335,17 @@ When using `handleType="custom"` with the `Resizable` component, it automaticall
 Simply use the named slot for each handle position you want to customize:
 
 ```vue
-<template #handle-br="{ active, hover, isResizing, cursor, size }">
-  <div
-    class="my-custom-handle"
-    :class="{ active, hover, resizing: isResizing && active }"
-    :style="{ cursor }"
-  >
-    <span>{{ size.width }}x{{ size.height }}</span>
-  </div>
-</template>
+<Resizable>
+  <template #handle-br="{ active, hover, isResizing, cursor, size }">
+    <div
+      class="my-custom-handle"
+      :class="{ active, hover, resizing: isResizing && active }"
+      :style="{ cursor }"
+    >
+      <span>{{ size.width }}x{{ size.height }}</span>
+    </div>
+  </template>
+</Resizable>
 ```
 
 The component will automatically:
