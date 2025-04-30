@@ -51,6 +51,7 @@ const dnrOptions: DnROptions = {
   capture: computed(() => toValue(props.capture) ?? true),
   lockAspectRatio: computed(() => toValue(props.lockAspectRatio) ?? false),
   handles: computed(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']),
+  handleType: computed(() => toValue(props.handleType) ?? 'borders'),
   minWidth: props.minWidth,
   minHeight: props.minHeight,
   maxWidth: props.maxWidth,
