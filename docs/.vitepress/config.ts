@@ -140,6 +140,7 @@ export default defineConfig({
             { text: 'Basic Usage', link: '/examples/Resizable/basic' },
             { text: 'Constrained Resizing', link: '/examples/Resizable/constrained' },
             { text: 'Custom Handles', link: '/examples/Resizable/handles' },
+            { text: 'Handle Types', link: '/examples/Resizable/handle-types' },
             { text: 'Aspect Ratio Lock', link: '/examples/Resizable/aspect-ratio' },
             { text: 'Event Handling', link: '/examples/Resizable/events' },
           ],

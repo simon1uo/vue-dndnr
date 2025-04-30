@@ -64,6 +64,7 @@ const size = ref({ width: 200, height: 150 })
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `disabled` | `Boolean` | `false` | Whether resizing is disabled. |
+| `handleType` | `String` | `'borders'` | Type of resize handles to display. Options: `'borders'`, `'handles'`, `'custom'`. |
 | `handles` | `Array` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Array of handles to display. |
 
 ### Event Control Props
@@ -99,3 +100,4 @@ const size = ref({ width: 200, height: 150 })
 | Slot | Props | Description |
 |------|-------|-------------|
 | default | `{ size, isResizing }` | The content to be made resizable. |
+| `handle-${position}` | `{ handle, active, hover }` | Custom handle slot for each position when `handleType="custom"`. Position can be any valid handle (e.g., `handle-br`, `handle-tl`, etc.). |

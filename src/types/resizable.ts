@@ -1,7 +1,7 @@
 /**
  * Types for the resizable component
  */
-import type { MaybeRefOrGetter } from 'vue'
+import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue'
 import type { PointerType, Size } from './common'
 
 /**
@@ -9,6 +9,160 @@ import type { PointerType, Size } from './common'
  * Supports both short ('t', 'b', etc.) and long ('top', 'bottom', etc.) formats
  */
 export type ResizeHandle = 't' | 'b' | 'r' | 'l' | 'tr' | 'tl' | 'br' | 'bl' | 'top' | 'bottom' | 'right' | 'left' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+
+/**
+ * Type of resize handles to display
+ */
+export type ResizeHandleType = 'borders' | 'handles' | 'custom'
+
+/**
+ * Options for the resize handles
+ */
+export interface ResizeHandlesOptions {
+  /**
+   * Type of resize handles to display
+   * - 'borders': Use element borders as resize handles (default)
+   * - 'handles': Display visible handles at corners and edges
+   * - 'custom': Use custom handles provided via slots
+   * @default 'borders'
+   */
+  handleType?: MaybeRefOrGetter<ResizeHandleType>
+
+  /**
+   * Active resize handles to enable
+   * @default ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']
+   */
+  handles?: MaybeRefOrGetter<ResizeHandle[]>
+
+  /**
+   * Custom handle elements to use when handleType is 'custom'
+   * Map of handle positions to HTML elements
+   */
+  customHandles?: MaybeRefOrGetter<Map<ResizeHandle, HTMLElement> | null | undefined>
+
+  /**
+   * Distance in pixels from edges to detect resize handles
+   * @default 8
+   */
+  boundaryThreshold?: MaybeRefOrGetter<number>
+
+  /**
+   * Whether to prevent default browser events during resize
+   * @default true
+   */
+  preventDefault?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to stop event propagation to parent elements
+   * @default false
+   */
+  stopPropagation?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to use event capturing phase
+   * @default true
+   */
+  capture?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Types of pointer events to respond to
+   * @default ['mouse', 'touch', 'pen']
+   */
+  pointerTypes?: MaybeRefOrGetter<PointerType[] | null | undefined>
+
+  /**
+   * Whether resizing is disabled
+   * @default false
+   */
+  disabled?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Called when resizing starts
+   * @param event - The pointer event that triggered the start
+   * @param handle - The handle that was clicked
+   */
+  onResizeStart?: (event: PointerEvent, handle: ResizeHandle) => void
+}
+
+/**
+ * Result of the useResizeHandles composable
+ */
+export interface ResizeHandlesResult {
+  /**
+   * Current handle type
+   */
+  handleType: ComputedRef<ResizeHandleType>
+
+  /**
+   * Currently active handle (during resize)
+   */
+  activeHandle: Ref<ResizeHandle | null>
+
+  /**
+   * Currently hovered handle
+   */
+  hoverHandle: Ref<ResizeHandle | null>
+
+  /**
+   * Map of handle elements
+   */
+  handleElements: Ref<Map<ResizeHandle, HTMLElement>>
+
+  /**
+   * List of created handle elements (for cleanup)
+   */
+  createdHandleElements: Ref<HTMLElement[]>
+
+  /**
+   * Get cursor style for a handle
+   */
+  getCursorForHandle: (handle: ResizeHandle) => string
+
+  /**
+   * Create a handle element
+   */
+  createHandleElement: (handle: ResizeHandle, isCustom?: boolean) => HTMLElement
+
+  /**
+   * Apply styles to a handle element
+   */
+  applyHandleStyles: (handleEl: HTMLElement, handle: ResizeHandle, isCustom?: boolean) => void
+
+  /**
+   * Register a handle element
+   */
+  registerHandle: (handle: ResizeHandle, element: HTMLElement) => void
+
+  /**
+   * Unregister a handle element
+   */
+  unregisterHandle: (handle: ResizeHandle) => void
+
+  /**
+   * Set up handle elements
+   */
+  setupHandleElements: (targetElement: HTMLElement | SVGElement) => void
+
+  /**
+   * Clean up handle elements
+   */
+  cleanup: () => void
+
+  /**
+   * Detect which handle is under the pointer
+   */
+  detectBoundary: (event: PointerEvent, element: HTMLElement | SVGElement) => ResizeHandle | null
+
+  /**
+   * Handle pointerdown event on a handle
+   */
+  onHandlePointerDown: (event: PointerEvent, handle: ResizeHandle) => void
+
+  /**
+   * Get event listener configuration
+   */
+  getConfig: () => { capture: boolean, passive: boolean }
+}
 
 /**
  * Configuration options for resizable functionality
@@ -61,6 +215,21 @@ export interface ResizableOptions {
    * @default ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']
    */
   handles?: MaybeRefOrGetter<ResizeHandle[]>
+
+  /**
+   * Type of resize handles to display
+   * - 'borders': Use element borders as resize handles (default)
+   * - 'handles': Display visible handles at corners and edges
+   * - 'custom': Use custom handles provided via slots
+   * @default 'borders'
+   */
+  handleType?: MaybeRefOrGetter<ResizeHandleType>
+
+  /**
+   * Custom handle elements to use when handleType is 'custom'
+   * Map of handle positions to HTML elements
+   */
+  customHandles?: MaybeRefOrGetter<Map<ResizeHandle, HTMLElement> | null | undefined>
 
   /**
    * Element or selector to use as bounds for the resizable element

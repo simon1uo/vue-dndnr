@@ -65,6 +65,7 @@ const { size } = useResizable(resizableRef, {
 | `maxHeight` | `MaybeRefOrGetter<number>` | `Infinity` | Maximum height constraint in pixels. |
 | `grid` | `MaybeRefOrGetter<[number, number] \| undefined \| null>` | `undefined` | Grid size for snapping during resize. Format: `[width, height]`. |
 | `lockAspectRatio` | `MaybeRefOrGetter<boolean>` | `false` | Whether to maintain aspect ratio during resizing. |
+| `handleType` | `MaybeRefOrGetter<'borders' \| 'handles' \| 'custom'>` | `'borders'` | Type of resize handles to display. |
 | `handles` | `MaybeRefOrGetter<ResizeHandle[]>` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Active resize handles to enable. |
 | `bounds` | `MaybeRefOrGetter<HTMLElement \| 'parent' \| null \| undefined>` | `undefined` | Element or selector to use as bounds for the resizable element. |
 | `disabled` | `MaybeRefOrGetter<boolean>` | `false` | Whether resizing is disabled. |
@@ -104,6 +105,8 @@ Unlike what some examples might suggest, the `useResizable` hook does not return
 | `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
 | `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
 | `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
+| `handleType` | `ComputedRef<'borders' \| 'handles' \| 'custom'>` | Current handle type being used. |
+| `handleElements` | `Ref<Map<ResizeHandle, HTMLElement>>` | Map of handle elements for 'handles' or 'custom' mode. |
 
 | `setSize` | `(newSize: Size) => void` | Function to programmatically set the size. |
 | `setPosition` | `(newPosition: Position) => void` | Function to programmatically set the position. |
@@ -111,6 +114,8 @@ Unlike what some examples might suggest, the `useResizable` hook does not return
 | `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
 | `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |
 | `detectBoundary` | `(event: PointerEvent, element: HTMLElement) => ResizeHandle \| null` | Function to detect handle at pointer position. |
+| `registerHandle` | `(handle: ResizeHandle, element: HTMLElement) => void` | Register a handle element for 'handles' or 'custom' mode. |
+| `unregisterHandle` | `(handle: ResizeHandle) => void` | Unregister a handle element. |
 
 ::: details Show Type Definitions
 
@@ -132,6 +137,8 @@ interface Position {
 type ResizeHandle = 't' | 'b' | 'r' | 'l' | 'tr' | 'tl' | 'br' | 'bl' |
   'top' | 'bottom' | 'right' | 'left' |
   'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+
+type ResizeHandleType = 'borders' | 'handles' | 'custom'
 
 type PointerType = 'mouse' | 'touch' | 'pen'
 ```

@@ -1,6 +1,7 @@
-import type { PointerType, Position, ResizableOptions, ResizeHandle, Size } from '@/types'
+import type { Position, ResizableOptions, Size } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { useEventListener } from '@/hooks/useEventListener'
+import { useResizeHandles } from '@/hooks/useResizeHandles'
 import {
   applyAspectRatioLock,
   applyGrid,
@@ -12,7 +13,7 @@ import {
   isClient,
 } from '@/utils'
 import { throttle } from '@/utils/throttle'
-import { onMounted, ref, toValue, watch } from 'vue'
+import { onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
 /**
  * Hook that adds resize functionality to an element
@@ -29,7 +30,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     maxHeight,
     grid,
     lockAspectRatio = false,
+    handleType = 'borders',
     handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
+    customHandles,
     bounds,
     disabled = false,
     pointerTypes = ['mouse', 'touch', 'pen'],
@@ -46,51 +49,66 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const size = ref<Size>({ ...initialSize })
   const position = ref<Position>({ x: 0, y: 0 })
   const isResizing = ref(false)
-  const activeHandle = ref<ResizeHandle | null>(null)
   const startEvent = ref<PointerEvent | null>(null)
-  const hoverHandle = ref<ResizeHandle | null>(null)
   const isAbsolutePositioned = ref(false)
 
   const startSize = ref<Size>({ ...initialSize })
   const startPosition = ref<Position>({ x: 0, y: 0 })
 
-  const getCursorForHandle = (handle: ResizeHandle): string => {
-    switch (handle) {
-      case 't':
-      case 'top':
-        return 'n-resize'
-      case 'b':
-      case 'bottom':
-        return 's-resize'
-      case 'r':
-      case 'right':
-        return 'e-resize'
-      case 'l':
-      case 'left':
-        return 'w-resize'
-      case 'tr':
-      case 'top-right':
-        return 'ne-resize'
-      case 'tl':
-      case 'top-left':
-        return 'nw-resize'
-      case 'br':
-      case 'bottom-right':
-        return 'se-resize'
-      case 'bl':
-      case 'bottom-left':
-        return 'sw-resize'
-      default:
-        return 'default'
-    }
+  // Handle event by preventing default and stopping propagation if configured
+  const handleEvent = (event: PointerEvent) => {
+    if (toValue(preventDefault))
+      event.preventDefault()
+    if (toValue(stopPropagation))
+      event.stopPropagation()
   }
+
+  // Initialize resize handles
+  const {
+    handleType: currentHandleType,
+    activeHandle,
+    hoverHandle,
+    handleElements,
+    getCursorForHandle,
+    registerHandle,
+    unregisterHandle,
+    setupHandleElements,
+    cleanup: cleanupHandles,
+    detectBoundary,
+  } = useResizeHandles(target, {
+    handleType,
+    handles,
+    customHandles,
+    boundaryThreshold,
+    preventDefault,
+    stopPropagation,
+    capture,
+    pointerTypes,
+    disabled,
+    onResizeStart: (event: PointerEvent) => {
+      // Handle resize start from handle elements
+      startEvent.value = event
+      startSize.value = { ...size.value }
+      startPosition.value = { ...position.value }
+      isResizing.value = true
+
+      if (onResizeStartCallback)
+        onResizeStartCallback(size.value, event)
+
+      handleEvent(event)
+    },
+  })
 
   const applyStyles = () => {
     const el = toValue(target)
     if (!el)
       return
 
-    const cursorStyle = hoverHandle.value ? getCursorForHandle(hoverHandle.value) : 'default'
+    // Only apply cursor styles for 'borders' type
+    // For 'handles' and 'custom' types, cursor is handled by CSS
+    const cursorStyle = currentHandleType.value === 'borders' && hoverHandle.value
+      ? getCursorForHandle(hoverHandle.value)
+      : 'default'
 
     if (!isAbsolutePositioned.value) {
       el.style.position = 'relative'
@@ -103,82 +121,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     el.style.width = typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width
     el.style.height = typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height
     el.style.userSelect = 'none'
-    el.style.cursor = isResizing.value && activeHandle.value ? getCursorForHandle(activeHandle.value) : cursorStyle
-  }
 
-  const filterEvent = (event: PointerEvent): boolean => {
-    if (toValue(disabled))
-      return false
-
-    const types = toValue(pointerTypes)
-    if (types)
-      return types.includes(event.pointerType as PointerType)
-
-    return true
-  }
-
-  const handleEvent = (event: PointerEvent) => {
-    if (toValue(preventDefault))
-      event.preventDefault()
-    if (toValue(stopPropagation))
-      event.stopPropagation()
-  }
-
-  const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
-    const rect = element.getBoundingClientRect()
-    const clientX = event.clientX ?? ((event as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
-    const clientY = event.clientY ?? ((event as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
-
-    const distToTop = Math.abs(clientY - rect.top)
-    const distToBottom = Math.abs(clientY - rect.bottom)
-    const distToLeft = Math.abs(clientX - rect.left)
-    const distToRight = Math.abs(clientX - rect.right)
-
-    const thresholdValue = toValue(boundaryThreshold)
-
-    const expandedRect = {
-      left: rect.left - thresholdValue,
-      right: rect.right + thresholdValue,
-      top: rect.top - thresholdValue,
-      bottom: rect.bottom + thresholdValue,
+    // Apply cursor style only for 'borders' type
+    if (currentHandleType.value === 'borders') {
+      el.style.cursor = isResizing.value && activeHandle.value
+        ? getCursorForHandle(activeHandle.value)
+        : cursorStyle
     }
-
-    const isWithinX = clientX >= expandedRect.left && clientX <= expandedRect.right
-    const isWithinY = clientY >= expandedRect.top && clientY <= expandedRect.bottom
-
-    if (!isWithinX || !isWithinY) {
-      return null
-    }
-
-    if (distToTop <= thresholdValue && distToLeft <= thresholdValue) {
-      return 'tl'
-    }
-    if (distToTop <= thresholdValue && distToRight <= thresholdValue) {
-      return 'tr'
-    }
-    if (distToBottom <= thresholdValue && distToLeft <= thresholdValue) {
-      return 'bl'
-    }
-    if (distToBottom <= thresholdValue && distToRight <= thresholdValue) {
-      return 'br'
-    }
-
-    const edgeThreshold = thresholdValue * 0.8
-
-    if (distToTop <= edgeThreshold && isWithinX) {
-      return 't'
-    }
-    if (distToBottom <= edgeThreshold && isWithinX) {
-      return 'b'
-    }
-    if (distToLeft <= edgeThreshold && isWithinY) {
-      return 'l'
-    }
-    if (distToRight <= edgeThreshold && isWithinY) {
-      return 'r'
-    }
-
-    return null
   }
 
   /**
@@ -186,7 +135,12 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
    * @param event - The pointer event from mouse movement
    */
   const onMouseMove = (event: PointerEvent) => {
-    if (isResizing.value || !filterEvent(event)) {
+    // For 'handles' or 'custom' type, hover is handled by CSS :hover
+    // so we only need to handle 'borders' type here
+    if (currentHandleType.value !== 'borders')
+      return
+
+    if (isResizing.value) {
       return
     }
 
@@ -207,8 +161,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
    * @param event - The pointer event that triggered the resize start
    */
   const onResizeStart = (event: PointerEvent) => {
+    // For 'handles' or 'custom' type, resize is started by handle elements directly
+    // so we only need to handle 'borders' type here
+    if (currentHandleType.value !== 'borders')
+      return
+
     const el = toValue(target)
-    if (!filterEvent(event) || !el)
+    if (!el)
       return
 
     const handle = detectBoundary(event, el)
@@ -536,6 +495,17 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
   onMounted(setupElementSize)
 
+  // Clean up on unmount
+  onUnmounted(cleanupHandles)
+
+  // Watch for changes to handleType and target
+  watch([currentHandleType, () => toValue(target), () => toValue(handles)], () => {
+    const el = toValue(target)
+    if (el) {
+      setupHandleElements(el)
+    }
+  })
+
   // Watch for changes to the target element
   watch(
     () => toValue(target),
@@ -543,6 +513,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       if (newTarget) {
         // Set up new listeners
         setupElementSize()
+        setupHandleElements(newTarget)
       }
     },
     { immediate: true },
@@ -645,12 +616,17 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     activeHandle,
     hoverHandle,
     isAbsolutePositioned,
+    handleType: currentHandleType,
+    handleElements,
     setSize,
     setPosition,
     onResizeStart,
     onResize,
     onResizeEnd,
     detectBoundary,
+    registerHandle,
+    unregisterHandle,
+    setupHandleElements,
   }
 }
 

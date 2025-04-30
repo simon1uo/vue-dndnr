@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import type { ResizableOptions, ResizeHandle, Size } from '@/types'
+import type { ResizableOptions, ResizeHandle, ResizeHandleType, Size } from '@/types'
 import { useResizable } from '@/hooks'
-import { computed, ref, toValue, watch } from 'vue'
-
-interface ResizableProps extends ResizableOptions {
-  size?: Size
-  modelValue?: Size
-}
+import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
 const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
+  handleType: 'borders',
   lockAspectRatio: false,
   disabled: false,
   preventDefault: true,
@@ -28,9 +24,16 @@ const emit = defineEmits<{
   'hoverHandleChange': [handle: ResizeHandle | null]
 }>()
 
+interface ResizableProps extends ResizableOptions {
+  size?: Size
+  modelValue?: Size
+}
+
 const targetRef = ref<HTMLElement | null>(null)
+const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
 const grid = computed(() => toValue(props.grid))
 const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
+const handleType = computed<ResizeHandleType>(() => toValue(props.handleType) ?? 'borders')
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 const bounds = computed(() => toValue(props.bounds))
 const disabled = computed(() => toValue(props.disabled))
@@ -46,12 +49,18 @@ const {
   setSize,
   activeHandle,
   hoverHandle,
+  handleType: currentHandleType,
+  registerHandle,
+  unregisterHandle,
+  setupHandleElements,
 } = useResizable(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
   grid,
   lockAspectRatio,
+  handleType,
   handles,
+  customHandles: handleRefs, // Pass the handle refs map as custom handles
   bounds,
   disabled,
   pointerTypes,
@@ -83,7 +92,9 @@ const {
 })
 
 watch(hoverHandle, (newHandle) => {
-  emit('hoverHandleChange', newHandle)
+  if (newHandle !== undefined) {
+    emit('hoverHandleChange', newHandle)
+  }
 })
 
 watch(
@@ -118,11 +129,142 @@ watch(
 const combinedClass = computed(() => {
   return isResizing.value ? 'resizable resizing' : 'resizable'
 })
+
+/**
+ * Get the appropriate cursor style for a resize handle
+ * @param handle - The resize handle position
+ * @returns The CSS cursor style for the handle
+ */
+function getCursorStyle(handle: ResizeHandle): string {
+  switch (handle) {
+    case 't':
+    case 'top':
+      return 'n-resize'
+    case 'b':
+    case 'bottom':
+      return 's-resize'
+    case 'r':
+    case 'right':
+      return 'e-resize'
+    case 'l':
+    case 'left':
+      return 'w-resize'
+    case 'tr':
+    case 'top-right':
+      return 'ne-resize'
+    case 'tl':
+    case 'top-left':
+      return 'nw-resize'
+    case 'br':
+    case 'bottom-right':
+      return 'se-resize'
+    case 'bl':
+    case 'bottom-left':
+      return 'sw-resize'
+    default:
+      return 'default'
+  }
+}
+
+// Function to register custom handle elements with the hook
+function registerHandleElements() {
+  // Clean up any existing handle registrations first
+  handleRefs.value.forEach((_, handle) => {
+    unregisterHandle(handle)
+  })
+  handleRefs.value.clear()
+
+  // Only continue processing for custom handles
+  if (currentHandleType.value !== 'custom') {
+    return
+  }
+
+  // Wait for the DOM to update using nextTick
+  nextTick(() => {
+    const el = targetRef.value
+    if (!el) {
+      return
+    }
+
+    // Process all handles from the handles prop
+    handles.value.forEach((handle) => {
+      // Find the slot content for this handle
+      const slotSelector = `.handle-slot-${handle}`
+      const slotContainer = el.querySelector(slotSelector)
+      const handleEl = slotContainer?.firstElementChild as HTMLElement | null
+
+      if (handleEl) {
+        // Store reference to the handle element and register it with the hook
+        handleRefs.value.set(handle, handleEl)
+        registerHandle(handle, handleEl)
+      }
+    })
+
+    // Trigger the hook's setupHandleElements to ensure proper registration
+    // If no slot content was found for any handle, the hook will create default handles
+    // This provides a fallback mechanism while avoiding duplicate handle creation
+    if (targetRef.value) {
+      setupHandleElements(targetRef.value)
+    }
+  })
+}
+
+// Function to clean up event listeners and handle references
+function cleanupHandleElements() {
+  // Unregister all handles
+  handleRefs.value.forEach((_, handle) => {
+    unregisterHandle(handle)
+  })
+  handleRefs.value.clear()
+}
+
+// Register handles when component is mounted
+onMounted(() => {
+  // Wait for the initial render to complete
+  nextTick(registerHandleElements)
+})
+
+// Watch for changes to handleType or handles
+watch([currentHandleType, handles], () => {
+  // Clean up existing handles first
+  cleanupHandleElements()
+
+  // When handleType or handles change, wait for DOM update then register handles
+  nextTick(registerHandleElements)
+}, { flush: 'post' })
+
+// Clean up when component is unmounted
+onUnmounted(cleanupHandleElements)
 </script>
 
 <template>
-  <div ref="targetRef" :class="combinedClass">
+  <div ref="targetRef" :class="[combinedClass, `handle-type-${currentHandleType}`]">
     <slot />
+
+    <!--
+      Custom handles when handleType is 'custom'
+      We only provide slots here, and let the hook create default handles if needed
+      This avoids duplicate handle creation between component and hook
+    -->
+    <template v-if="currentHandleType === 'custom'">
+      <div
+        v-for="handle in handles"
+        :key="handle"
+        :class="`handle-slot-${handle}`"
+        style="display: contents;"
+      >
+        <slot
+          :name="`handle-${handle}`"
+          :handle="handle"
+          :active="activeHandle === handle"
+          :hover="hoverHandle === handle"
+          :is-resizing="isResizing"
+          :position="handle"
+          :cursor="getCursorStyle(handle)"
+          :size="currentSize"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -136,5 +278,119 @@ const combinedClass = computed(() => {
 
 .resizable.resizing {
   z-index: 1;
+}
+
+/* Resize handles styling */
+.resize-handle {
+  position: absolute;
+  background-color: #4299e1;
+  border: 1px solid #2b6cb0;
+  box-sizing: border-box;
+  z-index: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.resize-handle:hover, .resize-handle.hover {
+  background-color: #3182ce;
+  transform: scale(1.1);
+}
+
+.resize-handle.active {
+  background-color: #2b6cb0;
+  transform: scale(1.2);
+}
+
+/* Corner handles */
+.resize-handle-tl, .resize-handle-tr, .resize-handle-bl, .resize-handle-br,
+.resize-handle-top-left, .resize-handle-top-right, .resize-handle-bottom-left, .resize-handle-bottom-right {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Edge handles */
+.resize-handle-t, .resize-handle-b, .resize-handle-top, .resize-handle-bottom {
+  width: 10px;
+  height: 10px;
+  left: calc(50% - 5px);
+  border-radius: 50%;
+}
+
+.resize-handle-l, .resize-handle-r, .resize-handle-left, .resize-handle-right {
+  width: 10px;
+  height: 10px;
+  top: calc(50% - 5px);
+  border-radius: 50%;
+}
+
+/* Position the handles */
+.resize-handle-t, .resize-handle-top {
+  top: -5px;
+  cursor: n-resize;
+}
+.resize-handle-b, .resize-handle-bottom {
+  bottom: -5px;
+  cursor: s-resize;
+}
+.resize-handle-l, .resize-handle-left {
+  left: -5px;
+  cursor: w-resize;
+}
+.resize-handle-r, .resize-handle-right {
+  right: -5px;
+  cursor: e-resize;
+}
+
+.resize-handle-tl, .resize-handle-top-left {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+.resize-handle-tr, .resize-handle-top-right {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+.resize-handle-bl, .resize-handle-bottom-left {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+.resize-handle-br, .resize-handle-bottom-right {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* Custom handles styling */
+.resize-handle-custom {
+  background-color: rgba(66, 153, 225, 0.6);
+  border: 1px solid rgba(43, 108, 176, 0.6);
+  transition: all 0.15s ease;
+}
+
+.resize-handle-custom:hover, .resize-handle-custom.hover {
+  background-color: rgba(49, 130, 206, 0.8);
+  transform: scale(1.1);
+  border-color: rgba(43, 108, 176, 0.8);
+}
+
+.resize-handle-custom.active, .resize-handle-custom.resizing {
+  background-color: rgba(43, 108, 176, 1);
+  transform: scale(1.2);
+  border-color: rgba(30, 90, 150, 1);
+}
+
+/* Position custom handles the same way as regular handles */
+.handle-type-custom .resize-handle-t, .handle-type-custom .resize-handle-top,
+.handle-type-custom .resize-handle-b, .handle-type-custom .resize-handle-bottom,
+.handle-type-custom .resize-handle-l, .handle-type-custom .resize-handle-left,
+.handle-type-custom .resize-handle-r, .handle-type-custom .resize-handle-right,
+.handle-type-custom .resize-handle-tl, .handle-type-custom .resize-handle-top-left,
+.handle-type-custom .resize-handle-tr, .handle-type-custom .resize-handle-top-right,
+.handle-type-custom .resize-handle-bl, .handle-type-custom .resize-handle-bottom-left,
+.handle-type-custom .resize-handle-br, .handle-type-custom .resize-handle-bottom-right {
+  position: absolute;
 }
 </style>
