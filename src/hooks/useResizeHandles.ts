@@ -1,6 +1,7 @@
 import type { PointerType, ResizeHandle, ResizeHandlesOptions, ResizeHandlesResult } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { computed, ref, toValue } from 'vue'
+import { getCursorStyle } from '@/utils/cursor'
 
 /**
  * Hook that manages resize handles
@@ -43,34 +44,7 @@ export function useResizeHandles(
    * @returns The CSS cursor style for the handle
    */
   const getCursorForHandle = (handle: ResizeHandle): string => {
-    switch (handle) {
-      case 't':
-      case 'top':
-        return 'n-resize'
-      case 'b':
-      case 'bottom':
-        return 's-resize'
-      case 'r':
-      case 'right':
-        return 'e-resize'
-      case 'l':
-      case 'left':
-        return 'w-resize'
-      case 'tr':
-      case 'top-right':
-        return 'ne-resize'
-      case 'tl':
-      case 'top-left':
-        return 'nw-resize'
-      case 'br':
-      case 'bottom-right':
-        return 'se-resize'
-      case 'bl':
-      case 'bottom-left':
-        return 'sw-resize'
-      default:
-        return 'default'
-    }
+    return getCursorStyle(handle)
   }
 
   /**
