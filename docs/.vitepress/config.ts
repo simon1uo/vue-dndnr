@@ -153,6 +153,7 @@ export default defineConfig({
             { text: 'Basic Usage', link: '/examples/DnR/basic' },
             { text: 'Constrained DnR', link: '/examples/DnR/constrained' },
             { text: 'Custom Handle', link: '/examples/DnR/handle' },
+            { text: 'Handle Types', link: '/examples/DnR/handle-types' },
             { text: 'Window Style', link: '/examples/DnR/window' },
             { text: 'Event Handling', link: '/examples/DnR/events' },
           ],
