@@ -124,7 +124,7 @@ const {
           <div class="position-display">Position: {{ customPosition.x }}, {{ customPosition.y }}</div>
           <div class="size-display">Size: {{ customSize.width }} x {{ customSize.height }}</div>
         </div>
-        <template #handle-br="{ handle, active, hover, isResizing, cursor, size, position }">
+        <template #handle-br="{ active, hover, isResizing, cursor, size }">
           <div
             class="custom-handle custom-handle-br"
             :class="{ active, hover, resizing: isResizing }"
@@ -134,7 +134,7 @@ const {
             <span v-if="active" class="handle-tooltip">{{ size.width }}x{{ size.height }}</span>
           </div>
         </template>
-        <template #handle-tr="{ handle, active, hover, isResizing, cursor, size, position }">
+        <template #handle-tr="{ active, hover, isResizing, cursor, size }">
           <div
             class="custom-handle custom-handle-tr"
             :class="{ active, hover, resizing: isResizing }"
@@ -144,7 +144,7 @@ const {
             <span v-if="active" class="handle-tooltip">{{ size.width }}x{{ size.height }}</span>
           </div>
         </template>
-        <template #handle-bl="{ handle, active, hover, isResizing, cursor, size, position }">
+        <template #handle-bl="{ active, hover, isResizing, cursor, size }">
           <div
             class="custom-handle custom-handle-bl"
             :class="{ active, hover, resizing: isResizing }"
@@ -154,7 +154,7 @@ const {
             <span v-if="active" class="handle-tooltip">{{ size.width }}x{{ size.height }}</span>
           </div>
         </template>
-        <template #handle-tl="{ handle, active, hover, isResizing, cursor, size, position }">
+        <template #handle-tl="{ active, hover, isResizing, cursor, size }">
           <div
             class="custom-handle custom-handle-tl"
             :class="{ active, hover, resizing: isResizing }"
@@ -353,7 +353,7 @@ Simply use the named slot for each handle position you want to customize:
 
 ```vue
 <DnR v-model:position="position" v-model:size="size" handleType="custom">
-  <template #handle-br="{ handle, active, hover, isResizing, cursor, size, position }">
+  <template #handle-br="{ active, hover, isResizing, cursor, size }">
     <div
       class="my-custom-handle"
       :class="{ active, hover, resizing: isResizing }"
@@ -373,13 +373,13 @@ The component will automatically:
 You don't need to add any special attributes or directives to your handle elements - just place them in the correct named slot.
 
 Each handle slot receives the following props:
-- `handle`: The handle position (e.g., 'br', 'tl')
-- `position`: The handle position (same as `handle`, for compatibility with Resizable)
 - `active`: Whether this handle is currently active (being dragged)
 - `hover`: Whether the mouse is hovering over this handle
 - `isResizing`: Whether the element is being resized
 - `cursor`: The appropriate cursor style for this handle
 - `size`: The current size of the element
+- `handle`: The handle position (e.g., 'br', 'tl') - available but not used in this example
+- `position`: The handle position (same as `handle`, for compatibility with Resizable) - available but not used in this example
 
 ### Hook Approach
 
@@ -508,7 +508,7 @@ const customSize = ref({ width: 200, height: 150 })
     </div>
 
     <!-- Custom handle slots with enhanced props -->
-    <template #handle-br="{ handle, active, hover, isResizing, cursor, size, position }">
+    <template #handle-br="{ active, hover, isResizing, cursor, size }">
       <div
         class="custom-handle custom-handle-br"
         :class="{ active, hover, resizing: isResizing }"
@@ -519,7 +519,7 @@ const customSize = ref({ width: 200, height: 150 })
       </div>
     </template>
 
-    <template #handle-tr="{ handle, active, hover, isResizing, cursor, size, position }">
+    <template #handle-tr="{ active, hover, isResizing, cursor, size }">
       <div
         class="custom-handle custom-handle-tr"
         :class="{ active, hover, resizing: isResizing }"
@@ -530,7 +530,7 @@ const customSize = ref({ width: 200, height: 150 })
       </div>
     </template>
 
-    <template #handle-bl="{ handle, active, hover, isResizing, cursor, size, position }">
+    <template #handle-bl="{ active, hover, isResizing, cursor, size }">
       <div
         class="custom-handle custom-handle-bl"
         :class="{ active, hover, resizing: isResizing }"
@@ -541,7 +541,7 @@ const customSize = ref({ width: 200, height: 150 })
       </div>
     </template>
 
-    <template #handle-tl="{ handle, active, hover, isResizing, cursor, size, position }">
+    <template #handle-tl="{ active, hover, isResizing, cursor, size }">
       <div
         class="custom-handle custom-handle-tl"
         :class="{ active, hover, resizing: isResizing }"

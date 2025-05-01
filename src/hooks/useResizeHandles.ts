@@ -1,7 +1,7 @@
 import type { PointerType, ResizeHandle, ResizeHandlesOptions, ResizeHandlesResult } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import { computed, ref, toValue } from 'vue'
 import { getCursorStyle } from '@/utils/cursor'
+import { computed, ref, toValue } from 'vue'
 
 /**
  * Hook that manages resize handles
