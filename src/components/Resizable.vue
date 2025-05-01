@@ -247,22 +247,10 @@ onUnmounted(cleanupHandleElements)
       This avoids duplicate handle creation between component and hook
     -->
     <template v-if="currentHandleType === 'custom'">
-      <div
-        v-for="handle in handles"
-        :key="handle"
-        :class="`handle-slot-${handle}`"
-        style="display: contents;"
-      >
-        <slot
-          :name="`handle-${handle}`"
-          :handle="handle"
-          :active="activeHandle === handle"
-          :hover="hoverHandle === handle"
-          :is-resizing="isResizing"
-          :position="handle"
-          :cursor="getCursorStyle(handle)"
-          :size="currentSize"
-        />
+      <div v-for="handle in handles" :key="handle" :class="`handle-slot-${handle}`" style="display: contents;">
+        <slot :name="`handle-${handle}`" :handle="handle" :active="activeHandle === handle"
+          :hover="hoverHandle === handle" :is-resizing="isResizing" :position="handle" :cursor="getCursorStyle(handle)"
+          :size="currentSize" />
       </div>
     </template>
   </div>
@@ -291,7 +279,8 @@ onUnmounted(cleanupHandleElements)
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-.resize-handle:hover, .resize-handle.hover {
+.resize-handle:hover,
+.resize-handle.hover {
   background-color: #3182ce;
   transform: scale(1.1);
 }
@@ -302,22 +291,34 @@ onUnmounted(cleanupHandleElements)
 }
 
 /* Corner handles */
-.resize-handle-tl, .resize-handle-tr, .resize-handle-bl, .resize-handle-br,
-.resize-handle-top-left, .resize-handle-top-right, .resize-handle-bottom-left, .resize-handle-bottom-right {
+.resize-handle-tl,
+.resize-handle-tr,
+.resize-handle-bl,
+.resize-handle-br,
+.resize-handle-top-left,
+.resize-handle-top-right,
+.resize-handle-bottom-left,
+.resize-handle-bottom-right {
   width: 10px;
   height: 10px;
   border-radius: 50%;
 }
 
 /* Edge handles */
-.resize-handle-t, .resize-handle-b, .resize-handle-top, .resize-handle-bottom {
+.resize-handle-t,
+.resize-handle-b,
+.resize-handle-top,
+.resize-handle-bottom {
   width: 10px;
   height: 10px;
   left: calc(50% - 5px);
   border-radius: 50%;
 }
 
-.resize-handle-l, .resize-handle-r, .resize-handle-left, .resize-handle-right {
+.resize-handle-l,
+.resize-handle-r,
+.resize-handle-left,
+.resize-handle-right {
   width: 10px;
   height: 10px;
   top: calc(50% - 5px);
@@ -325,39 +326,53 @@ onUnmounted(cleanupHandleElements)
 }
 
 /* Position the handles */
-.resize-handle-t, .resize-handle-top {
+.resize-handle-t,
+.resize-handle-top {
   top: -5px;
   cursor: n-resize;
 }
-.resize-handle-b, .resize-handle-bottom {
+
+.resize-handle-b,
+.resize-handle-bottom {
   bottom: -5px;
   cursor: s-resize;
 }
-.resize-handle-l, .resize-handle-left {
+
+.resize-handle-l,
+.resize-handle-left {
   left: -5px;
   cursor: w-resize;
 }
-.resize-handle-r, .resize-handle-right {
+
+.resize-handle-r,
+.resize-handle-right {
   right: -5px;
   cursor: e-resize;
 }
 
-.resize-handle-tl, .resize-handle-top-left {
+.resize-handle-tl,
+.resize-handle-top-left {
   top: -5px;
   left: -5px;
   cursor: nw-resize;
 }
-.resize-handle-tr, .resize-handle-top-right {
+
+.resize-handle-tr,
+.resize-handle-top-right {
   top: -5px;
   right: -5px;
   cursor: ne-resize;
 }
-.resize-handle-bl, .resize-handle-bottom-left {
+
+.resize-handle-bl,
+.resize-handle-bottom-left {
   bottom: -5px;
   left: -5px;
   cursor: sw-resize;
 }
-.resize-handle-br, .resize-handle-bottom-right {
+
+.resize-handle-br,
+.resize-handle-bottom-right {
   bottom: -5px;
   right: -5px;
   cursor: se-resize;
@@ -370,27 +385,37 @@ onUnmounted(cleanupHandleElements)
   transition: all 0.15s ease;
 }
 
-.resize-handle-custom:hover, .resize-handle-custom.hover {
+.resize-handle-custom:hover,
+.resize-handle-custom.hover {
   background-color: rgba(49, 130, 206, 0.8);
   transform: scale(1.1);
   border-color: rgba(43, 108, 176, 0.8);
 }
 
-.resize-handle-custom.active, .resize-handle-custom.resizing {
+.resize-handle-custom.active,
+.resize-handle-custom.resizing {
   background-color: rgba(43, 108, 176, 1);
   transform: scale(1.2);
   border-color: rgba(30, 90, 150, 1);
 }
 
 /* Position custom handles the same way as regular handles */
-.handle-type-custom .resize-handle-t, .handle-type-custom .resize-handle-top,
-.handle-type-custom .resize-handle-b, .handle-type-custom .resize-handle-bottom,
-.handle-type-custom .resize-handle-l, .handle-type-custom .resize-handle-left,
-.handle-type-custom .resize-handle-r, .handle-type-custom .resize-handle-right,
-.handle-type-custom .resize-handle-tl, .handle-type-custom .resize-handle-top-left,
-.handle-type-custom .resize-handle-tr, .handle-type-custom .resize-handle-top-right,
-.handle-type-custom .resize-handle-bl, .handle-type-custom .resize-handle-bottom-left,
-.handle-type-custom .resize-handle-br, .handle-type-custom .resize-handle-bottom-right {
+.handle-type-custom .resize-handle-t,
+.handle-type-custom .resize-handle-top,
+.handle-type-custom .resize-handle-b,
+.handle-type-custom .resize-handle-bottom,
+.handle-type-custom .resize-handle-l,
+.handle-type-custom .resize-handle-left,
+.handle-type-custom .resize-handle-r,
+.handle-type-custom .resize-handle-right,
+.handle-type-custom .resize-handle-tl,
+.handle-type-custom .resize-handle-top-left,
+.handle-type-custom .resize-handle-tr,
+.handle-type-custom .resize-handle-top-right,
+.handle-type-custom .resize-handle-bl,
+.handle-type-custom .resize-handle-bottom-left,
+.handle-type-custom .resize-handle-br,
+.handle-type-custom .resize-handle-bottom-right {
   position: absolute;
 }
 </style>

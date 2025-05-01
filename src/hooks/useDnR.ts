@@ -110,6 +110,10 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     onResize,
     onResizeEnd,
     detectBoundary,
+    handleType,
+    registerHandle,
+    unregisterHandle,
+    setupHandleElements,
   } = useResizable(target, resizableOptions.value)
 
   watch(hoverHandle, (newHandle) => {
@@ -146,6 +150,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     hoverHandle,
     isAbsolutePositioned,
     isNearResizeHandle,
+    handleType,
 
     style,
 
@@ -159,6 +164,9 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     onResize,
     onResizeEnd,
     detectBoundary,
+    registerHandle,
+    unregisterHandle,
+    setupHandleElements,
   }
 }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DnROptions, Position, ResizeHandle, Size } from '@/types'
 import useDnR from '@/hooks/useDnR'
-import { computed, ref, toValue, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
 interface DnRProps extends DnROptions {
   position?: Position
@@ -17,6 +17,12 @@ const props = withDefaults(defineProps<DnRProps>(), {
   disabled: false,
   draggingClassName: 'dragging',
   resizingClassName: 'resizing',
+  lockAspectRatio: false,
+  preventDefault: true,
+  stopPropagation: false,
+  capture: true,
+  throttleDelay: 16,
+  handleType: 'borders',
 })
 
 const emit = defineEmits<{
@@ -34,24 +40,42 @@ const emit = defineEmits<{
 }>()
 
 const targetRef = ref<HTMLElement | null>(null)
+const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
+
+const handle = computed(() => toValue(props.handle) ?? targetRef.value)
+const bounds = computed(() => toValue(props.bounds))
+const grid = computed(() => toValue(props.grid))
+const axis = computed(() => toValue(props.axis) ?? 'both')
+const scale = computed(() => toValue(props.scale) ?? 1)
+const disabled = computed(() => toValue(props.disabled))
+const pointerTypes = computed(() => toValue(props.pointerTypes))
+const preventDefault = computed(() => toValue(props.preventDefault))
+const stopPropagation = computed(() => toValue(props.stopPropagation) ?? false)
+const capture = computed(() => toValue(props.capture))
+const throttleDelay = computed(() => toValue(props.throttleDelay))
+const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
+const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
+const handleType = computed(() => toValue(props.handleType))
 
 // Create reactive options object
 const dnrOptions: DnROptions = {
   initialPosition: props.position || { x: 0, y: 0 },
   initialSize: props.size || { width: 'auto', height: 'auto' },
-  handle: computed(() => toValue(props.handle) ?? targetRef.value),
-  bounds: computed(() => toValue(props.bounds)),
-  grid: computed(() => toValue(props.grid)),
-  axis: computed(() => toValue(props.axis) ?? 'both'),
-  scale: computed(() => toValue(props.scale) ?? 1),
-  disabled: computed(() => toValue(props.disabled) ?? false),
-  pointerTypes: computed(() => toValue(props.pointerTypes)),
-  preventDefault: computed(() => toValue(props.preventDefault) ?? true),
-  stopPropagation: computed(() => toValue(props.stopPropagation) ?? false),
-  capture: computed(() => toValue(props.capture) ?? true),
-  lockAspectRatio: computed(() => toValue(props.lockAspectRatio) ?? false),
-  handles: computed(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']),
-  handleType: computed(() => toValue(props.handleType) ?? 'borders'),
+  handle,
+  bounds,
+  grid,
+  axis,
+  scale,
+  disabled,
+  pointerTypes,
+  preventDefault,
+  stopPropagation,
+  capture,
+  throttleDelay,
+  lockAspectRatio,
+  handles,
+  handleType,
+  customHandles: handleRefs,
   minWidth: props.minWidth,
   minHeight: props.minHeight,
   maxWidth: props.maxWidth,
@@ -99,7 +123,48 @@ const {
   setPosition,
   setSize,
   hoverHandle,
+  activeHandle,
+  handleType: currentHandleType,
+  registerHandle,
+  unregisterHandle,
+  setupHandleElements,
 } = useDnR(targetRef, dnrOptions)
+
+/**
+ * Get the appropriate cursor style for a resize handle
+ * @param handle - The resize handle position
+ * @returns The CSS cursor style for the handle
+ */
+function getCursorStyle(handle: ResizeHandle): string {
+  switch (handle) {
+    case 't':
+    case 'top':
+      return 'n-resize'
+    case 'b':
+    case 'bottom':
+      return 's-resize'
+    case 'r':
+    case 'right':
+      return 'e-resize'
+    case 'l':
+    case 'left':
+      return 'w-resize'
+    case 'tr':
+    case 'top-right':
+      return 'ne-resize'
+    case 'tl':
+    case 'top-left':
+      return 'nw-resize'
+    case 'br':
+    case 'bottom-right':
+      return 'se-resize'
+    case 'bl':
+    case 'bottom-left':
+      return 'sw-resize'
+    default:
+      return 'default'
+  }
+}
 
 watch(
   () => props.position,
@@ -141,6 +206,76 @@ watch(hoverHandle, (newHandle) => {
   emit('hoverHandleChange', newHandle)
 })
 
+// Function to register custom handle elements with the hook
+function registerHandleElements() {
+  // Clean up any existing handle registrations first
+  handleRefs.value.forEach((_, handle) => {
+    unregisterHandle(handle)
+  })
+  handleRefs.value.clear()
+
+  // Only continue processing for custom handles
+  if (currentHandleType.value !== 'custom') {
+    return
+  }
+
+  // Wait for the DOM to update using nextTick
+  nextTick(() => {
+    const el = targetRef.value
+    if (!el) {
+      return
+    }
+
+    // Process all handles from the handles prop
+    handles.value.forEach((handle) => {
+      // Find the slot content for this handle
+      const slotSelector = `.handle-slot-${handle}`
+      const slotContainer = el.querySelector(slotSelector)
+      const handleEl = slotContainer?.firstElementChild as HTMLElement | null
+
+      if (handleEl) {
+        // Store reference to the handle element and register it with the hook
+        handleRefs.value.set(handle, handleEl)
+        registerHandle(handle, handleEl)
+      }
+    })
+
+    // Trigger the hook's setupHandleElements to ensure proper registration
+    // If no slot content was found for any handle, the hook will create default handles
+    // This provides a fallback mechanism while avoiding duplicate handle creation
+    if (targetRef.value) {
+      setupHandleElements(targetRef.value)
+    }
+  })
+}
+
+// Function to clean up event listeners and handle references
+function cleanupHandleElements() {
+  // Unregister all handles
+  handleRefs.value.forEach((_, handle) => {
+    unregisterHandle(handle)
+  })
+  handleRefs.value.clear()
+}
+
+// Register handles when component is mounted
+onMounted(() => {
+  // Wait for the initial render to complete
+  nextTick(registerHandleElements)
+})
+
+// Watch for changes to handleType or handles
+watch([currentHandleType, handles], () => {
+  // Clean up existing handles first
+  cleanupHandleElements()
+
+  // When handleType or handles change, wait for DOM update then register handles
+  nextTick(registerHandleElements)
+}, { flush: 'post' })
+
+// Clean up when component is unmounted
+onUnmounted(cleanupHandleElements)
+
 const combinedClass = computed(() => {
   const classes = ['dnr']
 
@@ -163,6 +298,18 @@ const combinedClass = computed(() => {
 <template>
   <div ref="targetRef" :class="combinedClass" :style="dnrStyle">
     <slot />
+    <!--
+      Custom handles when handleType is 'custom'
+      We only provide slots here, and let the hook create default handles if needed
+      This avoids duplicate handle creation between component and hook
+    -->
+    <template v-if="currentHandleType === 'custom'">
+      <div v-for="handle in handles" :key="handle" :class="`handle-slot-${handle}`" style="display: contents;">
+        <slot :name="`handle-${handle}`" :handle="handle" :active="activeHandle === handle"
+          :hover="hoverHandle === handle" :is-resizing="isResizing" :position="handle" :cursor="getCursorStyle(handle)"
+          :size="size" />
+      </div>
+    </template>
   </div>
 </template>
 
