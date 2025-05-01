@@ -212,11 +212,15 @@ onUnmounted(cleanupHandleElements)
       This avoids duplicate handle creation between component and hook
     -->
     <template v-if="currentHandleType === 'custom'">
-      <div v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
-        style="display: contents;">
-        <slot :name="`handle-${handlePosition}`" :handle="handlePosition" :active="activeHandle === handlePosition"
+      <div
+        v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
+        style="display: contents;"
+      >
+        <slot
+          :name="`handle-${handlePosition}`" :handle="handlePosition" :active="activeHandle === handlePosition"
           :hover="hoverHandle === handlePosition" :is-resizing="isResizing" :position="handlePosition"
-          :cursor="getCursorStyle(handlePosition)" :size="currentSize" />
+          :cursor="getCursorStyle(handlePosition)" :size="currentSize"
+        />
       </div>
     </template>
   </div>
