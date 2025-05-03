@@ -17,7 +17,8 @@ export function useResizeHandles(
     handleType = 'borders',
     handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
     customHandles,
-    boundaryThreshold = 8,
+    handlesSize = 8,
+    handleBorderStyle = 'none',
     preventDefault = true,
     stopPropagation = false,
     capture = true,
@@ -101,8 +102,9 @@ export function useResizeHandles(
     el.style.position = 'absolute'
     el.style.zIndex = '10'
     el.style.cursor = getCursorForHandle(handle)
-    el.style.width = '10px'
-    el.style.height = '10px'
+    const size = `${toValue(handlesSize)}px`
+    el.style.width = size
+    el.style.height = size
     el.style.borderRadius = '50%'
     el.style.boxSizing = 'border-box'
     el.style.transition = 'transform 0.15s ease, background-color 0.15s ease'
@@ -110,15 +112,19 @@ export function useResizeHandles(
     // Set visual appearance based on handle type
     if (isCustom) {
       el.style.backgroundColor = 'rgba(66, 153, 225, 0.6)'
-      el.style.border = '1px solid rgba(43, 108, 176, 0.6)'
+      el.style.border = toValue(handleBorderStyle) && toValue(handleBorderStyle) !== 'none'
+        ? toValue(handleBorderStyle)
+        : '1px solid rgba(43, 108, 176, 0.6)'
     }
     else {
       el.style.backgroundColor = '#4299e1'
-      el.style.border = '1px solid #2b6cb0'
+      el.style.border = toValue(handleBorderStyle) && toValue(handleBorderStyle) !== 'none'
+        ? toValue(handleBorderStyle)
+        : '1px solid #2b6cb0'
     }
 
     // Set position based on handle type
-    const offset = isCustom ? -12 : -5
+    const offset = -toValue(handlesSize) / 2
 
     switch (handle) {
       case 'tl':
@@ -143,22 +149,22 @@ export function useResizeHandles(
         break
       case 't':
       case 'top':
-        el.style.left = `calc(50% ${offset}px)`
+        el.style.left = `calc(50% + ${offset}px)`
         el.style.top = `${offset}px`
         break
       case 'b':
       case 'bottom':
-        el.style.left = `calc(50% ${offset}px)`
+        el.style.left = `calc(50% + ${offset}px)`
         el.style.bottom = `${offset}px`
         break
       case 'l':
       case 'left':
-        el.style.top = `calc(50% ${offset}px)`
+        el.style.top = `calc(50% + ${offset}px)`
         el.style.left = `${offset}px`
         break
       case 'r':
       case 'right':
-        el.style.top = `calc(50% ${offset}px)`
+        el.style.top = `calc(50% + ${offset}px)`
         el.style.right = `${offset}px`
         break
     }
@@ -177,9 +183,20 @@ export function useResizeHandles(
     handleEl.style.position = 'absolute'
     handleEl.style.zIndex = '10'
     handleEl.style.cursor = getCursorForHandle(handle)
+    const size = `${toValue(handlesSize)}px`
+    handleEl.style.width = size
+    handleEl.style.height = size
+    handleEl.style.borderRadius = '50%'
+    handleEl.style.boxSizing = 'border-box'
+    handleEl.style.transition = 'transform 0.15s ease, background-color 0.15s ease'
+    handleEl.style.border = toValue(handleBorderStyle) && toValue(handleBorderStyle) !== 'none'
+      ? toValue(handleBorderStyle)
+      : (isCustom
+          ? '1px solid rgba(43, 108, 176, 0.6)'
+          : '1px solid #2b6cb0')
 
     // Set position based on handle type
-    const offset = isCustom ? -12 : -5
+    const offset = -toValue(handlesSize) / 2
 
     switch (handle) {
       case 'tl':
@@ -227,11 +244,9 @@ export function useResizeHandles(
     // Add hover event listeners
     handleEl.addEventListener('mouseenter', () => {
       if (isCustom) {
-        // For custom handles, just update hover state
         hoverHandle.value = handle
       }
       else {
-        // For standard handles, also update visual style
         handleEl.style.backgroundColor = isCustom ? 'rgba(49, 130, 206, 0.8)' : '#3182ce'
         handleEl.style.transform = 'scale(1.1)'
         hoverHandle.value = handle
@@ -241,7 +256,6 @@ export function useResizeHandles(
     handleEl.addEventListener('mouseleave', () => {
       if (activeHandle.value !== handle) {
         if (!isCustom) {
-          // Reset style for standard handles
           handleEl.style.backgroundColor = isCustom ? 'rgba(66, 153, 225, 0.6)' : '#4299e1'
           handleEl.style.transform = ''
         }
@@ -358,7 +372,7 @@ export function useResizeHandles(
   const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
     const clientX = event.clientX ?? ((event as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
     const clientY = event.clientY ?? ((event as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
-    const thresholdValue = toValue(boundaryThreshold)
+    const thresholdValue = toValue(handlesSize)
 
     // For 'handles' or 'custom' type, check if the pointer is over any handle element
     if (currentHandleType.value === 'handles' || currentHandleType.value === 'custom') {
@@ -430,7 +444,7 @@ export function useResizeHandles(
   }
 
   /**
-   * Create and attach handle elements to the target element
+   * Set up handle elements and apply border style for borders type
    */
   const setupHandleElements = (targetElement: HTMLElement | SVGElement) => {
     if (!targetElement)

@@ -349,6 +349,7 @@ Simply use the named slot for each handle position you want to customize:
 ```
 
 The component will automatically:
+
 1. Find your custom handle element in the slot
 2. Register it with the resize functionality
 3. Apply the appropriate event listeners
@@ -360,6 +361,7 @@ You don't need to add any special attributes or directives to your handle elemen
 When using `handleType="custom"` with the `useResizable` hook, you have two options:
 
 1. **Using the `customHandles` option (Recommended)**:
+
     ```js
     // Create separate refs for each handle
     const brHandleRef = ref(null)
@@ -390,6 +392,7 @@ When using `handleType="custom"` with the `useResizable` hook, you have two opti
     ```
 
 2. **Using the `registerHandle` method**:
+
     ```js
     // Get the registerHandle method from the hook
     const { registerHandle } = useResizable(elementRef, {
@@ -405,6 +408,7 @@ If no custom handles are provided, the hook will create default handles similar 
 ## Component Approach
 
 ::: details View Component Code
+
 ```vue
 <script setup>
 import { ref } from 'vue'
@@ -603,6 +607,7 @@ const customSize = ref({ width: 200, height: 150 })
 }
 </style>
 ```
+
 :::
 
 ## Hook Approach
@@ -610,6 +615,7 @@ const customSize = ref({ width: 200, height: 150 })
 ### Using Visible Handles
 
 ::: details View Hook Code with Visible Handles
+
 ```vue
 <script setup>
 import { ref } from 'vue'
@@ -648,6 +654,7 @@ const { size, style } = useResizable(elementRef, {
 }
 </style>
 ```
+
 :::
 
 ### Using Custom Handles
@@ -659,6 +666,7 @@ When using the hook with `handleType="custom"`, you have two options for registe
 The simplest way is to pass a Map of handle elements directly to the hook using the `customHandles` option. The hook will automatically apply absolute positioning and proper placement to these elements:
 
 ::: details View Hook Code with customHandles option
+
 ```vue
 <script setup>
 import { computed, ref } from 'vue'
@@ -750,6 +758,7 @@ const {
   </div>
 </template>
 ```
+
 :::
 
 #### Option 2: Using the `registerHandle` method
@@ -757,6 +766,7 @@ const {
 Alternatively, you can manually register each handle element using the `registerHandle` method:
 
 ::: details View Hook Code with registerHandle method
+
 ```vue
 <script setup>
 import { onMounted, ref } from 'vue'
@@ -843,6 +853,7 @@ onMounted(() => {
   </div>
 </template>
 ```
+
 :::
 
 #### Common Styling for Custom Handles
@@ -850,6 +861,7 @@ onMounted(() => {
 Regardless of which approach you use, you can style your custom handles with visual properties. The positioning (`position: absolute` and placement like `top`, `right`, etc.) is now automatically handled by the hook:
 
 ::: details View Custom Handle Styles
+
 ```css
 .custom-hook-container {
   position: relative;
@@ -912,4 +924,67 @@ Regardless of which approach you use, you can style your custom handles with vis
   opacity: 0.7;
 }
 ```
+
 :::
+
+## handlesSize and handleBorderStyle Options
+
+You can use the `handlesSize` option to control the size of the border detection area (for `borders` type) or the handle element size (for `handles`/`custom`).
+
+You can use the `handleBorderStyle` option to customize the border style when using `handleType="borders"`.
+
+### Example: Custom Border Style and Detection Size
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
+
+const borderSize = ref({ width: 200, height: 150 })
+const borderStyle = ref('2px dashed #e67e22')
+const borderDetection = ref(16)
+</script>
+
+<template>
+  <Resizable
+    v-model:size="borderSize"
+    handle-type="borders"
+    :handles-size="borderDetection"
+    :handle-border-style="borderStyle"
+    :min-width="100"
+    :min-height="100"
+  >
+    <div class="resizable-box">
+      Custom border style & detection area<br>
+      <span class="size-display">{{ borderSize.width }} x {{ borderSize.height }}</span>
+    </div>
+  </Resizable>
+</template>
+```
+
+### Example: Custom Handle Size
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import { Resizable } from 'vue-dndnr'
+
+const handlesSize = ref({ width: 200, height: 150 })
+const handleSize = ref(24)
+</script>
+
+<template>
+  <Resizable
+    v-model:size="handlesSize"
+    handle-type="handles"
+    :handles-size="handleSize"
+    :min-width="100"
+    :min-height="100"
+  >
+    <div class="resizable-box">
+      Custom handle size<br>
+      <span class="size-display">{{ handlesSize.width }} x {{ handlesSize.height }}</span>
+    </div>
+  </Resizable>
+</template>
+```

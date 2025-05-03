@@ -89,6 +89,8 @@ The `DnR` component combines all props from both the `Draggable` and `Resizable`
 | `resizeDisabled` | `Boolean` | `false` | Whether resizing is disabled. |
 | `handles` | `Array` | All handles | Array of handles to display. |
 | `lockAspectRatio` | `Boolean` | `false` | Whether to maintain the aspect ratio when resizing. |
+| `handlesSize` | `Number` | `8` | Size of the handle or border detection area in pixels. For `borders`, sets border detection area; for `handles`/`custom`, sets handle size. |
+| `handleBorderStyle` | `String` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
 
 ## Events
 

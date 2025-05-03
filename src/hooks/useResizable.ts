@@ -39,7 +39,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     preventDefault = true,
     stopPropagation = false,
     capture = true,
-    boundaryThreshold = 8,
+    handlesSize = 8,
+    handleBorderStyle = 'none',
     throttleDelay = 16, // Default to ~60fps
     onResizeStart: onResizeStartCallback,
     onResize: onResizeCallback,
@@ -79,7 +80,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleType,
     handles,
     customHandles,
-    boundaryThreshold,
+    handlesSize,
+    handleBorderStyle,
     preventDefault,
     stopPropagation,
     capture,
@@ -127,6 +129,17 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       el.style.cursor = isResizing.value && activeHandle.value
         ? getCursorForHandle(activeHandle.value)
         : cursorStyle
+      const borderStyle = toValue(handleBorderStyle)
+      if (borderStyle && borderStyle !== 'none') {
+        el.style.border = borderStyle
+      }
+      else {
+        el.style.border = ''
+      }
+    }
+    else {
+      // 非 borders 类型时不设置 border
+      el.style.border = ''
     }
   }
 

@@ -3,6 +3,7 @@
 The `Resizable` component allows you to make any element resizable.
 
 ## Basic Usage Demo
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Resizable } from 'vue-dndnr'
@@ -66,6 +67,8 @@ const size = ref({ width: 200, height: 150 })
 | `disabled` | `Boolean` | `false` | Whether resizing is disabled. |
 | `handleType` | `String` | `'borders'` | Type of resize handles to display. Options: `'borders'`, `'handles'`, `'custom'`. |
 | `handles` | `Array` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Array of handles to display. |
+| `handlesSize` | `Number` | `8` | Size of the handle or border detection area in pixels. For `borders`, sets border detection area; for `handles`/`custom`, sets handle size. |
+| `handleBorderStyle` | `String` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
 
 ### Event Control Props
 

@@ -41,10 +41,19 @@ export interface ResizeHandlesOptions {
   customHandles?: MaybeRefOrGetter<Map<ResizeHandle, HTMLElement> | null | undefined>
 
   /**
-   * Distance in pixels from edges to detect resize handles
+   * Size of the handle or border detection area in pixels
+   * - For handleType 'borders': sets the border detection area size
+   * - For handleType 'handles' or 'custom': sets the handle element size
    * @default 8
    */
-  boundaryThreshold?: MaybeRefOrGetter<number>
+  handlesSize?: MaybeRefOrGetter<number>
+
+  /**
+   * Border style for handleType 'borders'.
+   * Accepts any valid CSS border value. Default is 'none'.
+   * @default 'none'
+   */
+  handleBorderStyle?: MaybeRefOrGetter<string>
 
   /**
    * Whether to prevent default browser events during resize
@@ -262,10 +271,19 @@ export interface ResizableOptions {
   stopPropagation?: MaybeRefOrGetter<boolean>
 
   /**
-   * Distance in pixels from edges to detect resize handles
+   * Size of the handle or border detection area in pixels
+   * - For handleType 'borders': sets the border detection area size
+   * - For handleType 'handles' or 'custom': sets the handle element size
    * @default 8
    */
-  boundaryThreshold?: MaybeRefOrGetter<number>
+  handlesSize?: MaybeRefOrGetter<number>
+
+  /**
+   * Border style for handleType 'borders'.
+   * Accepts any valid CSS border value. Default is 'none'.
+   * @default 'none'
+   */
+  handleBorderStyle?: MaybeRefOrGetter<string>
 
   /**
    * Whether to use event capturing phase

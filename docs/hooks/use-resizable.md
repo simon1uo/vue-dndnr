@@ -78,7 +78,8 @@ const { size } = useResizable(resizableRef, {
 | `preventDefault` | `MaybeRefOrGetter<boolean>` | `true` | Whether to prevent default browser events during resize. |
 | `stopPropagation` | `MaybeRefOrGetter<boolean>` | `false` | Whether to stop event propagation to parent elements. |
 | `capture` | `MaybeRefOrGetter<boolean>` | `true` | Whether to use event capturing phase. |
-| `boundaryThreshold` | `MaybeRefOrGetter<number>` | `8` | Distance in pixels from edges to detect resize handles. |
+| `handlesSize` | `MaybeRefOrGetter<number>` | `8` | Size of the handle or border detection area in pixels. For `borders`, sets border detection area; for `handles`/`custom`, sets handle size. |
+| `handleBorderStyle` | `MaybeRefOrGetter<string>` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
 | `throttleDelay` | `MaybeRefOrGetter<number>` | `16` | Delay in milliseconds for throttling resize events (approximately 60fps). |
 
 #### Callback Options
@@ -142,4 +143,5 @@ type ResizeHandleType = 'borders' | 'handles' | 'custom'
 
 type PointerType = 'mouse' | 'touch' | 'pen'
 ```
+
 :::

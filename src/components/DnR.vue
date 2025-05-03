@@ -10,6 +10,7 @@ interface DnRProps extends DnROptions {
   className?: string
   draggingClassName?: string
   resizingClassName?: string
+  handleBorderStyle?: string
 }
 
 const props = withDefaults(defineProps<DnRProps>(), {
@@ -24,6 +25,7 @@ const props = withDefaults(defineProps<DnRProps>(), {
   capture: true,
   throttleDelay: 16,
   handleType: 'borders',
+  handleBorderStyle: 'none',
 })
 
 const emit = defineEmits<{
@@ -57,6 +59,7 @@ const throttleDelay = computed(() => toValue(props.throttleDelay))
 const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 const handleType = computed(() => toValue(props.handleType))
+const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
 
 // Create reactive options object
 const dnrOptions: DnROptions = {
@@ -76,6 +79,7 @@ const dnrOptions: DnROptions = {
   lockAspectRatio,
   handles,
   handleType,
+  handleBorderStyle,
   customHandles: handleRefs,
   minWidth: props.minWidth,
   minHeight: props.minHeight,

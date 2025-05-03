@@ -105,7 +105,8 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 | `maxHeight` | `MaybeRefOrGetter<number>` | `Infinity` | Maximum height constraint in pixels. |
 | `handles` | `MaybeRefOrGetter<ResizeHandle[]>` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Active resize handles to enable. |
 | `lockAspectRatio` | `MaybeRefOrGetter<boolean>` | `false` | Whether to maintain aspect ratio during resizing. |
-| `boundaryThreshold` | `MaybeRefOrGetter<number>` | `8` | Distance in pixels from edges to detect resize handles. |
+| `handlesSize` | `MaybeRefOrGetter<number>` | `8` | Size of the handle or border detection area in pixels. For `borders`, sets border detection area; for `handles`/`custom`, sets handle size. |
+| `handleBorderStyle` | `MaybeRefOrGetter<string>` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
 | `onResizeStart` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called when resizing starts. |
 | `onResize` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called during resizing. |
 | `onResizeEnd` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called when resizing ends. |
