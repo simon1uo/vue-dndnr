@@ -113,8 +113,8 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     const delta = calculateDelta(startEventPosition, eventPosition)
 
     let newPosition = {
-      x: startPosition.value.x + delta.x,
-      y: startPosition.value.y + delta.y,
+      x: Math.round(startPosition.value.x + delta.x),
+      y: Math.round(startPosition.value.y + delta.y),
     }
 
     const axisValue = toValue(axis)
@@ -167,7 +167,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (onDragCallback?.(position.value, event) === false)
       return
 
-    position.value = newPosition
+    position.value = {
+      x: Math.round(newPosition.x),
+      y: Math.round(newPosition.y),
+    }
     handleEvent(event)
   }
 
@@ -215,7 +218,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
    * @param newPosition - The new position to set
    */
   const setPosition = (newPosition: Position) => {
-    position.value = { ...newPosition }
+    position.value = {
+      x: Math.round(newPosition.x),
+      y: Math.round(newPosition.y),
+    }
   }
 
   return {

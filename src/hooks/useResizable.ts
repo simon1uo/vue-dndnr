@@ -411,9 +411,15 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     }
 
     // 更新状态
-    size.value = constrainedSize
+    size.value = {
+      width: typeof constrainedSize.width === 'number' ? Math.round(constrainedSize.width) : constrainedSize.width,
+      height: typeof constrainedSize.height === 'number' ? Math.round(constrainedSize.height) : constrainedSize.height,
+    }
     if (isAbsolutePositioned.value) {
-      position.value = newPosition
+      position.value = {
+        x: Math.round(newPosition.x),
+        y: Math.round(newPosition.y),
+      }
     }
 
     // 应用样式
@@ -529,7 +535,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
    * @param newSize - The new size to set
    */
   const setSize = (newSize: Size) => {
-    size.value = { ...newSize }
+    size.value = {
+      width: typeof newSize.width === 'number' ? Math.round(newSize.width) : newSize.width,
+      height: typeof newSize.height === 'number' ? Math.round(newSize.height) : newSize.height,
+    }
     applyStyles()
   }
 
@@ -569,29 +578,32 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
           // 确保位置在边界内
           position.value = {
-            x: Math.max(0, Math.min(newPosition.x, maxX)),
-            y: Math.max(0, Math.min(newPosition.y, maxY)),
+            x: Math.round(Math.max(0, Math.min(newPosition.x, maxX))),
+            y: Math.round(Math.max(0, Math.min(newPosition.y, maxY))),
           }
         }
         else {
           // 如果没有边界元素,至少确保不会出现负值
           position.value = {
-            x: Math.max(0, newPosition.x),
-            y: Math.max(0, newPosition.y),
+            x: Math.round(Math.max(0, newPosition.x)),
+            y: Math.round(Math.max(0, newPosition.y)),
           }
         }
       }
       else {
         // 没有边界约束时,直接更新位置,但确保不会出现负值
         position.value = {
-          x: Math.max(0, newPosition.x),
-          y: Math.max(0, newPosition.y),
+          x: Math.round(Math.max(0, newPosition.x)),
+          y: Math.round(Math.max(0, newPosition.y)),
         }
       }
     }
     else {
       // 对于相对定位元素,直接更新位置
-      position.value = { ...newPosition }
+      position.value = {
+        x: Math.round(newPosition.x),
+        y: Math.round(newPosition.y),
+      }
     }
 
     // 应用新的位置
