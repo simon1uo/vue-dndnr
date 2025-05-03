@@ -12,6 +12,9 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       include: ['src/**/*.ts', 'src/**/*.vue'],
+      tsconfigPath: './tsconfig.app.json',
+      rollupTypes: true,
+      staticImport: true,
     }),
   ],
   build: {
