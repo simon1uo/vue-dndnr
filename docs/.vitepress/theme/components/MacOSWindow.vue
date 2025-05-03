@@ -46,7 +46,7 @@ const windowTitleBarRef = ref<HTMLElement | null>(null)
 
 .window-titlebar {
   height: 38px;
-  background-color: var(--color-background-soft);
+  background-color: var(--color-background-soft) / 0.5;
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -91,6 +91,7 @@ const windowTitleBarRef = ref<HTMLElement | null>(null)
   overflow: hidden;
   position: relative;
   background-color: var(--color-background);
+  background-opacity: 0.8;
 }
 
 html.dark .macos-window {

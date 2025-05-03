@@ -1,171 +1,38 @@
 <script setup lang="ts">
 import { useData } from 'vitepress'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 
 import EditorDemo from './EditorDemo.vue'
 import MacOSWindow from './MacOSWindow.vue'
 
 const { frontmatter } = useData()
+const demoContainerRef = shallowRef<HTMLElement | null>(null)
 
-// Mouse tracking for cursor chase effect
-const demoContainerRef = ref<HTMLElement | null>(null)
-const mousePosition = ref({ x: 0, y: 0 })
-const containerRect = ref({ top: 0, left: 0, width: 0, height: 0 })
-const isHovering = ref(false)
+// Radial gradient overlay state
+const mouse = ref({ x: 0, y: 0, active: false })
 
-// Calculate distance from mouse to container center
-const distanceFromCenter = computed(() => {
-  if (!containerRect.value)
-    return { x: 0, y: 0 }
-
-  const centerX = containerRect.value.left + containerRect.value.width / 2
-  const centerY = containerRect.value.top + containerRect.value.height / 2
-
-  return {
-    x: mousePosition.value.x - centerX,
-    y: mousePosition.value.y - centerY,
-  }
-})
-
-// Calculate shadow offset based on mouse position
-const shadowOffset = computed(() => {
-  const maxOffset = 20
-  const xOffset = Math.min(Math.max(distanceFromCenter.value.x / 10, -maxOffset), maxOffset)
-  const yOffset = Math.min(Math.max(distanceFromCenter.value.y / 10, -maxOffset), maxOffset)
-
-  return { x: xOffset, y: yOffset }
-})
-
-// Calculate shadow size based on mouse proximity
-const shadowSizeMultiplier = computed(() => {
-  if (!isHovering.value)
-    return 1
-
-  // Calculate distance from mouse to container center
-  const distance = Math.sqrt(
-    distanceFromCenter.value.x ** 2
-    + distanceFromCenter.value.y ** 2,
-  )
-
-  // Scale based on proximity (closer = larger)
-  const maxDistance = Math.sqrt(
-    (containerRect.value.width / 2) ** 2
-    + (containerRect.value.height / 2) ** 2,
-  )
-
-  // Calculate normalized distance (0 = center, 1 = edge)
-  const normalizedDistance = Math.min(1, distance / maxDistance)
-
-  // Create a non-linear scaling effect that's more pronounced near the cursor
-  // Scale between 1.5 and 3 with more growth closer to the cursor
-  // The base multiplier is 1.5 (even at the edge) and increases to 3 at the center
-  return 1.5 + (1 - normalizedDistance ** 2) * 1.5
-})
-
-// Computed style for the container with dynamic shadow only (no scaling)
-const containerStyle = computed(() => {
-  // Create gradient shadow based on theme colors
-  const shadowX = isHovering.value ? shadowOffset.value.x : 0
-  const shadowY = isHovering.value ? shadowOffset.value.y : 0
-
-  // Base shadow sizes - smaller when not hovering
-  const baseShadowSize = isHovering.value ? 20 : 10
-  const baseShadowBlur = isHovering.value ? 40 : 20
-
-  // Apply the multiplier only when hovering
-  const multiplier = isHovering.value ? shadowSizeMultiplier.value : 1
-
-  // Calculate final shadow sizes
-  const shadowSize = Math.round(baseShadowSize * multiplier)
-  const shadowBlur = Math.round(baseShadowBlur * multiplier)
-
-  // Define style object with proper type
-  const styles: Record<string, string> = {
-    // Use a faster transition when entering hover state, slower when leaving
-    transition: isHovering.value
-      ? 'box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
-      : 'box-shadow 0.5s cubic-bezier(0.34, 0.96, 0.64, 1)',
-  }
-
-  // Adjust shadow opacity based on hover state
-  const primaryOpacity = isHovering.value ? 0.35 : 0.15
-  const secondaryOpacity = isHovering.value ? 0.25 : 0.1
-
-  // Always show shadow, but with different characteristics based on hover state
-  styles.boxShadow = `
-    ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowSize}px rgba(var(--color-primary-rgb, 66, 153, 225), ${primaryOpacity}),
-    ${-shadowX / 2}px ${-shadowY / 2}px ${shadowBlur}px ${Math.round(shadowSize / 2)}px rgba(var(--color-secondary-rgb, 159, 122, 234), ${secondaryOpacity})
-  `
-
-  // Add animation only when not hovering
-  if (!isHovering.value) {
-    styles.animation = 'shadowPulse 3s infinite ease-in-out'
-  }
-
-  return styles
-})
-
-// Track mouse position
-function handleMouseMove(event: MouseEvent) {
-  mousePosition.value = { x: event.clientX, y: event.clientY }
-
-  // Update container rect in case of page scroll/resize
-  if (demoContainerRef.value) {
-    containerRect.value = demoContainerRef.value.getBoundingClientRect()
-  }
-}
-
-function handleMouseEnter() {
-  isHovering.value = true
+function handleMouseMove(e: MouseEvent) {
+  const el = demoContainerRef.value
+  if (!el)
+    return
+  const rect = el.getBoundingClientRect()
+  mouse.value.x = e.clientX - rect.left
+  mouse.value.y = e.clientY - rect.top
+  mouse.value.active = true
 }
 
 function handleMouseLeave() {
-  isHovering.value = false
+  mouse.value.active = false
 }
 
-// Set up and clean up event listeners
-onMounted(() => {
-  if (demoContainerRef.value) {
-    containerRect.value = demoContainerRef.value.getBoundingClientRect()
+const radialGradientStyle = computed(() => {
+  if (!mouse.value.active)
+    return {}
+  // Use theme color and a strong blur for the radial effect
+  return {
+    '--radial-gradient': `radial-gradient(ellipse 180px 120px at ${mouse.value.x}px ${mouse.value.y}px, rgba(64,179,140,0.55), rgba(46,135,186,0.58) 60%, transparent 100%)`,
   }
-
-  window.addEventListener('mousemove', handleMouseMove)
-
-  // Add CSS variables for RGB values of theme colors
-  const root = document.documentElement
-  const primaryColor = getComputedStyle(root).getPropertyValue('--color-primary').trim()
-  const secondaryColor = getComputedStyle(root).getPropertyValue('--color-secondary').trim()
-
-  // Convert hex to RGB and set as CSS variables
-  root.style.setProperty('--color-primary-rgb', hexToRgb(primaryColor || '#4299e1'))
-  root.style.setProperty('--color-secondary-rgb', hexToRgb(secondaryColor || '#9f7aea'))
 })
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleMouseMove)
-})
-
-// Helper function to convert hex color to RGB
-function hexToRgb(hex: string): string {
-  // Default fallback
-  if (!hex || !hex.startsWith('#'))
-    return '66, 153, 225'
-
-  // Remove # if present
-  hex = hex.replace('#', '')
-
-  // Convert 3-digit hex to 6-digit
-  if (hex.length === 3) {
-    hex = hex.split('').map(char => char + char).join('')
-  }
-
-  // Parse the hex values
-  const r = Number.parseInt(hex.substring(0, 2), 16)
-  const g = Number.parseInt(hex.substring(2, 4), 16)
-  const b = Number.parseInt(hex.substring(4, 6), 16)
-
-  return `${r}, ${g}, ${b}`
-}
 </script>
 
 <template>
@@ -191,11 +58,8 @@ function hexToRgb(hex: string): string {
     </div>
 
     <div
-      ref="demoContainerRef"
-      class="flex lg:justify-center justify-end w-full h-500px"
-      :style="containerStyle"
-      @mouseenter="handleMouseEnter"
-      @mouseleave="handleMouseLeave"
+      id="home-hero-demo-container" ref="demoContainerRef" class="flex lg:justify-center justify-end w-full h-500px"
+      :style="radialGradientStyle" @mousemove="handleMouseMove" @mouseleave="handleMouseLeave"
     >
       <MacOSWindow title="Vue DNDNR Demo">
         <EditorDemo />
@@ -222,38 +86,54 @@ function hexToRgb(hex: string): string {
   }
 }
 
-/* Demo container with gradient shadow effect */
-.HomeHero > div:nth-child(2) {
+#home-hero-demo-container {
   position: relative;
   border-radius: 16px;
-  will-change: box-shadow;
-  background: linear-gradient(
-    135deg,
-    rgba(var(--color-primary-rgb, 66, 153, 225), 0.05) 0%,
-    rgba(var(--color-secondary-rgb, 159, 122, 234), 0.05) 100%
-  );
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 32px 0 rgba(64, 179, 140, 0.22);
+  z-index: 1;
 }
 
-/* Add a subtle glow effect on hover */
-.HomeHero > div:nth-child(2):hover {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--color-primary-rgb, 66, 153, 225), 0.1) 0%,
-    rgba(var(--color-secondary-rgb, 159, 122, 234), 0.1) 100%
-  );
+#home-hero-demo-container::after {
+  z-index: -1;
+  content: '';
+  position: absolute;
+  inset: -12px;
+  background: var(--radial-gradient, none);
+  background-size: 300% 300%;
+  transition: box-shadow 0.3s;
+  filter: blur(100px) brightness(2);
+  opacity: 0.92;
 }
 
-/* Add a subtle animation to make the shadow "breathe" */
-@keyframes shadowPulse {
+#home-hero-demo-container::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  z-index: -2;
+  border-radius: 20px;
+  pointer-events: none;
+  background: linear-gradient(120deg,
+      var(--color-primary) 0%,
+      var(--color-secondary) 40%,
+      var(--color-accent) 100%);
+  background-size: 150% 150%;
+  filter: blur(30px) brightness(1.12);
+  opacity: 0.62;
+  animation: flowing-gradient-shadow 4s linear infinite;
+  transition: background 0.5s;
+}
+
+@keyframes flowing-gradient-shadow {
   0% {
-    box-shadow: 0 5px 15px rgba(var(--color-primary-rgb, 66, 153, 225), 0.1);
+    background-position: 0% 50%;
   }
+
   50% {
-    box-shadow: 0 8px 20px rgba(var(--color-secondary-rgb, 159, 122, 234), 0.15);
+    background-position: 100% 50%;
   }
+
   100% {
-    box-shadow: 0 5px 15px rgba(var(--color-primary-rgb, 66, 153, 225), 0.1);
+    background-position: 0% 50%;
   }
 }
 </style>

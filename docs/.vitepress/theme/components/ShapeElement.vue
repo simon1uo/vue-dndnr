@@ -11,7 +11,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  color: '#4299e1',
+  color: '#40B38C',
   selected: false,
   isNew: false,
 })
@@ -83,7 +83,7 @@ const shapeStyle = computed(() => {
   // Base shadow - will be enhanced by CSS for selected state
   const baseShadow = props.selected
     ? `0 12px 24px rgba(0, 0, 0, 0.25),
-       0 0 0 2px var(--color-primary, #4299e1)`
+       0 0 0 2px var(--color-primary, #40B38C)`
     : `0 8px 16px rgba(0, 0, 0, 0.2),
        0 0 0 1px ${darkerColor}`
 
@@ -271,13 +271,13 @@ const triangleProps = computed(() => {
 @keyframes pulse {
   0% {
     transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0 2px var(--color-primary, #4299e1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0 2px var(--color-primary, #40B38C);
     filter: brightness(1.05);
   }
 
   100% {
     transform: translateY(-6px) scale(1.04);
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), 0 0 0 3px var(--color-primary, #4299e1);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), 0 0 0 3px var(--color-primary, #40B38C);
     filter: brightness(1.15) contrast(1.05);
   }
 }

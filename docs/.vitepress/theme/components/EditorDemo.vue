@@ -44,7 +44,7 @@ const shapes = ref<Shape[]>([
     type: 'rectangle',
     position: getRandomPosition(120, 80),
     size: { width: 120, height: 80 },
-    color: '#4299e1',
+    color: '#40B38C',
     zIndex: 1,
     isNew: true,
   },
@@ -53,7 +53,7 @@ const shapes = ref<Shape[]>([
     type: 'circle',
     position: getRandomPosition(100, 100),
     size: { width: 100, height: 100 },
-    color: '#9f7aea',
+    color: '#2E87BA',
     zIndex: 2,
     isNew: true,
   },
@@ -62,7 +62,7 @@ const shapes = ref<Shape[]>([
     type: 'triangle',
     position: getRandomPosition(100, 100),
     size: { width: 100, height: 100 },
-    color: '#f56565',
+    color: '#F29933',
     zIndex: 3,
     isNew: true,
   },
@@ -129,7 +129,17 @@ function addShape(type: ShapeType): void {
 
 // Helper function to generate random colors
 function getRandomColor(): string {
-  const colors = ['#4299e1', '#9f7aea', '#f56565', '#48bb78', '#ed8936', '#38b2ac']
+  const colors = [
+    '#40B38C',
+    '#65C5A3',
+    '#339275',
+    '#2E87BA',
+    '#4FA0CC',
+    '#246D96',
+    '#F29933',
+    '#F5B05F',
+    '#D17B1A',
+  ]
   return colors[Math.floor(Math.random() * colors.length)]
 }
 
@@ -168,7 +178,7 @@ function resetCanvas(): void {
       type: 'rectangle',
       position: getRandomPosition(120, 80),
       size: { width: 120, height: 80 },
-      color: '#4299e1',
+      color: '#40B38C',
       zIndex: 1,
       isNew: true,
     },
@@ -177,7 +187,7 @@ function resetCanvas(): void {
       type: 'circle',
       position: getRandomPosition(100, 100),
       size: { width: 100, height: 100 },
-      color: '#9f7aea',
+      color: '#2E87BA',
       zIndex: 2,
       isNew: true,
     },
@@ -186,7 +196,7 @@ function resetCanvas(): void {
       type: 'triangle',
       position: getRandomPosition(100, 100),
       size: { width: 100, height: 100 },
-      color: '#f56565',
+      color: '#F29933',
       zIndex: 3,
       isNew: true,
     },
