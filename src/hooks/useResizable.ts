@@ -383,10 +383,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       // Update position using corrected accumulated changes
       if (isAbsolutePositioned.value) {
         if (shouldUpdateX) {
-          newPosition.x = Math.max(0, startPosition.value.x + accumulatedDeltaX)
+          newPosition.x = startPosition.value.x + accumulatedDeltaX
         }
         if (shouldUpdateY) {
-          newPosition.y = Math.max(0, startPosition.value.y + accumulatedDeltaY)
+          newPosition.y = startPosition.value.y + accumulatedDeltaY
         }
       }
     }
@@ -404,7 +404,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    // 应用最小/最大约束
     let constrainedSize = applyMinMaxConstraints(
       snappedSize,
       minWidthValue,
@@ -413,7 +412,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       maxHeightValue,
     )
 
-    // 应用宽高比锁定
     if (toValue(lockAspectRatio)) {
       constrainedSize = applyAspectRatioLock(
         constrainedSize,
@@ -422,7 +420,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       )
     }
 
-    // 应用边界约束
     if (bounds) {
       let boundingElement: HTMLElement | null = null
       const boundsValue = toValue(bounds)
@@ -443,7 +440,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           y: targetRect.top - boundingRect.top,
         }
 
-        // 考虑边界约束时的最大尺寸
         const maxBoundWidth = boundingRect.right - boundingRect.left - targetPos.x
         const maxBoundHeight = boundingRect.bottom - boundingRect.top - targetPos.y
 
@@ -456,7 +452,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    // 更新状态
     size.value = {
       width: typeof constrainedSize.width === 'number' ? Math.round(constrainedSize.width) : constrainedSize.width,
       height: typeof constrainedSize.height === 'number' ? Math.round(constrainedSize.height) : constrainedSize.height,
@@ -468,7 +463,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    // 应用样式
     applyStyles()
 
     if (onResizeCallback) {
@@ -597,15 +591,12 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     if (!el)
       return
 
-    // 获取元素的当前位置和尺寸信息
     const rect = el.getBoundingClientRect()
     const computedStyle = window.getComputedStyle(el)
     const marginLeft = Number.parseFloat(computedStyle.marginLeft) || 0
     const marginTop = Number.parseFloat(computedStyle.marginTop) || 0
 
-    // 如果元素是绝对定位
     if (isAbsolutePositioned.value) {
-      // 考虑边界约束
       if (bounds) {
         const boundsValue = toValue(bounds)
         let boundingElement: HTMLElement | null = null
@@ -622,25 +613,22 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           const maxX = boundingRect.width - rect.width - marginLeft
           const maxY = boundingRect.height - rect.height - marginTop
 
-          // 确保位置在边界内
           position.value = {
-            x: Math.round(Math.max(0, Math.min(newPosition.x, maxX))),
-            y: Math.round(Math.max(0, Math.min(newPosition.y, maxY))),
+            x: Math.round(Math.min(newPosition.x, maxX)),
+            y: Math.round(Math.min(newPosition.y, maxY)),
           }
         }
         else {
-          // 如果没有边界元素,至少确保不会出现负值
           position.value = {
-            x: Math.round(Math.max(0, newPosition.x)),
-            y: Math.round(Math.max(0, newPosition.y)),
+            x: Math.round(newPosition.x),
+            y: Math.round(newPosition.y),
           }
         }
       }
       else {
-        // 没有边界约束时,直接更新位置,但确保不会出现负值
         position.value = {
-          x: Math.round(Math.max(0, newPosition.x)),
-          y: Math.round(Math.max(0, newPosition.y)),
+          x: Math.round(newPosition.x),
+          y: Math.round(newPosition.y),
         }
       }
     }
