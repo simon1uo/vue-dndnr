@@ -22,17 +22,38 @@ import { computed, ref, watch } from 'vue'
 export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions) {
   const interactionMode = ref<'idle' | 'dragging' | 'resizing'>('idle')
   const isNearResizeHandle = ref(false)
+  const isActive = ref(options.initialActive ?? false)
+
+  /**
+   * Set the active state and trigger callback
+   * @param value - New active state
+   */
+  const setActive = (value: boolean) => {
+    if (value === isActive.value)
+      return
+
+    // Call the callback and check if we should prevent the change
+    if (options.onActiveChange?.(value) === false)
+      return
+
+    isActive.value = value
+  }
 
   const draggableOptions = computed(() => {
     const {
       onDragStart: originalDragStart,
       onDrag: originalDrag,
       onDragEnd: originalDragEnd,
+      onActiveChange: originalActiveChange,
+      initialActive,
+      activeOn = 'none',
       ...restOptions
     } = options
 
     return {
       ...restOptions,
+      initialActive,
+      activeOn,
       disabled: options.disabled || interactionMode.value === 'resizing' || isNearResizeHandle.value,
       onDragStart: (position: Position, event: PointerEvent) => {
         if (interactionMode.value === 'resizing' || isNearResizeHandle.value)
@@ -52,6 +73,10 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
         interactionMode.value = 'idle'
         return originalDragEnd?.(position, event)
       },
+      onActiveChange: (active: boolean) => {
+        setActive(active)
+        return originalActiveChange?.(active)
+      },
     }
   })
 
@@ -60,11 +85,16 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       onResizeStart: originalResizeStart,
       onResize: originalResize,
       onResizeEnd: originalResizeEnd,
+      onActiveChange: originalActiveChange,
+      initialActive,
+      activeOn = 'none',
       ...restOptions
     } = options
 
     return {
       ...restOptions,
+      initialActive,
+      activeOn,
       disabled: options.disabled || interactionMode.value === 'dragging',
       onResizeStart: (size: Size, event: PointerEvent) => {
         if (interactionMode.value === 'dragging')
@@ -84,14 +114,20 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
         interactionMode.value = 'idle'
         originalResizeEnd?.(size, event)
       },
+      onActiveChange: (active: boolean) => {
+        setActive(active)
+        return originalActiveChange?.(active)
+      },
     }
   })
 
   const {
     position,
     isDragging,
+    isActive: draggableIsActive,
     style: draggableStyle,
     setPosition,
+    setActive: _setDraggableActive, // Unused but needed for destructuring
     onDragStart,
     onDrag,
     onDragEnd,
@@ -101,11 +137,13 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     size,
     position: resizablePosition,
     isResizing,
+    isActive: resizableIsActive,
     activeHandle,
     hoverHandle,
     isAbsolutePositioned,
     setSize,
     setPosition: setResizablePosition,
+    setActive: _setResizableActive, // Unused but needed for destructuring
     onResizeStart,
     onResize,
     onResizeEnd,
@@ -132,6 +170,19 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
   }, { deep: true })
 
+  // Sync active state between draggable and resizable
+  watch(draggableIsActive, (newActive) => {
+    if (newActive !== isActive.value) {
+      setActive(!!newActive)
+    }
+  })
+
+  watch(resizableIsActive, (newActive) => {
+    if (newActive !== isActive.value) {
+      setActive(!!newActive)
+    }
+  })
+
   const style = computed(() => {
     return {
       ...draggableStyle.value,
@@ -145,6 +196,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     size,
     isDragging,
     isResizing,
+    isActive,
     interactionMode,
     activeHandle,
     hoverHandle,
@@ -156,6 +208,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
     setPosition,
     setSize,
+    setActive,
 
     onDragStart,
     onDrag,

@@ -1,4 +1,4 @@
-import type { DraggableOptions, PointerType, Position } from '@/types'
+import type { ActivationTrigger, DraggableOptions, PointerType, Position } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { useEventListener } from '@/hooks/useEventListener'
 import {
@@ -12,7 +12,7 @@ import {
   getElementSize,
 } from '@/utils'
 import { throttle } from '@/utils/throttle'
-import { computed, ref, toValue } from 'vue'
+import { computed, onUnmounted, ref, toValue } from 'vue'
 
 /**
  * Hook that adds drag functionality to an element
@@ -34,15 +34,19 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     preventDefault = true,
     stopPropagation = false,
     capture = true,
+    initialActive = false,
+    activeOn = 'none' as ActivationTrigger,
     onDragStart: onDragStartCallback,
     onDrag: onDragCallback,
     onDragEnd: onDragEndCallback,
+    onActiveChange: onActiveChangeCallback,
     throttleDelay = 16, // Default to ~60fps
   } = options
 
   const position = ref<Position>({ ...initialPosition })
   const startPosition = ref<Position>({ ...initialPosition })
   const isDragging = ref(false)
+  const isActive = ref(initialActive)
 
   const startEvent = ref<PointerEvent | null>(null)
   const elementSize = ref<{ width: number, height: number }>({ width: 0, height: 0 })
@@ -56,17 +60,38 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   }))
 
   /**
-   * Filter pointer events based on disabled state and pointer types
+   * Filter pointer events based on disabled state, active state, and pointer types
    * @param event - The pointer event to filter
    * @returns True if the event should be processed, false otherwise
    */
   const filterEvent = (event: PointerEvent): boolean => {
     if (toValue(disabled))
       return false
+
+    // Check if element is active when activeOn is not 'none'
+    const currentActiveOn = toValue(activeOn)
+    if (currentActiveOn !== 'none' && !isActive.value)
+      return false
+
     const types = toValue(pointerTypes)
     if (types)
       return types.includes(event.pointerType as PointerType)
     return true
+  }
+
+  /**
+   * Set the active state and trigger callback
+   * @param value - New active state
+   */
+  const setActive = (value: boolean) => {
+    if (value === isActive.value)
+      return
+
+    // Call the callback and check if we should prevent the change
+    if (onActiveChangeCallback?.(value) === false)
+      return
+
+    isActive.value = value
   }
 
   /**
@@ -91,6 +116,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       return
     startEvent.value = event
     startPosition.value = { ...position.value }
+
     if (onDragStartCallback?.(position.value, event) === false)
       return
     isDragging.value = true
@@ -209,9 +235,77 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     passive: !toValue(preventDefault),
   })
 
-  useEventListener(draggingHandle, 'pointerdown', onDragStart, getConfig())
+  // Handle activation based on activeOn setting
+  const onPointerDown = (event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+
+    // If activeOn is 'click', set active state on pointer down
+    if (currentActiveOn === 'click') {
+      setActive(true)
+    }
+
+    // Then try to start dragging if conditions are met
+    onDragStart(event)
+  }
+
+  const onPointerEnter = (_event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+
+    // If activeOn is 'hover', set active state on pointer enter
+    if (currentActiveOn === 'hover') {
+      setActive(true)
+    }
+  }
+
+  const onPointerLeave = (event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+    const el = toValue(draggingHandle)
+
+    // If activeOn is 'hover', remove active state on pointer leave
+    // But only if the pointer is not moving to a child element
+    if (currentActiveOn === 'hover' && el) {
+      const relatedTarget = event.relatedTarget as Node | null
+      // Check if relatedTarget is a child of the current element
+      if (!relatedTarget || !el.contains(relatedTarget)) {
+        setActive(false)
+      }
+    }
+  }
+
+  /**
+   * Handle document click to deactivate when clicking outside the element
+   * @param event - The pointer event from document click
+   */
+  const onDocumentPointerDown = (event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+    const el = toValue(target)
+
+    // Only process if activeOn is 'click' and element is active
+    if (currentActiveOn === 'click' && isActive.value && el) {
+      // Check if the click is outside the element
+      const targetElement = event.target as Node
+      if (!el.contains(targetElement)) {
+        setActive(false)
+      }
+    }
+  }
+
+  // Set up event listeners
+  useEventListener(draggingHandle, 'pointerdown', onPointerDown, getConfig())
   useEventListener(draggingElement, 'pointermove', onDrag, getConfig())
   useEventListener(draggingElement, 'pointerup', onDragEnd, getConfig())
+
+  // Add activation-related event listeners
+  useEventListener(draggingHandle, 'pointerenter', onPointerEnter, getConfig())
+  useEventListener(draggingHandle, 'pointerleave', onPointerLeave, getConfig())
+
+  // Add document click listener to handle clicking outside
+  const documentListener = useEventListener(document, 'pointerdown', onDocumentPointerDown, { capture: true })
+
+  // Clean up document listener on unmount
+  onUnmounted(() => {
+    documentListener()
+  })
 
   /**
    * Set the position of the draggable element
@@ -227,8 +321,10 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   return {
     position,
     isDragging,
+    isActive,
     style,
     setPosition,
+    setActive,
     onDragStart,
     onDrag,
     onDragEnd,

@@ -11,6 +11,7 @@ This section demonstrates various usages and examples of the resizable functiona
 - [Aspect Ratio Lock](/examples/Resizable/aspect-ratio) - Maintain aspect ratio while resizing
 - [Grid Resizing](/examples/Resizable/grid) - Snap to grid while resizing
 - [Event Handling](/examples/Resizable/events) - Respond to resize events
+- [Active State Modes](/examples/Resizable/active-modes) - Control when elements can be resized
 
 ## API References
 

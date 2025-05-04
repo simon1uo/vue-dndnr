@@ -14,6 +14,14 @@ export interface Position {
 export type PointerType = 'mouse' | 'touch' | 'pen'
 
 /**
+ * Type for activation trigger
+ * - 'click': Element becomes active when clicked
+ * - 'hover': Element becomes active when hovered
+ * - 'none': Element is always active (traditional behavior)
+ */
+export type ActivationTrigger = 'click' | 'hover' | 'none'
+
+/**
  * Represents the dimensions of an element
  */
 export interface Size {

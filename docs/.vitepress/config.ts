@@ -130,6 +130,7 @@ export default defineConfig({
             { text: 'Custom Handle', link: '/examples/Draggable/handle' },
             { text: 'Axis Constraint', link: '/examples/Draggable/axis' },
             { text: 'Event Handling', link: '/examples/Draggable/events' },
+            { text: 'Active State Modes', link: '/examples/Draggable/active-modes' },
           ],
         },
         {
@@ -143,6 +144,7 @@ export default defineConfig({
             { text: 'Handle Types', link: '/examples/Resizable/handle-types' },
             { text: 'Aspect Ratio Lock', link: '/examples/Resizable/aspect-ratio' },
             { text: 'Event Handling', link: '/examples/Resizable/events' },
+            { text: 'Active State Modes', link: '/examples/Resizable/active-modes' },
           ],
         },
         {
@@ -156,6 +158,7 @@ export default defineConfig({
             { text: 'Handle Types', link: '/examples/DnR/handle-types' },
             { text: 'Window Style', link: '/examples/DnR/window' },
             { text: 'Event Handling', link: '/examples/DnR/events' },
+            { text: 'Active State Modes', link: '/examples/DnR/active-modes' },
           ],
         },
 

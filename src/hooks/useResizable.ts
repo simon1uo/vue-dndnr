@@ -41,15 +41,19 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     capture = true,
     handlesSize = 8,
     handleBorderStyle = 'none',
+    initialActive = false,
+    activeOn = 'none',
     throttleDelay = 16, // Default to ~60fps
     onResizeStart: onResizeStartCallback,
     onResize: onResizeCallback,
     onResizeEnd: onResizeEndCallback,
+    onActiveChange: onActiveChangeCallback,
   } = options
 
   const size = ref<Size>({ ...initialSize })
   const position = ref<Position>({ x: 0, y: 0 })
   const isResizing = ref(false)
+  const isActive = ref(initialActive)
   const startEvent = ref<PointerEvent | null>(null)
   const isAbsolutePositioned = ref(false)
 
@@ -62,6 +66,21 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       event.preventDefault()
     if (toValue(stopPropagation))
       event.stopPropagation()
+  }
+
+  /**
+   * Set the active state and trigger callback
+   * @param value - New active state
+   */
+  const setActive = (value: boolean) => {
+    if (value === isActive.value)
+      return
+
+    // Call the callback and check if we should prevent the change
+    if (onActiveChangeCallback?.(value) === false)
+      return
+
+    isActive.value = value
   }
 
   // Initialize resize handles
@@ -86,8 +105,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     stopPropagation,
     capture,
     pointerTypes,
-    disabled,
+    disabled: toValue(disabled) || (toValue(activeOn) !== 'none' && !isActive.value),
     onResizeStart: (event: PointerEvent) => {
+      // Check if element is active when activeOn is not 'none'
+      const currentActiveOn = toValue(activeOn)
+      if (currentActiveOn !== 'none' && !isActive.value)
+        return
+
       // Handle resize start from handle elements
       startEvent.value = event
       startSize.value = { ...size.value }
@@ -174,9 +198,18 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
    * @param event - The pointer event that triggered the resize start
    */
   const onResizeStart = (event: PointerEvent) => {
+    // Check if element is active when activeOn is not 'none'
+    const currentActiveOn = toValue(activeOn)
+    // If activeOn is 'click', set active state on resize start
+    if (currentActiveOn === 'click') {
+      setActive(true)
+    }
     // For 'handles' or 'custom' type, resize is started by handle elements directly
     // so we only need to handle 'borders' type here
     if (currentHandleType.value !== 'borders')
+      return
+
+    if (currentActiveOn !== 'none' && !isActive.value)
       return
 
     const el = toValue(target)
@@ -623,21 +656,80 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     applyStyles()
   }
 
+  // Handle activation based on activeOn setting
+  const onPointerEnter = (_event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+
+    // If activeOn is 'hover', set active state on pointer enter
+    if (currentActiveOn === 'hover') {
+      setActive(true)
+    }
+  }
+
+  const onPointerLeave = (event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+    const el = toValue(target)
+
+    // If activeOn is 'hover', remove active state on pointer leave
+    // But only if the pointer is not moving to a child element
+    if (currentActiveOn === 'hover' && el) {
+      const relatedTarget = event.relatedTarget as Node | null
+      // Check if relatedTarget is a child of the current element
+      if (!relatedTarget || !el.contains(relatedTarget)) {
+        setActive(false)
+      }
+    }
+
+    // Clear hover handle only if not moving to a child element
+    if (el) {
+      const relatedTarget = event.relatedTarget as Node | null
+      if (!relatedTarget || !el.contains(relatedTarget)) {
+        hoverHandle.value = null
+      }
+    }
+  }
+
+  /**
+   * Handle document click to deactivate when clicking outside the element
+   * @param event - The pointer event from document click
+   */
+  const onDocumentPointerDown = (event: PointerEvent) => {
+    const currentActiveOn = toValue(activeOn)
+    const el = toValue(target)
+
+    // Only process if activeOn is 'click' and element is active
+    if (currentActiveOn === 'click' && isActive.value && el) {
+      // Check if the click is outside the element
+      const targetElement = event.target as Node
+      if (!el.contains(targetElement)) {
+        setActive(false)
+      }
+    }
+  }
+
+  // Set up event listeners
   useEventListener(target, 'pointermove', onMouseMove, getConfig())
   useEventListener(target, 'pointerdown', onResizeStart, getConfig())
-  useEventListener(target, 'pointermove', onMouseMove, getConfig())
-  useEventListener(target, 'pointerleave', () => {
-    hoverHandle.value = null
-  }, getConfig())
+  useEventListener(target, 'pointerenter', onPointerEnter, getConfig())
+  useEventListener(target, 'pointerleave', onPointerLeave, getConfig())
 
   useEventListener(defaultWindow, 'pointermove', onResize, getConfig())
   useEventListener(defaultWindow, 'pointerup', onResizeEnd, getConfig())
+
+  // Add document click listener to handle clicking outside
+  const documentListener = useEventListener(document, 'pointerdown', onDocumentPointerDown, { capture: true })
+
+  // Add cleanup for document listener to the unmount handler
+  onUnmounted(() => {
+    documentListener()
+  })
 
   // Return values and methods
   return {
     size,
     position,
     isResizing,
+    isActive,
     activeHandle,
     hoverHandle,
     isAbsolutePositioned,
@@ -645,6 +737,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     handleElements,
     setSize,
     setPosition,
+    setActive,
     onResizeStart,
     onResize,
     onResizeEnd,

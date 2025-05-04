@@ -12,6 +12,7 @@ The [Draggable examples](/examples/Draggable/) showcase how to use the `Draggabl
 - [Custom Handle](/examples/Draggable/handle) - Drag only by a specific handle
 - [Axis Constraint](/examples/Draggable/axis) - Limit dragging to x or y axis
 - [Event Handling](/examples/Draggable/events) - Respond to drag events
+- [Active State Modes](/examples/Draggable/active-modes) - Control when elements can be dragged
 
 ## Resizable Examples
 
@@ -20,8 +21,11 @@ The [Resizable examples](/examples/Resizable/) demonstrate the `Resizable` compo
 - [Basic Usage](/examples/Resizable/basic) - Simple resizable element
 - [Constrained Resizing](/examples/Resizable/constrained) - Set min/max size constraints
 - [Custom Handles](/examples/Resizable/handles) - Customize which resize handles are available
+- [Handle Types](/examples/Resizable/handle-types) - Different handle types (borders, handles, custom)
 - [Aspect Ratio Lock](/examples/Resizable/aspect-ratio) - Maintain aspect ratio while resizing
+- [Grid Resizing](/examples/Resizable/grid) - Snap to grid while resizing
 - [Event Handling](/examples/Resizable/events) - Respond to resize events
+- [Active State Modes](/examples/Resizable/active-modes) - Control when elements can be resized
 
 ## DnR Examples
 
@@ -30,8 +34,10 @@ The [DnR examples](/examples/DnR/) show how to use the combined `DnR` component 
 - [Basic Usage](/examples/DnR/basic) - Simple draggable and resizable element
 - [Constrained DnR](/examples/DnR/constrained) - Set bounds and size constraints
 - [Custom Handle](/examples/DnR/handle) - Customize drag handle
+- [Handle Types](/examples/DnR/handle-types) - Different handle types
 - [Window Style](/examples/DnR/window) - Create window-like UI elements
 - [Event Handling](/examples/DnR/events) - Respond to drag and resize events
+- [Active State Modes](/examples/DnR/active-modes) - Control when elements can be dragged or resized
 
 ## Component vs Hook Approach
 

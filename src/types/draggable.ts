@@ -1,5 +1,5 @@
 import type { MaybeRefOrGetter } from 'vue'
-import type { PointerType, Position } from './common'
+import type { ActivationTrigger, PointerType, Position } from './common'
 
 /**
  * Configuration options for draggable functionality
@@ -10,6 +10,22 @@ export interface DraggableOptions {
    * @default { x: 0, y: 0 }
    */
   initialPosition?: Position
+
+  /**
+   * Initial active state of the element
+   * Only active elements can be dragged when activeOn is not 'none'
+   * @default false
+   */
+  initialActive?: boolean
+
+  /**
+   * Determines how the element becomes active
+   * - 'click': Element becomes active when clicked
+   * - 'hover': Element becomes active when hovered
+   * - 'none': Element is always active (traditional behavior)
+   * @default 'none'
+   */
+  activeOn?: MaybeRefOrGetter<ActivationTrigger>
 
   /**
    * Element or selector to use as bounds for the draggable element
@@ -107,6 +123,13 @@ export interface DraggableOptions {
    * @returns {boolean|void} Return false to prevent position update
    */
   onDragEnd?: (position: Position, event: PointerEvent) => void | boolean
+
+  /**
+   * Called when the active state changes
+   * @param active - New active state
+   * @returns {boolean|void} Return false to prevent active state change
+   */
+  onActiveChange?: (active: boolean) => void | boolean
 }
 
 /**

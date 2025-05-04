@@ -1,6 +1,6 @@
 # Draggable Component
 
-The `Draggable` component allows you to make any element draggable.
+The `Draggable` component allows you to make any element draggable with a simple wrapper component.
 
 <script setup lang="ts">
 import { ref } from 'vue'
@@ -41,37 +41,44 @@ const position = ref({ x: 0, y: 0 })
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `position` | `Object` | `{ x: 0, y: 0 }` | The position of the element. Can be bound with `v-model:position`. |
-| `modelValue` | `Object` | `undefined` | Alternative v-model binding for position. |
+| `position` | `Position` | `{ x: 0, y: 0 }` | The position of the element. Can be bound with `v-model:position`. |
+| `modelValue` | `Position` | `undefined` | Alternative v-model binding for position. |
+| `active` | `boolean` | `undefined` | Whether the element is currently active (selected). Can be bound with `v-model:active`. |
 
 ### Styling Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `className` | `String` | `undefined` | Custom class name for the component. |
-| `draggingClassName` | `String` | `'dragging'` | Class name applied while dragging. |
+| `className` | `string` | `undefined` | Custom class name for the component. |
+| `draggingClassName` | `string` | `'dragging'` | Class name applied while dragging. |
+| `activeClassName` | `string` | `'active'` | Class name applied when the element is active. |
+
+### Activation Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `activeOn` | `'click' \| 'hover' \| 'none'` | `'none'` | Determines how the element becomes active. Can be `'click'`, `'hover'`, or `'none'` (always active). |
+| `disabled` | `boolean` | `false` | Whether dragging is disabled. |
 
 ### Behavior Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `disabled` | `Boolean` | `false` | Whether dragging is disabled. |
-| `bounds` | `String\|Object\|null` | `null` | Constrains movement within bounds. Can be 'parent', 'window', or an object with `{ left, top, right, bottom }`. |
-| `grid` | `Array\|null` | `null` | Snaps the element to a grid. Format: `[x, y]`. |
-| `handle` | `String\|null` | `null` | CSS selector for the drag handle. If not provided, the entire element is draggable. |
-| `cancel` | `String\|null` | `null` | CSS selector for elements that should not trigger dragging. |
-| `axis` | `String` | `'both'` | Constrains movement to an axis. Can be 'x', 'y', or 'both'. |
-| `scale` | `Number` | `1` | Scale factor for the draggable element. |
+| `bounds` | `HTMLElement \| 'parent' \| null` | `undefined` | Constrains movement within bounds. Can be 'parent' or an HTML element. |
+| `grid` | `[number, number] \| null` | `undefined` | Snaps the element to a grid. Format: `[x, y]`. |
+| `handle` | `HTMLElement \| null` | `undefined` | Element to use as the drag handle. |
+| `axis` | `'x' \| 'y' \| 'both'` | `'both'` | Constrains movement to an axis. |
+| `scale` | `number` | `1` | Scale factor for the draggable element. |
 
 ### Event Control Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `pointerTypes` | `Array` | `undefined` | Array of supported pointer types. |
-| `preventDefault` | `Boolean` | `true` | Whether to prevent default event behavior. |
-| `stopPropagation` | `Boolean` | `false` | Whether to stop event propagation. |
-| `capture` | `Boolean` | `true` | Whether to use event capture phase. |
-| `throttleDelay` | `Number` | `16` | Throttle delay in milliseconds for drag events. |
+| `pointerTypes` | `('mouse' \| 'touch' \| 'pen')[]` | `['mouse', 'touch', 'pen']` | Types of pointer events to respond to. |
+| `preventDefault` | `boolean` | `true` | Whether to prevent default browser events. |
+| `stopPropagation` | `boolean` | `false` | Whether to stop event propagation. |
+| `capture` | `boolean` | `true` | Whether to use event capturing phase. |
+| `throttleDelay` | `number` | `16` | Delay in ms for throttling move events. |
 
 ## Events
 
@@ -79,19 +86,21 @@ const position = ref({ x: 0, y: 0 })
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `update:position` | `{ x, y }` | Emitted when the position changes. Used for `v-model:position` binding. |
-| `update:modelValue` | `{ x, y }` | Alternative v-model event for position changes. |
+| `update:position` | `Position` | Emitted when the position changes. Used for `v-model:position` binding. |
+| `update:modelValue` | `Position` | Alternative v-model event for position changes. |
+| `update:active` | `boolean` | Emitted when the active state changes. Used for `v-model:active` binding. |
+| `activeChange` | `boolean` | Emitted when the active state changes. |
 
 ### Interaction Events
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `dragStart` | `position, event` | Emitted when dragging starts. |
-| `drag` | `position, event` | Emitted during dragging. |
-| `dragEnd` | `position, event` | Emitted when dragging ends. |
+| `dragStart` | `position: Position, event: PointerEvent` | Emitted when dragging starts. |
+| `drag` | `position: Position, event: PointerEvent` | Emitted during dragging. |
+| `dragEnd` | `position: Position, event: PointerEvent` | Emitted when dragging ends. |
 
 ## Slots
 
 | Slot | Props | Description |
 |------|-------|-------------|
-| default | `{ position, isDragging }` | The content to be made draggable. |
+| default | `{ position, isDragging, isActive, style }` | The content to be made draggable. |

@@ -10,6 +10,7 @@ This section demonstrates various usages and examples of the draggable functiona
 - [Custom Handle](/examples/Draggable/handle) - Drag only by a specific handle
 - [Axis Constraint](/examples/Draggable/axis) - Limit dragging to x or y axis
 - [Event Handling](/examples/Draggable/events) - Respond to drag events
+- [Active State Modes](/examples/Draggable/active-modes) - Control when elements can be dragged
 
 ## API References
 

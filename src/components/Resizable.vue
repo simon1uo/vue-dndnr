@@ -4,32 +4,39 @@ import { useResizable } from '@/hooks'
 import { getCursorStyle } from '@/utils/cursor'
 import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
+interface ResizableProps extends ResizableOptions {
+  size?: Size
+  modelValue?: Size
+  active?: boolean
+  activeClassName?: string
+}
+
 const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
+  active: undefined,
   handleType: 'borders',
   lockAspectRatio: false,
   disabled: false,
+  activeOn: 'none',
   preventDefault: true,
   stopPropagation: false,
   capture: true,
   throttleDelay: 16,
   handleBorderStyle: 'none',
+  activeClassName: 'active',
 })
 
 const emit = defineEmits<{
   'update:size': [size: Size]
   'update:modelValue': [size: Size]
+  'update:active': [active: boolean]
   'resizeStart': [size: Size, event: PointerEvent]
   'resize': [size: Size, event: PointerEvent]
   'resizeEnd': [size: Size, event: PointerEvent]
   'hoverHandleChange': [handle: ResizeHandle | null]
+  'activeChange': [active: boolean | undefined]
 }>()
-
-interface ResizableProps extends ResizableOptions {
-  size?: Size
-  modelValue?: Size
-}
 
 const targetRef = ref<HTMLElement | null>(null)
 const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
@@ -49,7 +56,9 @@ const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
 const {
   size: currentSize,
   isResizing,
+  isActive,
   setSize,
+  setActive,
   activeHandle,
   hoverHandle,
   handleType: currentHandleType,
@@ -59,6 +68,7 @@ const {
 } = useResizable(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
+  initialActive: props.active,
   grid,
   lockAspectRatio,
   handleType,
@@ -92,6 +102,13 @@ const {
       if (props.onResizeEnd)
         props.onResizeEnd(size, event)
     }
+  },
+  onActiveChange: (active) => {
+    emit('activeChange', active)
+    emit('update:active', active)
+    if (props.onActiveChange)
+      return props.onActiveChange(active)
+    return true
   },
 })
 
@@ -130,8 +147,27 @@ watch(
   { deep: true },
 )
 
+watch(
+  () => props.active,
+  (newActive) => {
+    if (newActive !== undefined && newActive !== isActive.value) {
+      setActive(newActive)
+    }
+  },
+)
+
 const combinedClass = computed(() => {
-  return isResizing.value ? 'resizable resizing' : 'resizable'
+  const classes = ['resizable']
+
+  if (isResizing.value) {
+    classes.push('resizing')
+  }
+
+  if (isActive.value && props.activeClassName) {
+    classes.push(props.activeClassName)
+  }
+
+  return classes.join(' ')
 })
 
 // Function to register custom handle elements with the hook
@@ -239,6 +275,11 @@ onUnmounted(cleanupHandleElements)
 
 .resizable.resizing {
   z-index: 1;
+}
+
+.resizable.active {
+  z-index: 1;
+  outline: 2px solid #4299e1;
 }
 
 /* Resize handles styling */

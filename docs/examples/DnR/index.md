@@ -10,6 +10,7 @@ This section demonstrates various usages and examples of the DnR functionality (
 - [Window Style](/examples/DnR/window) - Create window-like UI elements
 - [Grid Alignment](/examples/DnR/grid) - Snap to grid while dragging and resizing
 - [Event Handling](/examples/DnR/events) - Respond to drag and resize events
+- [Active State Modes](/examples/DnR/active-modes) - Control when elements can be dragged or resized
 
 ## API References
 

@@ -2,7 +2,7 @@
  * Types for the resizable component
  */
 import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue'
-import type { PointerType, Size } from './common'
+import type { ActivationTrigger, PointerType, Size } from './common'
 
 /**
  * Valid resize handle positions
@@ -184,6 +184,22 @@ export interface ResizableOptions {
   initialSize?: Size
 
   /**
+   * Initial active state of the element
+   * Only active elements can be resized when activeOn is not 'none'
+   * @default false
+   */
+  initialActive?: boolean
+
+  /**
+   * Determines how the element becomes active
+   * - 'click': Element becomes active when clicked
+   * - 'hover': Element becomes active when hovered
+   * - 'none': Element is always active (traditional behavior)
+   * @default 'none'
+   */
+  activeOn?: MaybeRefOrGetter<ActivationTrigger>
+
+  /**
    * Minimum width constraint in pixels
    * @default 0
    */
@@ -317,4 +333,11 @@ export interface ResizableOptions {
    * @param event - The pointer event that triggered the end
    */
   onResizeEnd?: (size: Size, event: PointerEvent) => void
+
+  /**
+   * Called when the active state changes
+   * @param active - New active state
+   * @returns {boolean|void} Return false to prevent active state change
+   */
+  onActiveChange?: (active: boolean) => void | boolean
 }

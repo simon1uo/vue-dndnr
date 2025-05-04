@@ -6,30 +6,36 @@ import { computed, ref, toValue, watch } from 'vue'
 interface DraggableProps extends DraggableOptions {
   position?: Position
   modelValue?: Position
-
+  active?: boolean
   className?: string
   draggingClassName?: string
+  activeClassName?: string
 }
 
 const props = withDefaults(defineProps<DraggableProps>(), {
   position: undefined,
   modelValue: undefined,
+  active: undefined,
   axis: 'both',
   scale: 1,
   disabled: false,
+  activeOn: 'none',
   preventDefault: true,
   stopPropagation: false,
   capture: true,
   throttleDelay: 16,
   draggingClassName: 'dragging',
+  activeClassName: 'active',
 })
 
 const emit = defineEmits<{
   'update:position': [position: Position]
   'update:modelValue': [position: Position]
+  'update:active': [active: boolean]
   'dragStart': [position: Position, event: PointerEvent]
   'drag': [position: Position, event: PointerEvent]
   'dragEnd': [position: Position, event: PointerEvent]
+  'activeChange': [active: boolean]
 }>()
 
 const targetRef = ref<HTMLElement | SVGElement | null | undefined>(null)
@@ -44,15 +50,19 @@ const preventDefault = computed(() => toValue(props.preventDefault))
 const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
 const throttleDelay = computed(() => toValue(props.throttleDelay))
+const activeOn = computed(() => toValue(props.activeOn))
 
 const {
   position,
   isDragging,
+  isActive,
   style: draggableStyle,
   setPosition,
+  setActive,
 } = useDraggable(targetRef, {
   ...props,
   initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
+  initialActive: props.active,
   bounds,
   handle,
   grid,
@@ -64,6 +74,7 @@ const {
   stopPropagation,
   capture,
   throttleDelay,
+  activeOn,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)
@@ -78,6 +89,13 @@ const {
     emit('dragEnd', position, event)
     if (props.onDragEnd)
       props.onDragEnd(position, event)
+  },
+  onActiveChange: (active) => {
+    emit('activeChange', active)
+    emit('update:active', active)
+    if (props.onActiveChange)
+      return props.onActiveChange(active)
+    return true
   },
 })
 
@@ -110,6 +128,15 @@ watch(
   { deep: true },
 )
 
+watch(
+  () => props.active,
+  (newActive) => {
+    if (newActive !== undefined && newActive !== isActive.value) {
+      setActive(newActive)
+    }
+  },
+)
+
 const combinedClass = computed(() => {
   const classes = ['draggable']
 
@@ -119,6 +146,10 @@ const combinedClass = computed(() => {
 
   if (isDragging.value && props.draggingClassName) {
     classes.push(props.draggingClassName)
+  }
+
+  if (isActive.value && props.activeClassName) {
+    classes.push(props.activeClassName)
   }
 
   return classes.join(' ')
@@ -142,5 +173,10 @@ const combinedClass = computed(() => {
   opacity: 0.8;
   z-index: 1;
   cursor: grabbing;
+}
+
+.draggable.active {
+  z-index: 1;
+  outline: 2px solid #4299e1;
 }
 </style>

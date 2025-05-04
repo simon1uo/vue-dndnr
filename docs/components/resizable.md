@@ -1,6 +1,6 @@
 # Resizable Component
 
-The `Resizable` component allows you to make any element resizable.
+The `Resizable` component allows you to make any element resizable with customizable handles and constraints.
 
 ## Basic Usage Demo
 
@@ -44,41 +44,52 @@ const size = ref({ width: 200, height: 150 })
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `size` | `Object` | `{ width: 'auto', height: 'auto' }` | The size of the element. Can be bound with `v-model:size`. |
-| `modelValue` | `Object` | `undefined` | Alternative v-model binding for size. |
+| `size` | `Size` | `{ width: 'auto', height: 'auto' }` | The size of the element. Can be bound with `v-model:size`. |
+| `modelValue` | `Size` | `undefined` | Alternative v-model binding for size. |
+| `active` | `boolean` | `undefined` | Whether the element is currently active (selected). Can be bound with `v-model:active`. |
+
+### Styling Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `activeClassName` | `string` | `'active'` | Class name applied when the element is active. |
+| `handleBorderStyle` | `string` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
+
+### Activation Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `activeOn` | `'click' \| 'hover' \| 'none'` | `'none'` | Determines how the element becomes active. Can be `'click'`, `'hover'`, or `'none'` (always active). |
+| `disabled` | `boolean` | `false` | Whether resizing is disabled. |
 
 ### Size Constraints
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `minWidth` | `Number` | `10` | Minimum width in pixels. |
-| `minHeight` | `Number` | `10` | Minimum height in pixels. |
-| `maxWidth` | `Number\|null` | `null` | Maximum width in pixels. |
-| `maxHeight` | `Number\|null` | `null` | Maximum height in pixels. |
-| `grid` | `Array\|null` | `null` | Snaps the element to a grid. Format: `[width, height]`. |
-| `lockAspectRatio` | `Boolean` | `false` | Whether to maintain the aspect ratio when resizing. |
-| `bounds` | `String\|Object\|null` | `null` | Constrains resizing within bounds. Can be 'parent', 'window', or an object. |
-| `scale` | `Number` | `1` | Scale factor for the resizable element. |
+| `minWidth` | `number` | `undefined` | Minimum width constraint in pixels. |
+| `minHeight` | `number` | `undefined` | Minimum height constraint in pixels. |
+| `maxWidth` | `number` | `undefined` | Maximum width constraint in pixels. |
+| `maxHeight` | `number` | `undefined` | Maximum height constraint in pixels. |
+| `grid` | `[number, number] \| null` | `undefined` | Snaps the element to a grid. Format: `[width, height]`. |
+| `lockAspectRatio` | `boolean` | `false` | Whether to maintain the aspect ratio when resizing. |
+| `bounds` | `HTMLElement \| 'parent' \| null` | `undefined` | Constrains resizing within bounds. Can be 'parent' or an HTML element. |
 
-### Behavior Props
+### Handle Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `disabled` | `Boolean` | `false` | Whether resizing is disabled. |
-| `handleType` | `String` | `'borders'` | Type of resize handles to display. Options: `'borders'`, `'handles'`, `'custom'`. |
-| `handles` | `Array` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Array of handles to display. |
-| `handlesSize` | `Number` | `8` | Size of the handle or border detection area in pixels. For `borders`, sets border detection area; for `handles`/`custom`, sets handle size. |
-| `handleBorderStyle` | `String` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
+| `handleType` | `'borders' \| 'handles' \| 'custom'` | `'borders'` | Type of resize handles to display. |
+| `handles` | `ResizeHandle[]` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Array of handles to display. |
 
 ### Event Control Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `pointerTypes` | `Array` | `undefined` | Array of supported pointer types. |
-| `preventDefault` | `Boolean` | `true` | Whether to prevent default event behavior. |
-| `stopPropagation` | `Boolean` | `false` | Whether to stop event propagation. |
-| `capture` | `Boolean` | `true` | Whether to use event capture phase. |
-| `throttleDelay` | `Number` | `16` | Throttle delay in milliseconds for resize events. |
+| `pointerTypes` | `('mouse' \| 'touch' \| 'pen')[]` | `['mouse', 'touch', 'pen']` | Types of pointer events to respond to. |
+| `preventDefault` | `boolean` | `true` | Whether to prevent default browser events. |
+| `stopPropagation` | `boolean` | `false` | Whether to stop event propagation. |
+| `capture` | `boolean` | `true` | Whether to use event capturing phase. |
+| `throttleDelay` | `number` | `16` | Delay in ms for throttling resize events. |
 
 ## Events
 
@@ -86,21 +97,23 @@ const size = ref({ width: 200, height: 150 })
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `update:size` | `{ width, height }` | Emitted when the size changes. Used for `v-model:size` binding. |
-| `update:modelValue` | `{ width, height }` | Alternative v-model event for size changes. |
+| `update:size` | `Size` | Emitted when the size changes. Used for `v-model:size` binding. |
+| `update:modelValue` | `Size` | Alternative v-model event for size changes. |
+| `update:active` | `boolean` | Emitted when the active state changes. Used for `v-model:active` binding. |
+| `activeChange` | `boolean` | Emitted when the active state changes. |
 | `hoverHandleChange` | `ResizeHandle \| null` | Emitted when mouse hovers over a resize handle. |
 
 ### Interaction Events
 
 | Event | Parameters | Description |
 |-------|------------|-------------|
-| `resizeStart` | `size, event` | Emitted when resizing starts. |
-| `resize` | `size, event` | Emitted during resizing. |
-| `resizeEnd` | `size, event` | Emitted when resizing ends. |
+| `resizeStart` | `size: Size, event: PointerEvent` | Emitted when resizing starts. |
+| `resize` | `size: Size, event: PointerEvent` | Emitted during resizing. |
+| `resizeEnd` | `size: Size, event: PointerEvent` | Emitted when resizing ends. |
 
 ## Slots
 
 | Slot | Props | Description |
 |------|-------|-------------|
-| default | `{ size, isResizing }` | The content to be made resizable. |
-| `handle-${position}` | `{ handle, active, hover }` | Custom handle slot for each position when `handleType="custom"`. Position can be any valid handle (e.g., `handle-br`, `handle-tl`, etc.). |
+| default | `{ size, isResizing, isActive, activeHandle, hoverHandle }` | The content to be made resizable. |
+| `handle-${position}` | `{ handle, active, hover, isResizing, position, cursor, size }` | Custom handle slot for each position when `handleType="custom"`. Position can be any valid handle (e.g., `handle-br`, `handle-tl`, etc.). |

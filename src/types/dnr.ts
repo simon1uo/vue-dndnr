@@ -8,6 +8,13 @@ import type { ResizableOptions } from './resizable'
  */
 export interface DnROptions extends DraggableOptions, ResizableOptions {
   /**
+   * Initial active state of the element
+   * Only active elements can be dragged/resized when activeOn is not 'none'
+   * @default false
+   */
+  initialActive?: boolean
+
+  /**
    * Required bounds for the DnR element
    * Must be either an HTML element or 'parent'
    */

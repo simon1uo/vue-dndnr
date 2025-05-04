@@ -7,19 +7,24 @@ import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 
 interface DnRProps extends DnROptions {
   position?: Position
   size?: Size
+  active?: boolean
   className?: string
   draggingClassName?: string
   resizingClassName?: string
+  activeClassName?: string
   handleBorderStyle?: string
 }
 
 const props = withDefaults(defineProps<DnRProps>(), {
   position: undefined,
   size: undefined,
+  active: undefined,
   disabled: false,
   draggingClassName: 'dragging',
   resizingClassName: 'resizing',
+  activeClassName: 'active',
   lockAspectRatio: false,
+  activeOn: 'none',
   preventDefault: true,
   stopPropagation: false,
   capture: true,
@@ -31,7 +36,7 @@ const props = withDefaults(defineProps<DnRProps>(), {
 const emit = defineEmits<{
   'update:position': [position: Position]
   'update:size': [size: Size]
-
+  'update:active': [active: boolean]
   'dragStart': [position: Position, event: PointerEvent]
   'drag': [position: Position, event: PointerEvent]
   'dragEnd': [position: Position, event: PointerEvent]
@@ -40,6 +45,7 @@ const emit = defineEmits<{
   'resize': [size: Size, event: PointerEvent]
   'resizeEnd': [size: Size, event: PointerEvent]
   'hoverHandleChange': [handle: ResizeHandle | null]
+  'activeChange': [active: boolean]
 }>()
 
 const targetRef = ref<HTMLElement | null>(null)
@@ -65,6 +71,8 @@ const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
 const dnrOptions: DnROptions = {
   initialPosition: props.position || { x: 0, y: 0 },
   initialSize: props.size || { width: 'auto', height: 'auto' },
+  initialActive: props.active,
+  activeOn: props.activeOn,
   handle,
   bounds,
   grid,
@@ -115,6 +123,13 @@ const dnrOptions: DnROptions = {
     if (props.onResizeEnd)
       props.onResizeEnd(size, event)
   },
+  onActiveChange: (active: boolean) => {
+    emit('activeChange', active)
+    emit('update:active', active)
+    if (props.onActiveChange)
+      return props.onActiveChange(active)
+    return true
+  },
 }
 
 const {
@@ -122,11 +137,13 @@ const {
   size,
   isDragging,
   isResizing,
+  isActive,
   interactionMode,
   isNearResizeHandle,
   style: dnrStyle,
   setPosition,
   setSize,
+  setActive,
   hoverHandle,
   activeHandle,
   handleType: currentHandleType,
@@ -153,6 +170,15 @@ watch(
     }
   },
   { deep: true },
+)
+
+watch(
+  () => props.active,
+  (newActive) => {
+    if (newActive !== undefined && newActive !== isActive.value) {
+      setActive(newActive)
+    }
+  },
 )
 
 watch(
@@ -260,6 +286,10 @@ const combinedClass = computed(() => {
     classes.push(props.resizingClassName)
   }
 
+  if (isActive.value && props.activeClassName) {
+    classes.push(props.activeClassName)
+  }
+
   return classes.join(' ')
 })
 </script>
@@ -303,6 +333,10 @@ const combinedClass = computed(() => {
 .dnr.resizing {
   opacity: 0.8;
   z-index: 1;
+}
 
+.dnr.active {
+  z-index: 1;
+  outline: 2px solid #4299e1;
 }
 </style>
