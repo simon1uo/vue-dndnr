@@ -69,6 +69,9 @@ const { size } = useResizable(resizableRef, {
 | `handles` | `MaybeRefOrGetter<ResizeHandle[]>` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Active resize handles to enable. |
 | `bounds` | `MaybeRefOrGetter<HTMLElement \| 'parent' \| null \| undefined>` | `undefined` | Element or selector to use as bounds for the resizable element. |
 | `disabled` | `MaybeRefOrGetter<boolean>` | `false` | Whether resizing is disabled. |
+| `initialActive` | `boolean` | `false` | Initial active state of the element. |
+| `activeOn` | `MaybeRefOrGetter<'click' \| 'hover' \| 'none'>` | `'none'` | Determines how the element becomes active. Can be `'click'`, `'hover'`, or `'none'` (always active). |
+| `preventDeactivation` | `MaybeRefOrGetter<boolean>` | `false` | When true, the element will stay active even when clicking outside or leaving the element. |
 
 #### Event Control Options
 
@@ -89,6 +92,7 @@ const { size } = useResizable(resizableRef, {
 | `onResizeStart` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called when resizing starts. |
 | `onResize` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called during resizing. |
 | `onResizeEnd` | `(size: Size, event: PointerEvent) => void` | `undefined` | Called when resizing ends. |
+| `onActiveChange` | `(active: boolean) => void \| boolean` | `undefined` | Called when the active state changes. Return `false` to prevent active state change. |
 
 ## Return Value
 
@@ -103,6 +107,7 @@ Unlike what some examples might suggest, the `useResizable` hook does not return
 | `size` | `Ref<Size>` | Current size of the element. |
 | `position` | `Ref<Position>` | Current position of the element (when using absolute positioning). |
 | `isResizing` | `Ref<boolean>` | Whether the element is currently being resized. |
+| `isActive` | `Ref<boolean>` | Whether the element is currently active. |
 | `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
 | `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
 | `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
@@ -111,6 +116,7 @@ Unlike what some examples might suggest, the `useResizable` hook does not return
 
 | `setSize` | `(newSize: Size) => void` | Function to programmatically set the size. |
 | `setPosition` | `(newPosition: Position) => void` | Function to programmatically set the position. |
+| `setActive` | `(active: boolean) => void` | Function to programmatically set the active state. |
 | `onResizeStart` | `(event: PointerEvent) => void` | Handler for resize start event. |
 | `onResize` | `(event: PointerEvent) => void` | Handler for resize event. |
 | `onResizeEnd` | `(event: PointerEvent) => void` | Handler for resize end event. |

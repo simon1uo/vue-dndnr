@@ -58,6 +58,7 @@ const position = ref({ x: 0, y: 0 })
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `activeOn` | `'click' \| 'hover' \| 'none'` | `'none'` | Determines how the element becomes active. Can be `'click'`, `'hover'`, or `'none'` (always active). |
+| `preventDeactivation` | `boolean` | `false` | When true, the component will stay active even when clicking outside or leaving the element. |
 | `disabled` | `boolean` | `false` | Whether dragging is disabled. |
 
 ### Behavior Props

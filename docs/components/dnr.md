@@ -70,6 +70,7 @@ The `DnR` component combines props from both the `Draggable` and `Resizable` com
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `activeOn` | `String` | `'none'` | Determines how the element becomes active. Can be `'click'`, `'hover'`, or `'none'` (always active). |
+| `preventDeactivation` | `Boolean` | `false` | When true, the component will stay active even when clicking outside or leaving the element. |
 | `disabled` | `Boolean` | `false` | Whether all interactions are disabled. |
 
 ### Draggable Props

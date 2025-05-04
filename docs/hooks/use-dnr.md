@@ -73,6 +73,9 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `initialActive` | `boolean` | `false` | Initial active state of the element. Only active elements can be dragged/resized when activeOn is not 'none'. |
+| `activeOn` | `'click' \| 'hover' \| 'none'` | `'none'` | Determines how the element becomes active. |
+| `preventDeactivation` | `MaybeRefOrGetter<boolean>` | `false` | When true, the component will stay active even when clicking outside or leaving the element. |
 | `disabled` | `MaybeRefOrGetter<boolean>` | `false` | Whether all interactions are disabled. |
 | `bounds` | `MaybeRefOrGetter<HTMLElement \| 'parent' \| null \| undefined>` | `undefined` | Element or selector to use as bounds for the element. |
 | `grid` | `MaybeRefOrGetter<[number, number] \| undefined \| null>` | `undefined` | Grid size for snapping during interactions. |

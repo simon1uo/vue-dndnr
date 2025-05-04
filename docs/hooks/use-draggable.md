@@ -63,6 +63,9 @@ const { style } = useDraggable(draggableRef, {
 | `axis` | `MaybeRefOrGetter<'x' \| 'y' \| 'both'>` | `'both'` | Axis to constrain dragging movement. |
 | `scale` | `MaybeRefOrGetter<number>` | `1` | Scale factor for the draggable element. Useful when the element is within a transformed container. |
 | `disabled` | `MaybeRefOrGetter<boolean>` | `false` | Whether dragging is disabled. |
+| `initialActive` | `boolean` | `false` | Initial active state of the element. |
+| `activeOn` | `MaybeRefOrGetter<'click' \| 'hover' \| 'none'>` | `'none'` | Determines how the element becomes active. Can be `'click'`, `'hover'`, or `'none'` (always active). |
+| `preventDeactivation` | `MaybeRefOrGetter<boolean>` | `false` | When true, the element will stay active even when clicking outside or leaving the element. |
 
 #### Event Control Options
 
@@ -81,6 +84,7 @@ const { style } = useDraggable(draggableRef, {
 | `onDragStart` | `(position: Position, event: PointerEvent) => void \| boolean` | `undefined` | Called when dragging starts. Return `false` to prevent dragging. |
 | `onDrag` | `(position: Position, event: PointerEvent) => void \| boolean` | `undefined` | Called during dragging. Return `false` to stop dragging. |
 | `onDragEnd` | `(position: Position, event: PointerEvent) => void \| boolean` | `undefined` | Called when dragging ends. Return `false` to prevent position update. |
+| `onActiveChange` | `(active: boolean) => void \| boolean` | `undefined` | Called when the active state changes. Return `false` to prevent active state change. |
 
 ## Return Value
 
@@ -90,8 +94,10 @@ The `useDraggable` hook returns an object with the following properties and meth
 |-----------------|------|-------------|
 | `position` | `Ref<Position>` | Current position of the element. |
 | `isDragging` | `Ref<boolean>` | Whether the element is currently being dragged. |
+| `isActive` | `Ref<boolean>` | Whether the element is currently active. |
 | `style` | `ComputedRef<CSSProperties>` | Computed style object for positioning the element. |
 | `setPosition` | `(newPosition: Position) => void` | Function to programmatically set the position. |
+| `setActive` | `(active: boolean) => void` | Function to programmatically set the active state. |
 | `onDragStart` | `(event: PointerEvent) => void` | Handler for drag start event. |
 | `onDrag` | `(event: PointerEvent) => void` | Handler for drag event. |
 | `onDragEnd` | `(event: PointerEvent) => void` | Handler for drag end event. |
