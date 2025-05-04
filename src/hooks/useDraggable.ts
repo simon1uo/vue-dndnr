@@ -36,6 +36,7 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     capture = true,
     initialActive = false,
     activeOn = 'none' as ActivationTrigger,
+    preventDeactivation = false,
     onDragStart: onDragStartCallback,
     onDrag: onDragCallback,
     onDragEnd: onDragEndCallback,
@@ -260,10 +261,12 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const onPointerLeave = (event: PointerEvent) => {
     const currentActiveOn = toValue(activeOn)
     const el = toValue(draggingHandle)
+    const shouldPreventDeactivation = toValue(preventDeactivation)
 
     // If activeOn is 'hover', remove active state on pointer leave
     // But only if the pointer is not moving to a child element
-    if (currentActiveOn === 'hover' && el) {
+    // And preventDeactivation is false
+    if (currentActiveOn === 'hover' && el && !shouldPreventDeactivation) {
       const relatedTarget = event.relatedTarget as Node | null
       // Check if relatedTarget is a child of the current element
       if (!relatedTarget || !el.contains(relatedTarget)) {
@@ -279,9 +282,11 @@ export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const onDocumentPointerDown = (event: PointerEvent) => {
     const currentActiveOn = toValue(activeOn)
     const el = toValue(target)
+    const shouldPreventDeactivation = toValue(preventDeactivation)
 
     // Only process if activeOn is 'click' and element is active
-    if (currentActiveOn === 'click' && isActive.value && el) {
+    // And preventDeactivation is false
+    if (currentActiveOn === 'click' && isActive.value && el && !shouldPreventDeactivation) {
       // Check if the click is outside the element
       const targetElement = event.target as Node
       if (!el.contains(targetElement)) {

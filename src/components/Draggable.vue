@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<DraggableProps>(), {
   scale: 1,
   disabled: false,
   activeOn: 'none',
+  preventDeactivation: false,
   preventDefault: true,
   stopPropagation: false,
   capture: true,
@@ -51,6 +52,7 @@ const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
 const throttleDelay = computed(() => toValue(props.throttleDelay))
 const activeOn = computed(() => toValue(props.activeOn))
+const preventDeactivation = computed(() => toValue(props.preventDeactivation))
 
 const {
   position,
@@ -75,6 +77,7 @@ const {
   capture,
   throttleDelay,
   activeOn,
+  preventDeactivation,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)

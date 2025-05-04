@@ -28,6 +28,13 @@ export interface DraggableOptions {
   activeOn?: MaybeRefOrGetter<ActivationTrigger>
 
   /**
+   * Prevents the deactivation of the component
+   * When true, the component will stay active even when clicking outside or leaving the element
+   * @default false
+   */
+  preventDeactivation?: MaybeRefOrGetter<boolean>
+
+  /**
    * Element or selector to use as bounds for the draggable element
    * Can be an HTML element, 'parent', or an object with explicit bounds
    */

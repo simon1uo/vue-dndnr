@@ -200,6 +200,13 @@ export interface ResizableOptions {
   activeOn?: MaybeRefOrGetter<ActivationTrigger>
 
   /**
+   * Prevents the deactivation of the component
+   * When true, the component will stay active even when clicking outside or leaving the element
+   * @default false
+   */
+  preventDeactivation?: MaybeRefOrGetter<boolean>
+
+  /**
    * Minimum width constraint in pixels
    * @default 0
    */

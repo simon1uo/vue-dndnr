@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   lockAspectRatio: false,
   disabled: false,
   activeOn: 'none',
+  preventDeactivation: false,
   preventDefault: true,
   stopPropagation: false,
   capture: true,
@@ -52,6 +53,7 @@ const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
 const throttleDelay = computed(() => toValue(props.throttleDelay))
 const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
+const preventDeactivation = computed(() => toValue(props.preventDeactivation))
 
 const {
   size: currentSize,
@@ -82,6 +84,7 @@ const {
   capture,
   throttleDelay,
   handleBorderStyle,
+  preventDeactivation,
   onResizeStart: (size, event) => {
     if (activeHandle.value) {
       emit('resizeStart', size, event)
