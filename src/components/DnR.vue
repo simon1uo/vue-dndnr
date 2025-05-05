@@ -145,14 +145,12 @@ const {
   isResizing,
   isActive,
   interactionMode,
-  isNearResizeHandle,
   style: dnrStyle,
   setPosition,
   setSize,
   setActive,
   hoverHandle,
   activeHandle,
-  handleType: currentHandleType,
   registerHandle,
   unregisterHandle,
   setupHandleElements,
@@ -216,7 +214,7 @@ function registerHandleElements() {
   handleRefs.value.clear()
 
   // Only continue processing for custom handles
-  if (currentHandleType.value !== 'custom') {
+  if (handleType.value !== 'custom') {
     return
   }
 
@@ -266,7 +264,7 @@ onMounted(() => {
 })
 
 // Watch for changes to handleType or handles
-watch([currentHandleType, handles], () => {
+watch([handleType, handles], () => {
   // Clean up existing handles first
   cleanupHandleElements()
 
@@ -288,7 +286,7 @@ const combinedClass = computed(() => {
     classes.push(props.draggingClassName)
   }
 
-  if ((isResizing.value || isNearResizeHandle.value) && props.resizingClassName) {
+  if (isResizing.value && props.resizingClassName) {
     classes.push(props.resizingClassName)
   }
 
@@ -308,7 +306,7 @@ const combinedClass = computed(() => {
       We only provide slots here, and let the hook create default handles if needed
       This avoids duplicate handle creation between component and hook
     -->
-    <template v-if="currentHandleType === 'custom'">
+    <template v-if="handleType === 'custom'">
       <div
         v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
         style="display: contents;"

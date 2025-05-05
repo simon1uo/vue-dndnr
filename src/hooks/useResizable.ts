@@ -1,4 +1,4 @@
-import type { ResizableOptions } from '@/types'
+import type { DnROptions } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { useDnR } from '@/hooks/useDnR'
 
@@ -8,7 +8,7 @@ import { useDnR } from '@/hooks/useDnR'
  * @param options - Configuration options for resizable behavior
  * @returns Object containing resizable state and methods
  */
-export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
+export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions = {}) {
   // Use useDnR with drag disabled
   const {
     size,

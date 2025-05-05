@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { DraggableOptions, Position } from '@/types'
-import { useDraggable } from '@/hooks'
+import type { DnROptions, Position } from '@/types'
+import { useDnR } from '@/hooks'
 import { computed, ref, toValue, watch } from 'vue'
 
-interface DraggableProps extends DraggableOptions {
+interface DraggableProps extends DnROptions {
   position?: Position
   modelValue?: Position
   active?: boolean
@@ -27,6 +27,7 @@ const props = withDefaults(defineProps<DraggableProps>(), {
   throttleDelay: 16,
   draggingClassName: 'dragging',
   activeClassName: 'active',
+  disableResize: true,
 })
 
 const emit = defineEmits<{
@@ -53,6 +54,7 @@ const capture = computed(() => toValue(props.capture))
 const throttleDelay = computed(() => toValue(props.throttleDelay))
 const activeOn = computed(() => toValue(props.activeOn))
 const preventDeactivation = computed(() => toValue(props.preventDeactivation))
+const disableResize = computed(() => toValue(props.disableResize))
 
 const {
   position,
@@ -61,7 +63,7 @@ const {
   style: draggableStyle,
   setPosition,
   setActive,
-} = useDraggable(targetRef, {
+} = useDnR(targetRef, {
   ...props,
   initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
   initialActive: props.active,
@@ -78,6 +80,7 @@ const {
   throttleDelay,
   activeOn,
   preventDeactivation,
+  disableResize,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)
@@ -103,20 +106,11 @@ const {
 })
 
 watch(
-  () => props.position,
-  (newPosition) => {
-    if (newPosition && !isDragging.value) {
-      setPosition(newPosition)
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  () => props.modelValue,
-  (newPosition) => {
-    if (newPosition && !isDragging.value) {
-      setPosition(newPosition)
+  [() => props.position, () => props.modelValue],
+  ([newPosition, newModelValue]) => {
+    const positionToUse = newPosition || newModelValue
+    if (positionToUse && !isDragging.value) {
+      setPosition(positionToUse)
     }
   },
   { deep: true },

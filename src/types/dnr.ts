@@ -1,9 +1,115 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { ActivationTrigger, PointerType, Position, PositionType, Size } from './common'
-import type { ResizeHandle, ResizeHandleType } from './resizable'
+
+/**
+ * Valid resize handle positions
+ * Supports both short ('t', 'b', etc.) and long ('top', 'bottom', etc.) formats
+ */
+export type ResizeHandle = 't' | 'b' | 'r' | 'l' | 'tr' | 'tl' | 'br' | 'bl' | 'top' | 'bottom' | 'right' | 'left' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+
+/**
+ * Type of resize handles to display
+ */
+export type ResizeHandleType = 'borders' | 'handles' | 'custom'
+
+/**
+ * Options for the resize handles
+ */
+export interface ResizeHandlesOptions {
+  /**
+   * Type of resize handles to display
+   * - 'borders': Use element borders as resize handles (default)
+   * - 'handles': Display visible handles at corners and edges
+   * - 'custom': Use custom handles provided via slots
+   * @default 'borders'
+   */
+  handleType?: MaybeRefOrGetter<ResizeHandleType>
+
+  /**
+   * Active resize handles to enable
+   * @default ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']
+   */
+  handles?: MaybeRefOrGetter<ResizeHandle[]>
+
+  /**
+   * Custom handle elements to use when handleType is 'custom'
+   * Map of handle positions to HTML elements
+   */
+  customHandles?: MaybeRefOrGetter<Map<ResizeHandle, HTMLElement> | null | undefined>
+
+  /**
+   * Size of the handle or border detection area in pixels
+   * - For handleType 'borders': sets the border detection area size
+   * - For handleType 'handles' or 'custom': sets the handle element size
+   * @default 8
+   */
+  handlesSize?: MaybeRefOrGetter<number>
+
+  /**
+   * Border style for handleType 'borders'.
+   * Accepts any valid CSS border value. Default is 'none'.
+   * @default 'none'
+   */
+  handleBorderStyle?: MaybeRefOrGetter<string>
+
+  /**
+   * Whether to prevent default browser events during resize
+   * @default true
+   */
+  preventDefault?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to stop event propagation to parent elements
+   * @default false
+   */
+  stopPropagation?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether to use event capturing phase
+   * @default true
+   */
+  capture?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Types of pointer events to respond to
+   * @default ['mouse', 'touch', 'pen']
+   */
+  pointerTypes?: MaybeRefOrGetter<PointerType[] | null | undefined>
+
+  /**
+   * Whether resizing is disabled
+   * @default false
+   */
+  disabled?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Called when resizing starts
+   * @param event - The pointer event that triggered the start
+   * @param handle - The handle that was clicked
+   */
+  onResizeStart?: (event: PointerEvent, handle: ResizeHandle) => void
+}
 
 /**
  * Combined configuration options for Drag and Resize (DnR) functionality
+ */
+/**
+ * Represents a draggable element with its state
+ */
+export interface DraggableElement {
+  /** Unique identifier for the draggable element */
+  id: string
+  /** Reference to the HTML element being made draggable */
+  element: HTMLElement
+  /** Current position of the element */
+  position: Position
+  /** Whether the element is currently being dragged */
+  isDragging: boolean
+}
+
+/**
+ * Combined configuration options for Drag and Resize (DnR) functionality
+ * This is the shared options interface used by useDnR, useDraggable, and useResizable
  */
 export interface DnROptions {
   /**

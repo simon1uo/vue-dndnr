@@ -1,4 +1,4 @@
-import type { ActivationTrigger, DraggableOptions } from '@/types'
+import type { ActivationTrigger, DnROptions } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { useDnR } from '@/hooks/useDnR'
 import { computed } from 'vue'
@@ -9,7 +9,7 @@ import { computed } from 'vue'
  * @param options - Configuration options for draggable behavior
  * @returns Object containing draggable state and methods
  */
-export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DraggableOptions = {}) {
+export function useDraggable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: DnROptions = {}) {
   const {
     initialPosition = { x: 0, y: 0 },
     handle = target,
