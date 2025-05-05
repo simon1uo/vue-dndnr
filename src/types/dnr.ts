@@ -10,7 +10,7 @@ export type ResizeHandle = 't' | 'b' | 'r' | 'l' | 'tr' | 'tl' | 'br' | 'bl' | '
 /**
  * Type of resize handles to display
  */
-export type ResizeHandleType = 'borders' | 'handles' | 'custom'
+export type ResizeHandleType = 'borders' | 'handles' | 'custom' | 'none'
 
 /**
  * Options for the resize handles

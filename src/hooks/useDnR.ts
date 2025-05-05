@@ -168,7 +168,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     cleanup: cleanupHandles,
     detectBoundary,
   } = useResizeHandles(target, {
-    handleType,
+    handleType: computed(() => disableResizeValue.value ? 'none' as any : handleType), // 如果禁用缩放，则不使用任何句柄类型
     handles,
     customHandles,
     handlesSize,
@@ -676,8 +676,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       baseStyle.top = `${position.value.y}px`
     }
 
-    // Add cursor styles for resize handles
-    if (currentHandleType.value === 'borders') {
+    // Add cursor styles for resize handles only if resize is not disabled
+    if (currentHandleType.value === 'borders' && !disableResizeValue.value) {
       if (interactionMode.value === 'resizing' && activeHandle.value) {
         baseStyle.cursor = getCursorForHandle(activeHandle.value)
       }
@@ -692,6 +692,16 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       const borderStyle = toValue(handleBorderStyle)
       if (borderStyle && borderStyle !== 'none') {
         baseStyle.border = borderStyle
+      }
+    }
+
+    // Add cursor style for dragging if resize is disabled but drag is enabled
+    if (disableResizeValue.value && !disableDragValue.value) {
+      if (interactionMode.value === 'dragging') {
+        baseStyle.cursor = 'grabbing'
+      }
+      else {
+        baseStyle.cursor = 'grab'
       }
     }
 
@@ -714,7 +724,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       }
     }
 
-    if (currentHandleType.value !== 'borders')
+    // Skip resize handle detection if resize is disabled or handle type is not borders
+    if (disableResizeValue.value || currentHandleType.value !== 'borders')
       return
 
     const el = toValue(target)

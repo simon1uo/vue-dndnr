@@ -349,6 +349,11 @@ export function useResizeHandles(
    * @returns The detected resize handle or null
    */
   const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
+    // If handle type is 'none', always return null
+    if (currentHandleType.value === 'none') {
+      return null
+    }
+
     const clientX = event.clientX ?? ((event as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
     const clientY = event.clientY ?? ((event as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
     const thresholdValue = handlesSizeValue.value
@@ -432,8 +437,8 @@ export function useResizeHandles(
     // Clean up existing handles first
     cleanup()
 
-    // If borders type, just clean up and return
-    if (currentHandleType.value === 'borders')
+    // If borders type or none type, just clean up and return
+    if (currentHandleType.value === 'borders' || currentHandleType.value === 'none')
       return
 
     // Handle 'handles' type - create and attach visible handle elements
