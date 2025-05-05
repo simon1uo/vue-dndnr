@@ -436,14 +436,77 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           y: targetRect.top - boundingRect.top,
         }
 
+        // Handle right and bottom boundaries (existing logic)
         const maxBoundWidth = boundingRect.right - boundingRect.left - targetPos.x
         const maxBoundHeight = boundingRect.bottom - boundingRect.top - targetPos.y
 
+        // Identify which handle is being used for resizing
+        const isLeftHandle = activeHandle.value && (
+          activeHandle.value === 'l'
+          || activeHandle.value === 'left'
+          || activeHandle.value === 'tl'
+          || activeHandle.value === 'top-left'
+          || activeHandle.value === 'bl'
+          || activeHandle.value === 'bottom-left'
+        )
+
+        const isTopHandle = activeHandle.value && (
+          activeHandle.value === 't'
+          || activeHandle.value === 'top'
+          || activeHandle.value === 'tl'
+          || activeHandle.value === 'top-left'
+          || activeHandle.value === 'tr'
+          || activeHandle.value === 'top-right'
+        )
+
         if (typeof constrainedSize.width === 'number') {
+          // Apply right boundary constraint (existing logic)
           constrainedSize.width = Math.min(constrainedSize.width, maxBoundWidth)
+
+          // Apply left boundary constraint for left handles
+          if (isLeftHandle) {
+            // For left handles, we need to ensure the element doesn't go beyond the left boundary
+            // Calculate the minimum allowed x position (left boundary is at 0)
+            const minX = 0
+
+            // If the new position would be less than the minimum allowed, adjust both position and size
+            if (newPosition.x < minX) {
+              // Calculate how much we need to adjust
+              const adjustment = minX - newPosition.x
+
+              // Adjust position to minimum allowed
+              newPosition.x = minX
+
+              // Reduce width by the same amount we adjusted position
+              // But ensure we don't go below minimum width
+              constrainedSize.width = Math.max(minWidthValue, constrainedSize.width - adjustment)
+            }
+          }
         }
+
         if (typeof constrainedSize.height === 'number') {
+          // Apply bottom boundary constraint (existing logic)
           constrainedSize.height = Math.min(constrainedSize.height, maxBoundHeight)
+
+          // Apply top boundary constraint for top handles
+          if (isTopHandle) {
+            // For top handles, we need to ensure the element doesn't go beyond the top boundary
+            // Calculate the minimum allowed y position (top boundary is at 0)
+            const minY = 0
+
+            // If the new position would be less than the minimum allowed, adjust both position and size
+            if (newPosition.y < minY) {
+              // Calculate how much we need to adjust
+              const adjustment = minY - newPosition.y
+
+              // Adjust position to minimum allowed
+              newPosition.y = minY
+
+              // Reduce height by the same amount we adjusted position
+              // But ensure we don't go below minimum height
+              constrainedSize.height = Math.max(minHeightValue, constrainedSize.height - adjustment)
+            }
+          }
         }
       }
     }
