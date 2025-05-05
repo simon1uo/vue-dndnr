@@ -12,7 +12,7 @@ const size = ref({ width: 200, height: 150 })
 </script>
 
 <DemoContainer>
-  <Resizable v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+  <Resizable v-model:size="size" :min-width="100" :min-height="100" bounds="parent" positionType="relative">
     <div class="resizable-box">
       Resize me!
       <div class="text-sm color-text-light">
@@ -31,7 +31,7 @@ const size = ref({ width: 200, height: 150 })
 </script>
 
 <template>
-  <Resizable v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+  <Resizable v-model:size="size" :min-width="100" :min-height="100" bounds="parent" position-type="relative">
     Resize me!
     {{ size.width }} x {{ size.height }}
   </Resizable>
@@ -54,6 +54,7 @@ const size = ref({ width: 200, height: 150 })
 |------|------|---------|-------------|
 | `activeClassName` | `string` | `'active'` | Class name applied when the element is active. |
 | `handleBorderStyle` | `string` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
+| `positionType` | `'absolute' \| 'relative'` | `'relative'` | Position type for the element. Determines whether the element uses absolute or relative positioning. |
 
 ### Activation Props
 

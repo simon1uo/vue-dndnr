@@ -2,7 +2,7 @@ import type { DnROptions, Position, Size } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import useDraggable from '@/hooks/useDraggable'
 import useResizable from '@/hooks/useResizable'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toValue, watch } from 'vue'
 
 /**
  * Combined hook for draggable and resizable functionality (DnR)
@@ -88,6 +88,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       onActiveChange: originalActiveChange,
       initialActive,
       activeOn = 'none',
+      positionType = 'absolute',
       ...restOptions
     } = options
 
@@ -95,6 +96,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       ...restOptions,
       initialActive,
       activeOn,
+      positionType,
       disabled: options.disabled || interactionMode.value === 'dragging',
       onResizeStart: (size: Size, event: PointerEvent) => {
         if (interactionMode.value === 'dragging')
@@ -140,7 +142,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     isActive: resizableIsActive,
     activeHandle,
     hoverHandle,
-    isAbsolutePositioned,
+    positionType,
     style: resizableStyle,
     setSize,
     setPosition: setResizablePosition,
@@ -160,7 +162,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   })
 
   watch(position, (newPosition) => {
-    if (interactionMode.value === 'dragging' && isAbsolutePositioned.value) {
+    if (interactionMode.value === 'dragging' && toValue(positionType) === 'absolute') {
       setResizablePosition(newPosition)
     }
   }, { deep: true })
@@ -200,7 +202,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     interactionMode,
     activeHandle,
     hoverHandle,
-    isAbsolutePositioned,
+    positionType,
     isNearResizeHandle,
     handleType,
 

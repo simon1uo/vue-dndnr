@@ -34,7 +34,7 @@ import { ref } from 'vue'
 import { useDnR } from 'vue-dndnr'
 
 const dnrRef = ref<HTMLElement | null>(null)
-const { style } = useDnR(dnrRef, {
+const { style, size } = useDnR(dnrRef, {
   initialPosition: { x: 0, y: 0 },
   initialSize: { width: 200, height: 150 },
   minWidth: 100,
@@ -102,6 +102,7 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `initialSize` | `Size` | `{ width: 'auto', height: 'auto' }` | Initial size of the element. |
+| `positionType` | `MaybeRefOrGetter<'absolute' \| 'relative'>` | `'absolute'` | Position type for the element. Determines whether the element uses absolute or relative positioning. |
 | `minWidth` | `MaybeRefOrGetter<number>` | `0` | Minimum width constraint in pixels. |
 | `minHeight` | `MaybeRefOrGetter<number>` | `0` | Minimum height constraint in pixels. |
 | `maxWidth` | `MaybeRefOrGetter<number>` | `Infinity` | Maximum width constraint in pixels. |
@@ -119,7 +120,7 @@ The `useDnR` hook combines all options from both the `useDraggable` and `useResi
 The `useDnR` hook returns an object with the following properties and methods:
 
 ::: warning Important Note
-The `style` object returned by `useDnR` is a computed style object that combines the position styles from `useDraggable` with the size styles. This is different from `useResizable`, which directly applies styles to the target element without returning a style object.
+The `style` object returned by `useDnR` is a computed style object that combines the position styles from `useDraggable` with the size styles from `useResizable`. Both hooks now return a style object that can be directly bound to the target element.
 :::
 
 | Property/Method | Type | Description |
@@ -131,7 +132,7 @@ The `style` object returned by `useDnR` is a computed style object that combines
 | `interactionMode` | `Ref<'idle' \| 'dragging' \| 'resizing'>` | Current interaction state. |
 | `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
 | `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
-| `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
+| `positionType` | `MaybeRefOrGetter<'absolute' \| 'absolute'>` | Position type for the element. |
 | `isNearResizeHandle` | `Ref<boolean>` | Whether the mouse is near a resize handle. |
 | `style` | `ComputedRef<CSSProperties>` | Combined style object for positioning and sizing. |
 | `setPosition` | `(newPosition: Position) => void` | Function to programmatically set the position. |

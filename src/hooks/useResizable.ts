@@ -24,6 +24,8 @@ import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>, options: ResizableOptions = {}) {
   const {
     initialSize = { width: 'auto', height: 'auto' },
+    initialPosition = { x: 0, y: 0 },
+    positionType = 'relative',
     minWidth,
     minHeight,
     maxWidth,
@@ -52,14 +54,13 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   } = options
 
   const size = ref<Size>({ ...initialSize })
-  const position = ref<Position>({ x: 0, y: 0 })
+  const position = ref<Position>({ ...initialPosition })
   const isResizing = ref(false)
   const isActive = ref(initialActive)
   const startEvent = ref<PointerEvent | null>(null)
-  const isAbsolutePositioned = ref(false)
 
   const startSize = ref<Size>({ ...initialSize })
-  const startPosition = ref<Position>({ x: 0, y: 0 })
+  const startPosition = ref<Position>({ ...initialPosition })
 
   // Handle event by preventing default and stopping propagation if configured
   const handleEvent = (event: PointerEvent) => {
@@ -130,14 +131,14 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
   const style = computed(() => {
     // Base styles
     const baseStyle: Record<string, string> = {
-      position: isAbsolutePositioned.value ? 'absolute' : 'relative',
+      position: toValue(positionType),
       userSelect: 'none',
       width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
       height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
     }
 
-    // Add position styles for absolute positioned elements
-    if (isAbsolutePositioned.value) {
+    // Position styles
+    if (toValue(positionType) === 'absolute') {
       baseStyle.left = `${position.value.x}px`
       baseStyle.top = `${position.value.y}px`
     }
@@ -378,13 +379,11 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       newHeight = Math.min(Math.max(currentHeight + effectiveHeightChange, minHeightValue), maxHeightValue)
 
       // Update position using corrected accumulated changes
-      if (isAbsolutePositioned.value) {
-        if (shouldUpdateX) {
-          newPosition.x = startPosition.value.x + accumulatedDeltaX
-        }
-        if (shouldUpdateY) {
-          newPosition.y = startPosition.value.y + accumulatedDeltaY
-        }
+      if (shouldUpdateX) {
+        newPosition.x = startPosition.value.x + accumulatedDeltaX
+      }
+      if (shouldUpdateY) {
+        newPosition.y = startPosition.value.y + accumulatedDeltaY
       }
     }
 
@@ -453,11 +452,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       width: typeof constrainedSize.width === 'number' ? Math.round(constrainedSize.width) : constrainedSize.width,
       height: typeof constrainedSize.height === 'number' ? Math.round(constrainedSize.height) : constrainedSize.height,
     }
-    if (isAbsolutePositioned.value) {
-      position.value = {
-        x: Math.round(newPosition.x),
-        y: Math.round(newPosition.y),
-      }
+    position.value = {
+      x: Math.round(newPosition.x),
+      y: Math.round(newPosition.y),
     }
 
     if (onResizeCallback) {
@@ -501,12 +498,15 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
 
     const el = toValue(target)
     if (el) {
-      // Check positioning type
-      const computedStyle = window.getComputedStyle(el)
-      isAbsolutePositioned.value = computedStyle.position === 'absolute'
-
-      // Set initial position for absolute positioned elements
-      if (isAbsolutePositioned.value) {
+      // Set initial position
+      // Use initialPosition if provided, otherwise get the current element position
+      if (options.initialPosition) {
+        // initialPosition was explicitly provided, use it
+        position.value = { ...initialPosition }
+        startPosition.value = { ...initialPosition }
+      }
+      else {
+        // No initialPosition provided, use current element position
         const elementPosition = getElementPosition(el)
         position.value = elementPosition
         startPosition.value = { ...elementPosition }
@@ -588,33 +588,25 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     const marginLeft = Number.parseFloat(computedStyle.marginLeft) || 0
     const marginTop = Number.parseFloat(computedStyle.marginTop) || 0
 
-    if (isAbsolutePositioned.value) {
-      if (bounds) {
-        const boundsValue = toValue(bounds)
-        let boundingElement: HTMLElement | null = null
+    if (bounds) {
+      const boundsValue = toValue(bounds)
+      let boundingElement: HTMLElement | null = null
 
-        if (boundsValue === 'parent' && el.parentElement) {
-          boundingElement = el.parentElement
-        }
-        else if (boundsValue instanceof HTMLElement) {
-          boundingElement = boundsValue
-        }
+      if (boundsValue === 'parent' && el.parentElement) {
+        boundingElement = el.parentElement
+      }
+      else if (boundsValue instanceof HTMLElement) {
+        boundingElement = boundsValue
+      }
 
-        if (boundingElement) {
-          const boundingRect = boundingElement.getBoundingClientRect()
-          const maxX = boundingRect.width - rect.width - marginLeft
-          const maxY = boundingRect.height - rect.height - marginTop
+      if (boundingElement) {
+        const boundingRect = boundingElement.getBoundingClientRect()
+        const maxX = boundingRect.width - rect.width - marginLeft
+        const maxY = boundingRect.height - rect.height - marginTop
 
-          position.value = {
-            x: Math.round(Math.min(newPosition.x, maxX)),
-            y: Math.round(Math.min(newPosition.y, maxY)),
-          }
-        }
-        else {
-          position.value = {
-            x: Math.round(newPosition.x),
-            y: Math.round(newPosition.y),
-          }
+        position.value = {
+          x: Math.round(Math.min(newPosition.x, maxX)),
+          y: Math.round(Math.min(newPosition.y, maxY)),
         }
       }
       else {
@@ -712,7 +704,8 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     isActive,
     activeHandle,
     hoverHandle,
-    isAbsolutePositioned,
+    positionType,
+
     handleType: currentHandleType,
     handleElements,
     style,

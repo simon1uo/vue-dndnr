@@ -2,7 +2,7 @@
  * Types for the resizable component
  */
 import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue'
-import type { ActivationTrigger, PointerType, Size } from './common'
+import type { ActivationTrigger, PointerType, Position, Size } from './common'
 
 /**
  * Valid resize handle positions
@@ -174,6 +174,11 @@ export interface ResizeHandlesResult {
 }
 
 /**
+ * Position type for the resizable element
+ */
+export type PositionType = 'absolute' | 'relative'
+
+/**
  * Configuration options for resizable functionality
  */
 export interface ResizableOptions {
@@ -182,6 +187,21 @@ export interface ResizableOptions {
    * @default { width: 'auto', height: 'auto' }
    */
   initialSize?: Size
+
+  /**
+   * Initial position of the element
+   * If not provided, the current element position will be used
+   * @default { x: 0, y: 0 }
+   */
+  initialPosition?: Position
+
+  /**
+   * Position type for the element
+   * - 'absolute': Use absolute positioning (default)
+   * - 'relative': Use relative positioning
+   * @default 'absolute'
+   */
+  positionType?: MaybeRefOrGetter<PositionType>
 
   /**
    * Initial active state of the element

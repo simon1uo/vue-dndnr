@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ResizableOptions, ResizeHandle, ResizeHandleType, Size } from '@/types'
+import type { Position, ResizableOptions, ResizeHandle, ResizeHandleType, Size } from '@/types'
 import { useResizable } from '@/hooks'
 import { getCursorStyle } from '@/utils/cursor'
 import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
@@ -7,6 +7,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 
 interface ResizableProps extends ResizableOptions {
   size?: Size
   modelValue?: Size
+  position?: Position
   active?: boolean
   activeClassName?: string
 }
@@ -14,7 +15,9 @@ interface ResizableProps extends ResizableOptions {
 const props = withDefaults(defineProps<ResizableProps>(), {
   size: undefined,
   modelValue: undefined,
+  position: undefined,
   active: undefined,
+  positionType: 'relative',
   handleType: 'borders',
   lockAspectRatio: false,
   disabled: false,
@@ -31,6 +34,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
 const emit = defineEmits<{
   'update:size': [size: Size]
   'update:modelValue': [size: Size]
+  'update:position': [position: Position]
   'update:active': [active: boolean]
   'resizeStart': [size: Size, event: PointerEvent]
   'resize': [size: Size, event: PointerEvent]
@@ -43,6 +47,7 @@ const targetRef = ref<HTMLElement | null>(null)
 const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
 const grid = computed(() => toValue(props.grid))
 const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
+const positionType = computed(() => toValue(props.positionType))
 const handleType = computed<ResizeHandleType>(() => toValue(props.handleType) ?? 'borders')
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 const bounds = computed(() => toValue(props.bounds))
@@ -57,9 +62,11 @@ const preventDeactivation = computed(() => toValue(props.preventDeactivation))
 
 const {
   size: currentSize,
+  position: currentPosition,
   isResizing,
   isActive,
   setSize,
+  setPosition,
   setActive,
   activeHandle,
   hoverHandle,
@@ -71,7 +78,9 @@ const {
 } = useResizable(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
+  initialPosition: props.position || { x: 0, y: 0 },
   initialActive: props.active,
+  positionType,
   grid,
   lockAspectRatio,
   handleType,
@@ -147,6 +156,24 @@ watch(
   (newSize) => {
     emit('update:size', newSize)
     emit('update:modelValue', newSize)
+  },
+  { deep: true },
+)
+
+watch(
+  currentPosition,
+  (newPosition) => {
+    emit('update:position', newPosition)
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.position,
+  (newPosition) => {
+    if (newPosition && !isResizing.value) {
+      setPosition(newPosition)
+    }
   },
   { deep: true },
 )

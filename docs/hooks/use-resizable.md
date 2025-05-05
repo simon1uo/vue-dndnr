@@ -59,6 +59,8 @@ const { size, style } = useResizable(resizableRef, {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `initialSize` | `Size` | `{ width: 'auto', height: 'auto' }` | Initial size of the resizable element. |
+| `initialPosition` | `Position` | `{ x: 0, y: 0 }` | Initial position of the element. |
+| `positionType` | `MaybeRefOrGetter<'absolute' \| 'relative'>` | `'absolute'` | Position type for the element. Determines whether the element uses absolute or relative positioning. |
 | `minWidth` | `MaybeRefOrGetter<number>` | `0` | Minimum width constraint in pixels. |
 | `minHeight` | `MaybeRefOrGetter<number>` | `0` | Minimum height constraint in pixels. |
 | `maxWidth` | `MaybeRefOrGetter<number>` | `Infinity` | Maximum width constraint in pixels. |
@@ -111,10 +113,9 @@ The `useResizable` hook now returns a `style` computed property that can be dire
 | `isActive` | `Ref<boolean>` | Whether the element is currently active. |
 | `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
 | `hoverHandle` | `Ref<ResizeHandle \| null>` | Currently hovered resize handle. |
-| `isAbsolutePositioned` | `Ref<boolean>` | Whether the element uses absolute positioning. |
+| `positionType` | `MaybeRefOrGetter<'absolute' \| 'relative'>` | Position type for the element. |
 | `handleType` | `ComputedRef<'borders' \| 'handles' \| 'custom'>` | Current handle type being used. |
 | `handleElements` | `Ref<Map<ResizeHandle, HTMLElement>>` | Map of handle elements for 'handles' or 'custom' mode. |
-
 | `setSize` | `(newSize: Size) => void` | Function to programmatically set the size. |
 | `setPosition` | `(newPosition: Position) => void` | Function to programmatically set the position. |
 | `setActive` | `(active: boolean) => void` | Function to programmatically set the active state. |

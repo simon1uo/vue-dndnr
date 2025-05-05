@@ -35,7 +35,7 @@ const size = ref({ width: 200, height: 150 })
 </script>
 
 <template>
-  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100" bounds="parent">
+  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100" bounds="parent" positionType="absolute">
     Drag & Resize me!
     position: {{ position.x }}, {{ position.y }}
     size: {{ size.width }} x {{ size.height }}
@@ -64,6 +64,7 @@ The `DnR` component combines props from both the `Draggable` and `Resizable` com
 | `resizingClassName` | `String` | `'resizing'` | Class name applied while resizing. |
 | `activeClassName` | `String` | `'active'` | Class name applied when the element is active. |
 | `handleBorderStyle` | `String` | `'none'` | Border style for handleType 'borders'. Accepts any valid CSS border value. |
+| `positionType` | `'absolute' \| 'relative'` | `'absolute'` | Position type for the element. Determines whether the element uses absolute or relative positioning. |
 
 ### Activation Props
 
