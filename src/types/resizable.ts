@@ -1,7 +1,7 @@
 /**
  * Types for the resizable component
  */
-import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue'
+import type { MaybeRefOrGetter } from 'vue'
 import type { ActivationTrigger, PointerType, Position, Size } from './common'
 
 /**
@@ -92,91 +92,6 @@ export interface ResizeHandlesOptions {
    */
   onResizeStart?: (event: PointerEvent, handle: ResizeHandle) => void
 }
-
-/**
- * Result of the useResizeHandles composable
- */
-export interface ResizeHandlesResult {
-  /**
-   * Current handle type
-   */
-  handleType: ComputedRef<ResizeHandleType>
-
-  /**
-   * Currently active handle (during resize)
-   */
-  activeHandle: Ref<ResizeHandle | null>
-
-  /**
-   * Currently hovered handle
-   */
-  hoverHandle: Ref<ResizeHandle | null>
-
-  /**
-   * Map of handle elements
-   */
-  handleElements: Ref<Map<ResizeHandle, HTMLElement>>
-
-  /**
-   * List of created handle elements (for cleanup)
-   */
-  createdHandleElements: Ref<HTMLElement[]>
-
-  /**
-   * Get cursor style for a handle
-   */
-  getCursorForHandle: (handle: ResizeHandle) => string
-
-  /**
-   * Create a handle element
-   */
-  createHandleElement: (handle: ResizeHandle, isCustom?: boolean) => HTMLElement
-
-  /**
-   * Apply styles to a handle element
-   */
-  applyHandleStyles: (handleEl: HTMLElement, handle: ResizeHandle, isCustom?: boolean) => void
-
-  /**
-   * Register a handle element
-   */
-  registerHandle: (handle: ResizeHandle, element: HTMLElement) => void
-
-  /**
-   * Unregister a handle element
-   */
-  unregisterHandle: (handle: ResizeHandle) => void
-
-  /**
-   * Set up handle elements
-   */
-  setupHandleElements: (targetElement: HTMLElement | SVGElement) => void
-
-  /**
-   * Clean up handle elements
-   */
-  cleanup: () => void
-
-  /**
-   * Detect which handle is under the pointer
-   */
-  detectBoundary: (event: PointerEvent, element: HTMLElement | SVGElement) => ResizeHandle | null
-
-  /**
-   * Handle pointerdown event on a handle
-   */
-  onHandlePointerDown: (event: PointerEvent, handle: ResizeHandle) => void
-
-  /**
-   * Get event listener configuration
-   */
-  getConfig: () => { capture: boolean, passive: boolean }
-}
-
-/**
- * Position type for the resizable element
- */
-export type PositionType = 'absolute' | 'relative'
 
 /**
  * Configuration options for resizable functionality

@@ -1,7 +1,7 @@
-import type { PointerType, ResizeHandle, ResizeHandlesOptions, ResizeHandlesResult } from '@/types'
+import type { PointerType, ResizeHandle, ResizeHandlesOptions } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { getCursorStyle } from '@/utils/cursor'
-import { computed, ref, toValue } from 'vue'
+import { computed, onUnmounted, shallowRef, toValue } from 'vue'
 
 /**
  * Hook that manages resize handles
@@ -12,7 +12,7 @@ import { computed, ref, toValue } from 'vue'
 export function useResizeHandles(
   target: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>,
   options: ResizeHandlesOptions = {},
-): ResizeHandlesResult {
+) {
   const {
     handleType = 'borders',
     handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
@@ -27,16 +27,21 @@ export function useResizeHandles(
     onResizeStart,
   } = options
 
-  // Computed value for handle type
   const currentHandleType = computed(() => toValue(handleType))
+  const handlesSizeValue = computed(() => toValue(handlesSize))
+  const handlesValue = computed(() => toValue(handles))
+  const handleBorderStyleValue = computed(() => toValue(handleBorderStyle))
+  const disabledValue = computed(() => toValue(disabled))
+  const pointerTypesValue = computed(() => toValue(pointerTypes))
+  const preventDefaultValue = computed(() => toValue(preventDefault))
+  const stopPropagationValue = computed(() => toValue(stopPropagation))
+  const captureValue = computed(() => toValue(capture))
 
-  // State for handles
-  const activeHandle = ref<ResizeHandle | null>(null)
-  const hoverHandle = ref<ResizeHandle | null>(null)
-  const handleElements = ref<Map<ResizeHandle, HTMLElement>>(new Map())
-  const createdHandleElements = ref<HTMLElement[]>([])
+  const activeHandle = shallowRef<ResizeHandle | null>(null)
+  const hoverHandle = shallowRef<ResizeHandle | null>(null)
+  const handleElements = shallowRef<Map<ResizeHandle, HTMLElement>>(new Map())
+  const createdHandleElements = shallowRef<HTMLElement[]>([])
 
-  // Store event handlers for each handle to properly remove them later
   const handleEventListeners = new Map<ResizeHandle, (e: PointerEvent) => void>()
 
   /**
@@ -54,10 +59,10 @@ export function useResizeHandles(
    * @returns Whether the event should be processed
    */
   const filterEvent = (event: PointerEvent): boolean => {
-    if (toValue(disabled))
+    if (disabledValue.value)
       return false
 
-    const types = toValue(pointerTypes)
+    const types = pointerTypesValue.value
     if (types)
       return types.includes(event.pointerType as PointerType)
 
@@ -69,9 +74,9 @@ export function useResizeHandles(
    * @param event - The pointer event to handle
    */
   const handleEvent = (event: PointerEvent) => {
-    if (toValue(preventDefault))
+    if (preventDefaultValue.value)
       event.preventDefault()
-    if (toValue(stopPropagation))
+    if (stopPropagationValue.value)
       event.stopPropagation()
   }
 
@@ -79,10 +84,89 @@ export function useResizeHandles(
    * Get event listener configuration based on current options
    * @returns Event listener options object
    */
-  const getConfig = () => ({
-    capture: toValue(capture),
-    passive: !toValue(preventDefault),
-  })
+  const getEventConfig = computed(() => ({
+    capture: captureValue.value,
+    passive: !preventDefaultValue.value,
+  }))
+
+  /**
+   * Calculate handle positions based on the handle type
+   * @param handle - The handle position
+   * @returns The position CSS styles for the handle
+   */
+  const getHandlePositionStyles = (handle: ResizeHandle): Record<string, string> => {
+    const offset = -handlesSizeValue.value / 2
+    const styles: Record<string, string> = {}
+
+    switch (handle) {
+      case 'tl':
+      case 'top-left':
+        styles.top = `${offset}px`
+        styles.left = `${offset}px`
+        break
+      case 'tr':
+      case 'top-right':
+        styles.top = `${offset}px`
+        styles.right = `${offset}px`
+        break
+      case 'bl':
+      case 'bottom-left':
+        styles.bottom = `${offset}px`
+        styles.left = `${offset}px`
+        break
+      case 'br':
+      case 'bottom-right':
+        styles.bottom = `${offset}px`
+        styles.right = `${offset}px`
+        break
+      case 't':
+      case 'top':
+        styles.left = `calc(50% + ${offset}px)`
+        styles.top = `${offset}px`
+        break
+      case 'b':
+      case 'bottom':
+        styles.left = `calc(50% + ${offset}px)`
+        styles.bottom = `${offset}px`
+        break
+      case 'l':
+      case 'left':
+        styles.top = `calc(50% + ${offset}px)`
+        styles.left = `${offset}px`
+        break
+      case 'r':
+      case 'right':
+        styles.top = `calc(50% + ${offset}px)`
+        styles.right = `${offset}px`
+        break
+    }
+
+    return styles
+  }
+
+  /**
+   * Get base styles for handle elements
+   * @param isCustom - Whether this is a custom handle
+   * @returns The base CSS styles for the handle
+   */
+  const getHandleBaseStyles = (isCustom = false): Record<string, string> => {
+    const size = `${handlesSizeValue.value}px`
+    const borderStyle = handleBorderStyleValue.value !== 'none'
+      ? handleBorderStyleValue.value
+      : (isCustom ? '1px solid rgba(43, 108, 176, 0.6)' : '1px solid #2b6cb0')
+
+    return {
+      position: 'absolute',
+      zIndex: '10',
+      width: size,
+      height: size,
+      borderRadius: '50%',
+      boxSizing: 'border-box',
+      transition: 'transform 0.15s ease, background-color 0.15s ease',
+      backgroundColor: isCustom ? 'rgba(66, 153, 225, 0.6)' : '#4299e1',
+      border: borderStyle,
+    }
+  }
 
   /**
    * Create a handle element
@@ -98,76 +182,20 @@ export function useResizeHandles(
     }
     el.dataset.handle = handle
 
-    // Add base styles
-    el.style.position = 'absolute'
-    el.style.zIndex = '10'
+    // Apply base styles
+    const baseStyles = getHandleBaseStyles(isCustom)
+    Object.entries(baseStyles).forEach(([prop, value]) => {
+      el.style[prop as any] = value
+    })
+
+    // Apply cursor style
     el.style.cursor = getCursorForHandle(handle)
-    const size = `${toValue(handlesSize)}px`
-    el.style.width = size
-    el.style.height = size
-    el.style.borderRadius = '50%'
-    el.style.boxSizing = 'border-box'
-    el.style.transition = 'transform 0.15s ease, background-color 0.15s ease'
 
-    // Set visual appearance based on handle type
-    if (isCustom) {
-      el.style.backgroundColor = 'rgba(66, 153, 225, 0.6)'
-      el.style.border = toValue(handleBorderStyle) && toValue(handleBorderStyle) !== 'none'
-        ? toValue(handleBorderStyle)
-        : '1px solid rgba(43, 108, 176, 0.6)'
-    }
-    else {
-      el.style.backgroundColor = '#4299e1'
-      el.style.border = toValue(handleBorderStyle) && toValue(handleBorderStyle) !== 'none'
-        ? toValue(handleBorderStyle)
-        : '1px solid #2b6cb0'
-    }
-
-    // Set position based on handle type
-    const offset = -toValue(handlesSize) / 2
-
-    switch (handle) {
-      case 'tl':
-      case 'top-left':
-        el.style.top = `${offset}px`
-        el.style.left = `${offset}px`
-        break
-      case 'tr':
-      case 'top-right':
-        el.style.top = `${offset}px`
-        el.style.right = `${offset}px`
-        break
-      case 'bl':
-      case 'bottom-left':
-        el.style.bottom = `${offset}px`
-        el.style.left = `${offset}px`
-        break
-      case 'br':
-      case 'bottom-right':
-        el.style.bottom = `${offset}px`
-        el.style.right = `${offset}px`
-        break
-      case 't':
-      case 'top':
-        el.style.left = `calc(50% + ${offset}px)`
-        el.style.top = `${offset}px`
-        break
-      case 'b':
-      case 'bottom':
-        el.style.left = `calc(50% + ${offset}px)`
-        el.style.bottom = `${offset}px`
-        break
-      case 'l':
-      case 'left':
-        el.style.top = `calc(50% + ${offset}px)`
-        el.style.left = `${offset}px`
-        break
-      case 'r':
-      case 'right':
-        el.style.top = `calc(50% + ${offset}px)`
-        el.style.right = `${offset}px`
-        break
-    }
+    // Apply position styles
+    const positionStyles = getHandlePositionStyles(handle)
+    Object.entries(positionStyles).forEach(([prop, value]) => {
+      el.style[prop as any] = value
+    })
 
     return el
   }
@@ -179,87 +207,39 @@ export function useResizeHandles(
    * @param isCustom - Whether this is a custom handle
    */
   const applyHandleStyles = (handleEl: HTMLElement, handle: ResizeHandle, isCustom = false) => {
-    // Set base styles
-    handleEl.style.position = 'absolute'
-    handleEl.style.zIndex = '10'
+    // Apply base styles
+    const baseStyles = getHandleBaseStyles(isCustom)
+    Object.entries(baseStyles).forEach(([prop, value]) => {
+      handleEl.style[prop as any] = value
+    })
+
+    // Apply cursor style
     handleEl.style.cursor = getCursorForHandle(handle)
-    const size = `${toValue(handlesSize)}px`
-    handleEl.style.width = size
-    handleEl.style.height = size
-    handleEl.style.borderRadius = '50%'
-    handleEl.style.boxSizing = 'border-box'
-    handleEl.style.transition = 'transform 0.15s ease, background-color 0.15s ease'
-    handleEl.style.border = toValue(handleBorderStyle) && toValue(handleBorderStyle) !== 'none'
-      ? toValue(handleBorderStyle)
-      : (isCustom
-          ? '1px solid rgba(43, 108, 176, 0.6)'
-          : '1px solid #2b6cb0')
 
-    // Set position based on handle type
-    const offset = -toValue(handlesSize) / 2
-
-    switch (handle) {
-      case 'tl':
-      case 'top-left':
-        handleEl.style.top = `${offset}px`
-        handleEl.style.left = `${offset}px`
-        break
-      case 'tr':
-      case 'top-right':
-        handleEl.style.top = `${offset}px`
-        handleEl.style.right = `${offset}px`
-        break
-      case 'bl':
-      case 'bottom-left':
-        handleEl.style.bottom = `${offset}px`
-        handleEl.style.left = `${offset}px`
-        break
-      case 'br':
-      case 'bottom-right':
-        handleEl.style.bottom = `${offset}px`
-        handleEl.style.right = `${offset}px`
-        break
-      case 't':
-      case 'top':
-        handleEl.style.left = `calc(50% + ${offset}px)`
-        handleEl.style.top = `${offset}px`
-        break
-      case 'b':
-      case 'bottom':
-        handleEl.style.left = `calc(50% + ${offset}px)`
-        handleEl.style.bottom = `${offset}px`
-        break
-      case 'l':
-      case 'left':
-        handleEl.style.top = `calc(50% + ${offset}px)`
-        handleEl.style.left = `${offset}px`
-        break
-      case 'r':
-      case 'right':
-        handleEl.style.top = `calc(50% + ${offset}px)`
-        handleEl.style.right = `${offset}px`
-        break
-    }
+    // Apply position styles
+    const positionStyles = getHandlePositionStyles(handle)
+    Object.entries(positionStyles).forEach(([prop, value]) => {
+      handleEl.style[prop as any] = value
+    })
 
     // Add hover event listeners
     handleEl.addEventListener('mouseenter', () => {
-      if (isCustom) {
-        hoverHandle.value = handle
-      }
-      else {
-        handleEl.style.backgroundColor = isCustom ? 'rgba(49, 130, 206, 0.8)' : '#3182ce'
+      hoverHandle.value = handle
+
+      if (!isCustom) {
+        handleEl.style.backgroundColor = '#3182ce'
         handleEl.style.transform = 'scale(1.1)'
-        hoverHandle.value = handle
       }
     })
 
     handleEl.addEventListener('mouseleave', () => {
       if (activeHandle.value !== handle) {
         if (!isCustom) {
-          handleEl.style.backgroundColor = isCustom ? 'rgba(66, 153, 225, 0.6)' : '#4299e1'
+          handleEl.style.backgroundColor = '#4299e1'
           handleEl.style.transform = ''
         }
       }
+
       if (hoverHandle.value === handle) {
         hoverHandle.value = null
       }
@@ -279,8 +259,7 @@ export function useResizeHandles(
     if (!el)
       return
 
-    const handlesValue = toValue(handles)
-    if (!handlesValue || !handlesValue.includes(handle))
+    if (!handlesValue.value.includes(handle))
       return
 
     // Set the active handle
@@ -304,7 +283,7 @@ export function useResizeHandles(
 
     if (element && eventListener) {
       // Remove event listener
-      element.removeEventListener('pointerdown', eventListener, getConfig())
+      element.removeEventListener('pointerdown', eventListener, getEventConfig.value)
 
       // Remove from maps
       handleElements.value.delete(handle)
@@ -337,7 +316,7 @@ export function useResizeHandles(
     handleElements.value.set(handle, element)
 
     // Add pointerdown event listener to the handle element
-    element.addEventListener('pointerdown', handleEventListener, getConfig())
+    element.addEventListener('pointerdown', handleEventListener, getEventConfig.value)
   }
 
   /**
@@ -348,7 +327,7 @@ export function useResizeHandles(
     handleEventListeners.forEach((listener, handle) => {
       const element = handleElements.value.get(handle)
       if (element) {
-        element.removeEventListener('pointerdown', listener, getConfig())
+        element.removeEventListener('pointerdown', listener, getEventConfig.value)
       }
     })
 
@@ -372,7 +351,7 @@ export function useResizeHandles(
   const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
     const clientX = event.clientX ?? ((event as unknown as TouchEvent).touches?.[0]?.clientX ?? 0)
     const clientY = event.clientY ?? ((event as unknown as TouchEvent).touches?.[0]?.clientY ?? 0)
-    const thresholdValue = toValue(handlesSize)
+    const thresholdValue = handlesSizeValue.value
 
     // For 'handles' or 'custom' type, check if the pointer is over any handle element
     if (currentHandleType.value === 'handles' || currentHandleType.value === 'custom') {
@@ -457,19 +436,14 @@ export function useResizeHandles(
     if (currentHandleType.value === 'borders')
       return
 
-    const handlesValue = toValue(handles)
-
     // Handle 'handles' type - create and attach visible handle elements
     if (currentHandleType.value === 'handles') {
       // Create and attach handle elements
-      handlesValue.forEach((handle) => {
+      handlesValue.value.forEach((handle) => {
         const handleEl = createHandleElement(handle, false)
         targetElement.append(handleEl)
         createdHandleElements.value.push(handleEl)
         registerHandle(handle, handleEl)
-
-        // Apply styles and event listeners
-        applyHandleStyles(handleEl, handle)
       })
     }
     // Handle 'custom' type - use provided custom handles or create default ones
@@ -479,7 +453,7 @@ export function useResizeHandles(
       if (customHandlesValue && customHandlesValue.size > 0) {
         // Register each custom handle
         customHandlesValue.forEach((handleEl, handle) => {
-          if (handlesValue.includes(handle)) {
+          if (handlesValue.value.includes(handle)) {
             // Apply styles and register the handle
             applyHandleStyles(handleEl, handle, true)
             registerHandle(handle, handleEl)
@@ -497,22 +471,23 @@ export function useResizeHandles(
         // This serves as a fallback when using the hook directly without the component
         if (!hasRegisteredHandles) {
           // Create and attach default handle elements for custom type
-          handlesValue.forEach((handle) => {
+          handlesValue.value.forEach((handle) => {
             const handleEl = createHandleElement(handle, true)
             targetElement.append(handleEl)
             createdHandleElements.value.push(handleEl)
             registerHandle(handle, handleEl)
-
-            // Apply styles and event listeners
-            applyHandleStyles(handleEl, handle, true)
           })
         }
       }
     }
   }
 
+  // Clean up on unmount
+  onUnmounted(() => {
+    cleanup()
+  })
+
   return {
-    handleType: currentHandleType,
     activeHandle,
     hoverHandle,
     handleElements,
@@ -526,7 +501,6 @@ export function useResizeHandles(
     cleanup,
     detectBoundary,
     onHandlePointerDown,
-    getConfig,
   }
 }
 

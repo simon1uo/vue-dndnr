@@ -13,6 +13,7 @@ interface DnRProps extends DnROptions {
   resizingClassName?: string
   activeClassName?: string
   handleBorderStyle?: string
+  positionType?: 'absolute' | 'relative'
 }
 
 const props = withDefaults(defineProps<DnRProps>(), {
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<DnRProps>(), {
   throttleDelay: 16,
   handleType: 'borders',
   handleBorderStyle: 'none',
+  positionType: 'absolute',
 })
 
 const emit = defineEmits<{
@@ -67,6 +69,7 @@ const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 const handleType = computed(() => toValue(props.handleType))
 const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
+const positionType = computed(() => toValue(props.positionType) ?? 'absolute')
 
 // Create reactive options object
 const dnrOptions: DnROptions = {
@@ -91,6 +94,7 @@ const dnrOptions: DnROptions = {
   handleType,
   handleBorderStyle,
   customHandles: handleRefs,
+  positionType,
   minWidth: props.minWidth,
   minHeight: props.minHeight,
   maxWidth: props.maxWidth,
@@ -321,7 +325,6 @@ const combinedClass = computed(() => {
 
 <style scoped>
 .dnr {
-  position: absolute;
   touch-action: none;
   user-select: none;
 }
