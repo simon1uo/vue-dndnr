@@ -67,6 +67,7 @@ const {
   registerHandle,
   unregisterHandle,
   setupHandleElements,
+  style,
 } = useResizable(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
@@ -245,7 +246,7 @@ onUnmounted(cleanupHandleElements)
 </script>
 
 <template>
-  <div ref="targetRef" :class="[combinedClass, `handle-type-${currentHandleType}`]">
+  <div ref="targetRef" :class="[combinedClass, `handle-type-${currentHandleType}`]" :style="style">
     <slot />
 
     <!--

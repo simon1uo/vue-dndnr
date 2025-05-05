@@ -141,6 +141,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     activeHandle,
     hoverHandle,
     isAbsolutePositioned,
+    style: resizableStyle,
     setSize,
     setPosition: setResizablePosition,
     setActive: _setResizableActive, // Unused but needed for destructuring
@@ -186,8 +187,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const style = computed(() => {
     return {
       ...draggableStyle.value,
-      width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
-      height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
+      ...resizableStyle.value,
     }
   })
 

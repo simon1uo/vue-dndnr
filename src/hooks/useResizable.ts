@@ -13,7 +13,7 @@ import {
   isClient,
 } from '@/utils'
 import { throttle } from '@/utils/throttle'
-import { onMounted, onUnmounted, ref, toValue, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
 /**
  * Hook that adds resize functionality to an element
@@ -126,47 +126,43 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     },
   })
 
-  const applyStyles = () => {
-    const el = toValue(target)
-    if (!el)
-      return
-
-    // Only apply cursor styles for 'borders' type
-    // For 'handles' and 'custom' types, cursor is handled by CSS
-    const cursorStyle = currentHandleType.value === 'borders' && hoverHandle.value
-      ? getCursorForHandle(hoverHandle.value)
-      : 'default'
-
-    if (!isAbsolutePositioned.value) {
-      el.style.position = 'relative'
-    }
-    else {
-      el.style.left = `${position.value.x}px`
-      el.style.top = `${position.value.y}px`
+  // Computed style object to be returned instead of directly modifying element
+  const style = computed(() => {
+    // Base styles
+    const baseStyle: Record<string, string> = {
+      position: isAbsolutePositioned.value ? 'absolute' : 'relative',
+      userSelect: 'none',
+      width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
+      height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
     }
 
-    el.style.width = typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width
-    el.style.height = typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height
-    el.style.userSelect = 'none'
+    // Add position styles for absolute positioned elements
+    if (isAbsolutePositioned.value) {
+      baseStyle.left = `${position.value.x}px`
+      baseStyle.top = `${position.value.y}px`
+    }
 
-    // Apply cursor style only for 'borders' type
+    // Add cursor styles for 'borders' type
     if (currentHandleType.value === 'borders') {
-      el.style.cursor = isResizing.value && activeHandle.value
-        ? getCursorForHandle(activeHandle.value)
-        : cursorStyle
-      const borderStyle = toValue(handleBorderStyle)
-      if (borderStyle && borderStyle !== 'none') {
-        el.style.border = borderStyle
+      if (isResizing.value && activeHandle.value) {
+        baseStyle.cursor = getCursorForHandle(activeHandle.value)
+      }
+      else if (hoverHandle.value) {
+        baseStyle.cursor = getCursorForHandle(hoverHandle.value)
       }
       else {
-        el.style.border = ''
+        baseStyle.cursor = 'default'
+      }
+
+      // Add border style if specified
+      const borderStyle = toValue(handleBorderStyle)
+      if (borderStyle && borderStyle !== 'none') {
+        baseStyle.border = borderStyle
       }
     }
-    else {
-      // 非 borders 类型时不设置 border
-      el.style.border = ''
-    }
-  }
+
+    return baseStyle
+  })
 
   /**
    * Handle mouse movement for resize handle detection
@@ -464,8 +460,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
 
-    applyStyles()
-
     if (onResizeCallback) {
       onResizeCallback(size.value, event)
     }
@@ -526,8 +520,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
           height: size.value.height === 'auto' ? elementSize.height : size.value.height,
         }
       }
-
-      applyStyles()
     }
   }
 
@@ -566,9 +558,9 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     { immediate: true },
   )
 
-  // Watch for changes to size, position or handle state to update styles
+  // Watch for changes to reactive state that affects the computed style
   watch([size, position, hoverHandle, isResizing, activeHandle], () => {
-    applyStyles()
+    // Style updates are handled automatically by the computed style property
   }, { deep: true })
 
   /**
@@ -580,7 +572,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       width: typeof newSize.width === 'number' ? Math.round(newSize.width) : newSize.width,
       height: typeof newSize.height === 'number' ? Math.round(newSize.height) : newSize.height,
     }
-    applyStyles()
   }
 
   /**
@@ -634,15 +625,11 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
       }
     }
     else {
-      // 对于相对定位元素,直接更新位置
       position.value = {
         x: Math.round(newPosition.x),
         y: Math.round(newPosition.y),
       }
     }
-
-    // 应用新的位置
-    applyStyles()
   }
 
   // Handle activation based on activeOn setting
@@ -728,6 +715,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | SVGElement |
     isAbsolutePositioned,
     handleType: currentHandleType,
     handleElements,
+    style,
     setSize,
     setPosition,
     setActive,

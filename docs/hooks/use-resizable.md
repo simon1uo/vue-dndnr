@@ -9,7 +9,7 @@ import { ref } from 'vue'
 import { useResizable } from 'vue-dndnr'
 
 const resizableRef = ref(null)
-const { size } = useResizable(resizableRef, {
+const { size, style } = useResizable(resizableRef, {
   initialSize: { width: 200, height: 150 },
   minWidth: 100,
   minHeight: 100,
@@ -18,7 +18,7 @@ const { size } = useResizable(resizableRef, {
 </script>
 
 <DemoContainer>
-  <div ref="resizableRef" class="resizable-box">
+  <div ref="resizableRef" class="resizable-box" :style="style">
     Resize me!
     <div class="text-sm color-text-light">{{ size.width }} x {{ size.height }}</div>
   </div>
@@ -30,7 +30,7 @@ import { ref } from 'vue'
 import { useResizable } from 'vue-dndnr'
 
 const resizableRef = ref<HTMLElement | null>(null)
-const { size } = useResizable(resizableRef, {
+const { size, style } = useResizable(resizableRef, {
   initialSize: { width: 200, height: 150 },
   minWidth: 100,
   minHeight: 100,
@@ -39,7 +39,7 @@ const { size } = useResizable(resizableRef, {
 </script>
 
 <template>
-  <div ref="resizableRef" class="resizable-box">
+  <div ref="resizableRef" class="resizable-box" :style="style">
     Resize me!
   </div>
 </template>
@@ -98,14 +98,15 @@ const { size } = useResizable(resizableRef, {
 
 The `useResizable` hook returns an object with the following properties and methods:
 
-::: warning Important Note
-Unlike what some examples might suggest, the `useResizable` hook does not return a `style` object. Instead, it directly applies styles to the target element. The examples in the documentation that use `:style="style"` are incorrect and will be updated.
+::: tip
+The `useResizable` hook now returns a `style` computed property that can be directly bound to the target element using `:style="style"`. This is consistent with the `useDraggable` hook's behavior.
 :::
 
 | Property/Method | Type | Description |
 |-----------------|------|-------------|
 | `size` | `Ref<Size>` | Current size of the element. |
 | `position` | `Ref<Position>` | Current position of the element (when using absolute positioning). |
+| `style` | `ComputedRef<Record<string, string>>` | Computed style object that can be bound to the element. |
 | `isResizing` | `Ref<boolean>` | Whether the element is currently being resized. |
 | `isActive` | `Ref<boolean>` | Whether the element is currently active. |
 | `activeHandle` | `Ref<ResizeHandle \| null>` | Currently active resize handle. |
