@@ -43,7 +43,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // Drag options
     handle: draggingHandle = target,
     draggingElement = defaultWindow,
-    bounds,
+    containerElement,
     grid,
     axis = 'both',
     scale = 1,
@@ -95,7 +95,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const gridValue = computed(() => toValue(grid))
   const axisValue = computed(() => toValue(axis))
   const scaleValue = computed(() => toValue(scale))
-  const boundsValue = computed(() => toValue(bounds))
+  const containerElementValue = computed(() => toValue(containerElement))
   const lockAspectRatioValue = computed(() => toValue(lockAspectRatio))
   const preventDefaultValue = computed(() => toValue(preventDefault))
   const stopPropagationValue = computed(() => toValue(stopPropagation))
@@ -292,42 +292,33 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // Prepare new position for bounds check
     let newPosition: Position = { x: newX, y: newY }
 
-    // Apply bounds if specified
-    if (boundsValue.value) {
-      let boundingElement: HTMLElement | null = null
+    // Apply bounds if container element is specified
+    if (containerElementValue.value) {
       const targetEl = toValue(target)
+      const containerEl = toValue(containerElementValue)
 
-      if (boundsValue.value === 'parent' && targetEl?.parentElement) {
-        boundingElement = targetEl.parentElement
-      }
-      else if (boundsValue.value instanceof HTMLElement) {
-        boundingElement = boundsValue.value
-      }
+      if (containerEl && targetEl) {
+        // Get the bounding rectangles of both elements
+        const containerRect = getElementBounds(containerEl)
+        const targetRect = getElementBounds(targetEl)
 
-      if (boundingElement && targetEl) {
-        const boundingRect = getElementBounds(boundingElement)
-        const elementRect = getElementBounds(targetEl)
+        // Calculate the size of the target element
+        const elementSize = {
+          width: targetRect.right - targetRect.left,
+          height: targetRect.bottom - targetRect.top,
+        }
 
-        newPosition = applyBounds(
-          newPosition,
-          {
-            left: 0,
-            top: 0,
-            right: boundingRect.right - boundingRect.left,
-            bottom: boundingRect.bottom - boundingRect.top,
-          },
-          {
-            width: elementRect.right - elementRect.left,
-            height: elementRect.bottom - elementRect.top,
-          },
-        )
-      }
-      else if (typeof boundsValue.value === 'object' && boundsValue.value) {
-        newPosition = applyBounds(
-          newPosition,
-          boundsValue.value,
-          elementSize.value,
-        )
+        // Calculate the bounds relative to the container
+        // The container's top-left corner becomes (0,0)
+        const boundsRect = {
+          left: 0,
+          top: 0,
+          right: containerRect.right - containerRect.left,
+          bottom: containerRect.bottom - containerRect.top,
+        }
+
+        // Apply bounds constraints to the position
+        newPosition = applyBounds(newPosition, boundsRect, elementSize)
       }
     }
 
@@ -541,46 +532,34 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
     const { newSize, newPosition } = calculateNewDimensions()
 
-    // Check bounds if specified
-    if (boundsValue.value && positionTypeValue.value === 'absolute') {
-      let boundingElement: HTMLElement | null = null
+    // Check bounds if container element is specified and using absolute positioning
+    if (containerElementValue.value && positionTypeValue.value === 'absolute') {
+      const containerEl = containerElementValue.value
 
-      if (boundsValue.value === 'parent' && el.parentElement) {
-        boundingElement = el.parentElement
-      }
-      else if (boundsValue.value instanceof HTMLElement) {
-        boundingElement = boundsValue.value
-      }
-
-      // Apply bounds to position if a bounding element is found
-      if (boundingElement || (typeof boundsValue.value === 'object' && boundsValue.value)) {
+      // Apply bounds to position if a container element is found
+      if (containerEl) {
+        // Calculate the element's dimensions based on the new size
         const elementWidth = typeof newSize.width === 'number' ? newSize.width : (el as HTMLElement).offsetWidth
         const elementHeight = typeof newSize.height === 'number' ? newSize.height : (el as HTMLElement).offsetHeight
         const elementSize = { width: elementWidth, height: elementHeight }
 
-        // Create bounds rectangle
-        let boundsRect: { left: number, top: number, right: number, bottom: number }
+        // Get the container's bounding rectangle
+        const containerRect = getElementBounds(containerEl)
 
-        if (boundingElement) {
-          const rect = getElementBounds(boundingElement)
-          boundsRect = {
-            left: 0,
-            top: 0,
-            right: rect.right - rect.left,
-            bottom: rect.bottom - rect.top,
-          }
-        }
-        else {
-          // Use explicit bounds object
-          // Make sure we have a valid bounds object with the correct shape
-          const typedBounds = boundsValue.value as unknown
-          boundsRect = typedBounds as { left: number, top: number, right: number, bottom: number }
+        // Calculate the bounds relative to the container
+        // The container's top-left corner becomes (0,0)
+        const boundsRect = {
+          left: 0,
+          top: 0,
+          right: containerRect.right - containerRect.left,
+          bottom: containerRect.bottom - containerRect.top,
         }
 
-        // Apply bounds
+        // Apply bounds constraints to the position
         const adjustedPosition = applyBounds(newPosition, boundsRect, elementSize)
 
         // Only adjust position, not size
+        // This allows the element to resize freely but keeps it within the container
         newPosition.x = adjustedPosition.x
         newPosition.y = adjustedPosition.y
       }

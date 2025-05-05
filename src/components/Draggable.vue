@@ -41,7 +41,7 @@ const emit = defineEmits<{
 }>()
 
 const targetRef = ref<HTMLElement | SVGElement | null | undefined>(null)
-const bounds = computed(() => toValue(props.bounds))
+const containerElement = computed(() => toValue(props.containerElement))
 const handle = computed(() => toValue(props.handle) ?? targetRef.value)
 const grid = computed(() => toValue(props.grid))
 const axis = computed(() => toValue(props.axis))
@@ -67,7 +67,7 @@ const {
   ...props,
   initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
   initialActive: props.active,
-  bounds,
+  containerElement,
   handle,
   grid,
   axis,

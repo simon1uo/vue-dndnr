@@ -55,7 +55,7 @@ const targetRef = ref<HTMLElement | null>(null)
 const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
 
 const handle = computed(() => toValue(props.handle) ?? targetRef.value)
-const bounds = computed(() => toValue(props.bounds))
+const containerElement = computed(() => toValue(props.containerElement))
 const grid = computed(() => toValue(props.grid))
 const axis = computed(() => toValue(props.axis) ?? 'both')
 const scale = computed(() => toValue(props.scale) ?? 1)
@@ -79,7 +79,7 @@ const dnrOptions: DnROptions = {
   activeOn: props.activeOn,
   preventDeactivation: props.preventDeactivation,
   handle,
-  bounds,
+  containerElement,
   grid,
   axis,
   scale,

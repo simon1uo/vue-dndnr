@@ -51,7 +51,7 @@ const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
 const positionType = computed(() => toValue(props.positionType))
 const handleType = computed<ResizeHandleType>(() => toValue(props.handleType) ?? 'borders')
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
-const bounds = computed(() => toValue(props.bounds))
+const containerElement = computed(() => toValue(props.containerElement))
 const disabled = computed(() => toValue(props.disabled))
 const pointerTypes = computed(() => toValue(props.pointerTypes))
 const preventDefault = computed(() => toValue(props.preventDefault))
@@ -87,7 +87,7 @@ const {
   lockAspectRatio,
   handleType,
   handles,
-  bounds,
+  containerElement,
   disabled,
   pointerTypes,
   preventDefault,

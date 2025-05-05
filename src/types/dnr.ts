@@ -197,10 +197,9 @@ export interface DnROptions {
 
   // Drag-specific options
   /**
-   * Element or selector to use as bounds for the draggable/resizable element
-   * Can be an HTML element, 'parent', or an object with explicit bounds for dragging
+   * Element for calculating bounds (If not set, it will use the event's target)
    */
-  bounds?: MaybeRefOrGetter<HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number } | null | undefined>
+  containerElement?: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>
 
   /**
    * Grid size for snapping during drag and resize
