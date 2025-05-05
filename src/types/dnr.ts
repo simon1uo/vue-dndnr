@@ -1,6 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue'
-import type { ActivationTrigger, PointerType, Position, Size } from './common'
-import type { PositionType, ResizeHandle, ResizeHandleType } from './resizable'
+import type { ActivationTrigger, PointerType, Position, PositionType, Size } from './common'
+import type { ResizeHandle, ResizeHandleType } from './resizable'
 
 /**
  * Combined configuration options for Drag and Resize (DnR) functionality
@@ -46,6 +46,18 @@ export interface DnROptions {
    * @default false
    */
   disabled?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether dragging is disabled
+   * @default false
+   */
+  disableDrag?: MaybeRefOrGetter<boolean>
+
+  /**
+   * Whether resizing is disabled
+   * @default false
+   */
+  disableResize?: MaybeRefOrGetter<boolean>
 
   /**
    * Types of pointer events to respond to

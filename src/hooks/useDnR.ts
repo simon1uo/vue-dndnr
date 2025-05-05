@@ -29,6 +29,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     initialPosition = { x: 0, y: 0 },
     initialSize = { width: 'auto', height: 'auto' },
     disabled = false,
+    disableDrag = false,
+    disableResize = false,
     pointerTypes = ['mouse', 'touch', 'pen'],
     preventDefault = true,
     stopPropagation = false,
@@ -87,6 +89,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   // Cache frequently accessed reactive values
   const positionTypeValue = computed(() => toValue(positionType))
   const disabledValue = computed(() => toValue(disabled))
+  const disableDragValue = computed(() => toValue(disableDrag) || toValue(disabled))
+  const disableResizeValue = computed(() => toValue(disableResize) || toValue(disabled))
   const activeOnValue = computed(() => toValue(activeOn))
   const gridValue = computed(() => toValue(grid))
   const axisValue = computed(() => toValue(axis))
@@ -115,10 +119,20 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   /**
    * Filter pointer events based on disabled state, active state, and pointer types
    * @param event - The pointer event to filter
+   * @param forDrag - Whether this is for a drag operation
+   * @param forResize - Whether this is for a resize operation
    * @returns True if the event should be processed, false otherwise
    */
-  const filterEvent = (event: PointerEvent): boolean => {
+  const filterEvent = (event: PointerEvent, forDrag = false, forResize = false): boolean => {
+    // Check global disabled state
     if (disabledValue.value)
+      return false
+
+    // Check specific disabled states
+    if (forDrag && disableDragValue.value)
+      return false
+
+    if (forResize && disableResizeValue.value)
       return false
 
     // Check if element is active when activeOn is not 'none'
@@ -163,9 +177,13 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     stopPropagation,
     capture,
     pointerTypes,
-    disabled: computed(() => disabledValue.value || (activeOnValue.value !== 'none' && !isActive.value)),
+    disabled: computed(() => disabledValue.value || disableResizeValue.value || (activeOnValue.value !== 'none' && !isActive.value)),
     onResizeStart: (event: PointerEvent, handle: ResizeHandle) => {
       if (interactionMode.value === 'dragging')
+        return
+
+      // Check if resize is disabled
+      if (disableResizeValue.value)
         return
 
       // Check if element is active when activeOn is not 'none'
@@ -206,7 +224,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
     const el = toValue(draggingHandle)
     const targetEl = toValue(target)
-    if (!filterEvent(event) || !el || !targetEl)
+    if (!filterEvent(event, true, false) || !el || !targetEl)
       return false
 
     if (currentHandleType.value === 'handles' || currentHandleType.value === 'custom') {
@@ -368,8 +386,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     if (currentHandleType.value !== 'borders')
       return
 
-    // Check if element is active when activeOn is not 'none'
-    if (activeOnValue.value !== 'none' && !isActive.value)
+    // Check if resize is disabled
+    if (!filterEvent(event, false, true))
       return
 
     const el = toValue(target)
@@ -630,11 +648,13 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       setActive(true)
     }
 
-    if (currentHandleType.value === 'borders') {
+    // Handle resize first (if not disabled)
+    if (!disableResizeValue.value && currentHandleType.value === 'borders') {
       handleResizeStart(event)
     }
 
-    if (interactionMode.value !== 'resizing') {
+    // Handle drag if not already resizing and not disabled
+    if (!disableDragValue.value && interactionMode.value !== 'resizing') {
       handleDragStart(event)
     }
   }

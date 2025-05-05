@@ -2,7 +2,7 @@
  * Types for the resizable component
  */
 import type { MaybeRefOrGetter } from 'vue'
-import type { ActivationTrigger, PointerType, Position, Size } from './common'
+import type { ActivationTrigger, PointerType, Position, PositionType, Size } from './common'
 
 /**
  * Valid resize handle positions

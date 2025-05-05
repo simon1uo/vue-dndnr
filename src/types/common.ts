@@ -30,3 +30,8 @@ export interface Size {
   /** The height value (can be a number in pixels or a CSS string value) */
   height: number | string
 }
+
+/**
+ * Valid position types for positioning elements
+ */
+export type PositionType = 'absolute' | 'relative'
