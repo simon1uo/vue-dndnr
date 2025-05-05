@@ -35,7 +35,7 @@ const size = ref({ width: 200, height: 150 })
 </script>
 
 <template>
-  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100" bounds="parent" positionType="absolute">
+  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100" bounds="parent" position-type="absolute">
     Drag & Resize me!
     position: {{ position.x }}, {{ position.y }}
     size: {{ size.width }} x {{ size.height }}
