@@ -87,6 +87,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const elementSize = shallowRef<{ width: number, height: number }>({ width: 0, height: 0 })
 
   // Cache frequently accessed reactive values
+  const handleTypeValue = computed(() => toValue(handleType))
   const positionTypeValue = computed(() => toValue(positionType))
   const disabledValue = computed(() => toValue(disabled))
   const disableDragValue = computed(() => toValue(disableDrag) || toValue(disabled))
@@ -99,7 +100,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const lockAspectRatioValue = computed(() => toValue(lockAspectRatio))
   const preventDefaultValue = computed(() => toValue(preventDefault))
   const stopPropagationValue = computed(() => toValue(stopPropagation))
-  const currentHandleType = computed(() => toValue(handleType))
 
   /**
    * Set the active state and trigger callback
@@ -168,7 +168,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     cleanup: cleanupHandles,
     detectBoundary,
   } = useResizeHandles(target, {
-    handleType: computed(() => disableResizeValue.value ? 'none' as any : handleType), // 如果禁用缩放，则不使用任何句柄类型
+    handleType: disableResizeValue.value ? 'none' : handleType,
     handles,
     customHandles,
     handlesSize,
@@ -199,7 +199,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       startSize.value = size.value
       startPosition.value = position.value
       interactionMode.value = 'resizing'
-      // 确保 activeHandle 被设置，这对于 'handles' 和 'custom' 类型至关重要
       activeHandle.value = handle
 
       if (onResizeStartCallback)
@@ -227,7 +226,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     if (!filterEvent(event, true, false) || !el || !targetEl)
       return false
 
-    if (currentHandleType.value === 'handles' || currentHandleType.value === 'custom') {
+    if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
       const target = event.target as HTMLElement
       for (const handleEl of handleElements.value.values()) {
         if (handleEl === target || handleEl.contains(target)) {
@@ -374,7 +373,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
     // For 'handles' or 'custom' type, resize is handled by the resize handles
     // so we only need to handle 'borders' type here
-    if (currentHandleType.value !== 'borders')
+    if (handleTypeValue.value !== 'borders')
       return
 
     // Check if resize is disabled
@@ -628,7 +627,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
 
     // Handle resize first (if not disabled)
-    if (!disableResizeValue.value && currentHandleType.value === 'borders') {
+    if (!disableResizeValue.value && handleTypeValue.value === 'borders') {
       handleResizeStart(event)
     }
 
@@ -656,7 +655,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
 
     // Add cursor styles for resize handles only if resize is not disabled
-    if (currentHandleType.value === 'borders' && !disableResizeValue.value) {
+    if (handleTypeValue.value === 'borders' && !disableResizeValue.value) {
       if (interactionMode.value === 'resizing' && activeHandle.value) {
         baseStyle.cursor = getCursorForHandle(activeHandle.value)
       }
@@ -704,7 +703,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
 
     // Skip resize handle detection if resize is disabled or handle type is not borders
-    if (disableResizeValue.value || currentHandleType.value !== 'borders')
+    if (disableResizeValue.value || handleTypeValue.value !== 'borders')
       return
 
     const el = toValue(target)
@@ -797,7 +796,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
 
     // Setup handles if needed
-    if (currentHandleType.value === 'handles' || currentHandleType.value === 'custom') {
+    if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
       setupHandleElements(el)
     }
   }
