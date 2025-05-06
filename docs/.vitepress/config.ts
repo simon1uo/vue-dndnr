@@ -51,21 +51,11 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Components',
+        text: 'API',
         items: [
-          { text: 'Overview', link: '/components/' },
-          { text: 'Draggable', link: '/components/draggable' },
-          { text: 'Resizable', link: '/components/resizable' },
-          { text: 'DnR', link: '/components/dnr' },
-        ],
-      },
-      {
-        text: 'Hooks',
-        items: [
-          { text: 'Overview', link: '/hooks/' },
-          { text: 'useDraggable', link: '/hooks/use-draggable' },
-          { text: 'useResizable', link: '/hooks/use-resizable' },
-          { text: 'useDnR', link: '/hooks/use-dnr' },
+          { text: 'Overview', link: '/api/' },
+          { text: 'useDnR', link: '/api/use-dnr' },
+          { text: 'Type Definitions', link: '/api/types' },
         ],
       },
       {
@@ -90,25 +80,13 @@ export default defineConfig({
           ],
         },
       ],
-      '/components/': [
+      '/api/': [
         {
-          text: 'Components',
+          text: 'API Reference',
           items: [
-            { text: 'Overview', link: '/components/' },
-            { text: 'Draggable', link: '/components/draggable' },
-            { text: 'Resizable', link: '/components/resizable' },
-            { text: 'DnR', link: '/components/dnr' },
-          ],
-        },
-      ],
-      '/hooks/': [
-        {
-          text: 'Hooks',
-          items: [
-            { text: 'Overview', link: '/hooks/' },
-            { text: 'useDraggable', link: '/hooks/use-draggable' },
-            { text: 'useResizable', link: '/hooks/use-resizable' },
-            { text: 'useDnR', link: '/hooks/use-dnr' },
+            { text: 'Overview', link: '/api/' },
+            { text: 'useDnR', link: '/api/use-dnr' },
+            { text: 'Type Definitions', link: '/api/types' },
           ],
         },
       ],
