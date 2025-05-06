@@ -40,6 +40,10 @@ export function applyAxisConstraint(position: Position, axis?: 'x' | 'y' | 'both
  * Apply bounds constraint to a position
  * @param position - The current position to constrain
  * @param bounds - The bounding rectangle or constraints object
+ * @param bounds.left - The left boundary coordinate
+ * @param bounds.top - The top boundary coordinate
+ * @param bounds.right - The right boundary coordinate
+ * @param bounds.bottom - The bottom boundary coordinate
  * @param elementSize - The size of the element being constrained
  * @param elementSize.width - The width of the element being constrained
  * @param elementSize.height - The height of the element being constrained

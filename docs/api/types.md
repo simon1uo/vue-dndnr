@@ -62,10 +62,10 @@ type PositionType = 'absolute' | 'relative'
  * Valid resize handle positions
  * Supports both short ('t', 'b', etc.) and long ('top', 'bottom', etc.) formats
  */
-type ResizeHandle = 
-  | 't' | 'b' | 'r' | 'l' 
-  | 'tr' | 'tl' | 'br' | 'bl' 
-  | 'top' | 'bottom' | 'right' | 'left' 
+type ResizeHandle =
+  | 't' | 'b' | 'r' | 'l'
+  | 'tr' | 'tl' | 'br' | 'bl'
+  | 'top' | 'bottom' | 'right' | 'left'
   | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 ```
 
