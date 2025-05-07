@@ -36,6 +36,6 @@ Each component has a corresponding composable hook:
 ## Next Steps
 
 - [Installation](/guide/installation) - Install Vue DNDNR in your project
-- [Components](/components/) - Explore the available components
-- [Hooks](/hooks/) - Learn about the TypeScript hooks
+- [API Reference](/api/) - Explore the available components and hooks
+- [Examples](/examples/) - See usage examples
 - [Project Progress](/guide/progress) - Check the current development status

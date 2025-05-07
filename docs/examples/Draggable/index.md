@@ -16,5 +16,4 @@ This section demonstrates various usages and examples of the draggable functiona
 
 For detailed information about the APIs, please refer to:
 
-- [Draggable Component API documentation](/components/draggable)
-- [useDraggable Hook API documentation](/hooks/use-draggable)
+- [API Reference](/api/)

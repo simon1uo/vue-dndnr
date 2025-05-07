@@ -17,5 +17,4 @@ This section demonstrates various usages and examples of the resizable functiona
 
 For detailed information about the APIs, please refer to:
 
-- [Resizable Component API documentation](/components/resizable)
-- [useResizable Hook API documentation](/hooks/use-resizable)
+- [API Reference](/api/)
