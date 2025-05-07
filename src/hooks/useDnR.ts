@@ -213,6 +213,17 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     isNearResizeHandle.value = newHandle !== null
   })
 
+  // Watch for active state changes to update handle visibility and cursor styles
+  watch(isActive, (_newActive) => {
+    const el = toValue(target)
+    if (el) {
+      // For 'handles' or 'custom' type, we need to recreate or update the handles
+      if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
+        setupHandleElements(el)
+      }
+    }
+  })
+
   /**
    * Handle the start of a drag operation
    * @param event - The pointer event that triggered the drag start
@@ -654,8 +665,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       baseStyle.top = `${position.value.y}px`
     }
 
-    // Add cursor styles for resize handles only if resize is not disabled
-    if (handleTypeValue.value === 'borders' && !disableResizeValue.value) {
+    // Add cursor styles for resize handles only if resize is not disabled and element is active (if activeOn is not 'none')
+    if (handleTypeValue.value === 'borders' && !disableResizeValue.value && (activeOnValue.value === 'none' || isActive.value)) {
       if (interactionMode.value === 'resizing' && activeHandle.value) {
         baseStyle.cursor = getCursorForHandle(activeHandle.value)
       }
@@ -702,8 +713,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       }
     }
 
-    // Skip resize handle detection if resize is disabled or handle type is not borders
-    if (disableResizeValue.value || handleTypeValue.value !== 'borders')
+    // Skip resize handle detection if resize is disabled, handle type is not borders, or element is not active
+    if (disableResizeValue.value || handleTypeValue.value !== 'borders' || (activeOnValue.value !== 'none' && !isActive.value))
       return
 
     const el = toValue(target)

@@ -175,6 +175,11 @@ watch(
   (newActive) => {
     if (newActive !== undefined && newActive !== isActive.value) {
       setActive(newActive)
+
+      // Force re-register handle elements when active state changes
+      if (handleType.value === 'custom') {
+        nextTick(registerHandleElements)
+      }
     }
   },
 )
@@ -248,7 +253,7 @@ onUnmounted(cleanupHandleElements)
 <template>
   <div ref="targetRef" :class="[combinedClass, `handle-type-${handleType}`]" :style="style">
     <slot />
-    <template v-if="handleType === 'custom'">
+    <template v-if="handleType === 'custom' && (activeOn === 'none' || isActive)">
       <div
         v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
         style="display: contents;"

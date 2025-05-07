@@ -155,7 +155,8 @@ export function useResizeHandles(
       ? handleBorderStyleValue.value
       : (isCustom ? '1px solid rgba(43, 108, 176, 0.6)' : '1px solid #2b6cb0')
 
-    return {
+    // Base styles
+    const styles: Record<string, string> = {
       position: 'absolute',
       zIndex: '10',
       width: size,
@@ -166,6 +167,13 @@ export function useResizeHandles(
       backgroundColor: isCustom ? 'rgba(66, 153, 225, 0.6)' : '#4299e1',
       border: borderStyle,
     }
+
+    // If disabled, hide the handle
+    if (disabledValue.value) {
+      styles.display = 'none'
+    }
+
+    return styles
   }
 
   /**
@@ -349,8 +357,8 @@ export function useResizeHandles(
    * @returns The detected resize handle or null
    */
   const detectBoundary = (event: PointerEvent, element: HTMLElement | SVGElement): ResizeHandle | null => {
-    // If handle type is 'none', always return null
-    if (currentHandleType.value === 'none') {
+    // If handle type is 'none' or component is disabled, always return null
+    if (currentHandleType.value === 'none' || disabledValue.value) {
       return null
     }
 
@@ -437,8 +445,8 @@ export function useResizeHandles(
     // Clean up existing handles first
     cleanup()
 
-    // If borders type or none type, just clean up and return
-    if (currentHandleType.value === 'borders' || currentHandleType.value === 'none')
+    // If borders type, none type, or component is disabled, just clean up and return
+    if (currentHandleType.value === 'borders' || currentHandleType.value === 'none' || disabledValue.value)
       return
 
     // Handle 'handles' type - create and attach visible handle elements
@@ -476,12 +484,12 @@ export function useResizeHandles(
         // This serves as a fallback when using the hook directly without the component
         if (!hasRegisteredHandles) {
           // Create and attach default handle elements for custom type
-          handlesValue.value.forEach((handle) => {
-            const handleEl = createHandleElement(handle, true)
-            targetElement.append(handleEl)
-            createdHandleElements.value.push(handleEl)
-            registerHandle(handle, handleEl)
-          })
+          // handlesValue.value.forEach((handle) => {
+          //   const handleEl = createHandleElement(handle, true)
+          //   targetElement.append(handleEl)
+          //   createdHandleElements.value.push(handleEl)
+          //   registerHandle(handle, handleEl)
+          // })
         }
       }
     }

@@ -181,6 +181,13 @@ watch(
   (newActive) => {
     if (newActive !== undefined && newActive !== isActive.value) {
       setActive(newActive)
+
+      // Force re-register handle elements when active state changes
+      if (handleType.value === 'custom') {
+        nextTick(() => {
+          registerHandleElements()
+        })
+      }
     }
   },
 )
@@ -306,7 +313,7 @@ const combinedClass = computed(() => {
       We only provide slots here, and let the hook create default handles if needed
       This avoids duplicate handle creation between component and hook
     -->
-    <template v-if="handleType === 'custom'">
+    <template v-if="handleType === 'custom' && (activeOn === 'none' || isActive)">
       <div
         v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
         style="display: contents;"
