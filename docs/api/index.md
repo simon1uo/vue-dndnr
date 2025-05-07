@@ -9,7 +9,3 @@ The library is built around the core `useDnR` hook, which provides the foundatio
 ### Available APIs
 
 - [useDnR](/api/use-dnr) - Core hook that combines dragging and resizing functionality, also includes documentation for the DnR component
-
-## Type Definitions
-
-For detailed type information, see the [Type Definitions](/api/types) page.

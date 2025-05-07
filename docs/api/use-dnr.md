@@ -9,11 +9,11 @@ import { ref } from 'vue'
 import { useDnR } from 'vue-dndnr'
 
 const elementRef = ref(null)
-const { position, size, style } = useDnR(elementRef, {
-  initialPosition: { x: 50, y: 50 },
+const { position, size, style, active } = useDnR(elementRef, {
+  initialPosition: { x: 0, y: 0 },
   initialSize: { width: 200, height: 150 },
-  minWidth: 100,
-  minHeight: 100
+  minWidth: 200,
+  minHeight: 150
 })
 </script>
 
@@ -21,15 +21,15 @@ const { position, size, style } = useDnR(elementRef, {
   <div
     ref="elementRef"
     :style="style"
-    class="dnr-box"
+    class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl cursor-move"
   >
-    Drag & Resize me!
+    👋 Drag & ↔️ Resize me!
     <div class="text-sm mt-2">Position: {{ position.x }}, {{ position.y }}</div>
     <div class="text-sm mt-1">Size: {{ size.width }} x {{ size.height }}</div>
   </div>
 </DemoContainer>
 
-## Hook Usage
+:::details Hook Usage
 
 ```vue
 <script setup>
@@ -53,8 +53,9 @@ const { position, size, style } = useDnR(elementRef, {
   </div>
 </template>
 ```
+:::
 
-## Component Usage
+:::details Component Usage
 
 The `DnR` component provides a convenient wrapper around the `useDnR` hook, making it easier to create draggable and resizable elements without manually setting up refs and styles.
 
@@ -77,42 +78,7 @@ const size = ref({ width: 200, height: 150 })
   </DnR>
 </template>
 ```
-
-### Component Props
-
-The `DnR` component accepts all options from the `useDnR` hook as props, plus the following:
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `position` | `Position` | `undefined` | Current position of the element. Can be bound with `v-model:position`. |
-| `size` | `Size` | `undefined` | Current size of the element. Can be bound with `v-model:size`. |
-| `active` | `boolean` | `undefined` | Whether the element is currently active. Can be bound with `v-model:active`. |
-| `className` | `string` | `undefined` | CSS class to apply to the wrapper element. |
-| `draggingClassName` | `string` | `undefined` | CSS class to apply when dragging. |
-| `resizingClassName` | `string` | `undefined` | CSS class to apply when resizing. |
-| `activeClassName` | `string` | `undefined` | CSS class to apply when active. |
-
-### Component Events
-
-| Event | Parameters | Description |
-|-------|------------|-------------|
-| `update:position` | `Position` | Emitted when position changes. Used for `v-model:position` binding. |
-| `update:size` | `Size` | Emitted when size changes. Used for `v-model:size` binding. |
-| `update:active` | `boolean` | Emitted when active state changes. Used for `v-model:active` binding. |
-| `activeChange` | `boolean` | Emitted when active state changes. |
-| `dragStart` | `position: Position, event: PointerEvent` | Emitted when dragging starts. |
-| `drag` | `position: Position, event: PointerEvent` | Emitted during dragging. |
-| `dragEnd` | `position: Position, event: PointerEvent` | Emitted when dragging ends. |
-| `resizeStart` | `size: Size, event: PointerEvent, handle: ResizeHandle` | Emitted when resizing starts. |
-| `resize` | `size: Size, event: PointerEvent, handle: ResizeHandle` | Emitted during resizing. |
-| `resizeEnd` | `size: Size, event: PointerEvent, handle: ResizeHandle` | Emitted when resizing ends. |
-
-### Component Slots
-
-| Slot | Props | Description |
-|------|-------|-------------|
-| default | `{ position, size, isDragging, isResizing, isActive, activeHandle, hoverHandle, style }` | The content to be made draggable and resizable. |
-| handle-[position] | `{ active, hover, isResizing, cursor, size }` | Custom resize handle for the specified position (e.g., `handle-br` for bottom-right). Only used when `handleType="custom"`. |
+:::
 
 ## Type and Options Declarations
 
@@ -201,3 +167,39 @@ The `DnROptions` interface provides a comprehensive set of configuration options
 | `onResize` | `(size: Size, event: PointerEvent, handle: ResizeHandle) => void` | Called during resizing |
 | `onResizeEnd` | `(size: Size, event: PointerEvent, handle: ResizeHandle) => void` | Called when resizing ends |
 | `onActiveChange` | `(active: boolean) => boolean` | Called when active state changes |
+
+### Component Props
+
+The `DnR` component accepts all options from the `useDnR` hook as props, plus the following:
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `position` | `Position` | `undefined` | Current position of the element. Can be bound with `v-model:position`. |
+| `size` | `Size` | `undefined` | Current size of the element. Can be bound with `v-model:size`. |
+| `active` | `boolean` | `undefined` | Whether the element is currently active. Can be bound with `v-model:active`. |
+| `className` | `string` | `undefined` | CSS class to apply to the wrapper element. |
+| `draggingClassName` | `string` | `undefined` | CSS class to apply when dragging. |
+| `resizingClassName` | `string` | `undefined` | CSS class to apply when resizing. |
+| `activeClassName` | `string` | `undefined` | CSS class to apply when active. |
+
+### Component Events
+
+| Event | Parameters | Description |
+|-------|------------|-------------|
+| `update:position` | `Position` | Emitted when position changes. Used for `v-model:position` binding. |
+| `update:size` | `Size` | Emitted when size changes. Used for `v-model:size` binding. |
+| `update:active` | `boolean` | Emitted when active state changes. Used for `v-model:active` binding. |
+| `activeChange` | `boolean` | Emitted when active state changes. |
+| `dragStart` | `position: Position, event: PointerEvent` | Emitted when dragging starts. |
+| `drag` | `position: Position, event: PointerEvent` | Emitted during dragging. |
+| `dragEnd` | `position: Position, event: PointerEvent` | Emitted when dragging ends. |
+| `resizeStart` | `size: Size, event: PointerEvent, handle: ResizeHandle` | Emitted when resizing starts. |
+| `resize` | `size: Size, event: PointerEvent, handle: ResizeHandle` | Emitted during resizing. |
+| `resizeEnd` | `size: Size, event: PointerEvent, handle: ResizeHandle` | Emitted when resizing ends. |
+
+### Component Slots
+
+| Slot | Props | Description |
+|------|-------|-------------|
+| default | `{ position, size, isDragging, isResizing, isActive, activeHandle, hoverHandle, style }` | The content to be made draggable and resizable. |
+| handle-[position] | `{ active, hover, isResizing, cursor, size }` | Custom resize handle for the specified position (e.g., `handle-br` for bottom-right). Only used when `handleType="custom"`. |
