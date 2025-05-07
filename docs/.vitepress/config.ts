@@ -55,7 +55,6 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/api/' },
           { text: 'useDnR', link: '/api/use-dnr' },
-          { text: 'Type Definitions', link: '/api/types' },
         ],
       },
       {
@@ -86,7 +85,6 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/api/' },
             { text: 'useDnR', link: '/api/use-dnr' },
-            { text: 'Type Definitions', link: '/api/types' },
           ],
         },
       ],
