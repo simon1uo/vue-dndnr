@@ -16,5 +16,4 @@ This section demonstrates various usages and examples of the DnR functionality (
 
 For detailed information about the APIs, please refer to:
 
-- [DnR Component API documentation](/components/dnr)
-- [useDnR Hook API documentation](/hooks/use-dnr)
+- [DnR Component and useDnR Hook API documentation](/api/use-dnr)

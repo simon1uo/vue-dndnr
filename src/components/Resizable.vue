@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { Position, ResizableOptions, ResizeHandle, ResizeHandleType, Size } from '@/types'
-import { useResizable } from '@/hooks'
+import type { DnROptions, Position, ResizeHandle, ResizeHandleType, Size } from '@/types'
+import { useDnR } from '@/hooks'
 import { getCursorStyle } from '@/utils/cursor'
 import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
-interface ResizableProps extends ResizableOptions {
+interface ResizableProps extends DnROptions {
   size?: Size
   modelValue?: Size
   position?: Position
@@ -29,6 +29,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   throttleDelay: 16,
   handleBorderStyle: 'none',
   activeClassName: 'active',
+  disableDrag: true,
 })
 
 const emit = defineEmits<{
@@ -50,7 +51,7 @@ const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
 const positionType = computed(() => toValue(props.positionType))
 const handleType = computed<ResizeHandleType>(() => toValue(props.handleType) ?? 'borders')
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
-const bounds = computed(() => toValue(props.bounds))
+const containerElement = computed(() => toValue(props.containerElement))
 const disabled = computed(() => toValue(props.disabled))
 const pointerTypes = computed(() => toValue(props.pointerTypes))
 const preventDefault = computed(() => toValue(props.preventDefault))
@@ -70,23 +71,23 @@ const {
   setActive,
   activeHandle,
   hoverHandle,
-  handleType: currentHandleType,
   registerHandle,
   unregisterHandle,
   setupHandleElements,
   style,
-} = useResizable(targetRef, {
+} = useDnR(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
   initialPosition: props.position || { x: 0, y: 0 },
   initialActive: props.active,
+
+  customHandles: handleRefs,
   positionType,
   grid,
   lockAspectRatio,
   handleType,
   handles,
-  customHandles: handleRefs, // Pass the handle refs map as custom handles
-  bounds,
+  containerElement,
   disabled,
   pointerTypes,
   preventDefault,
@@ -132,20 +133,11 @@ watch(hoverHandle, (newHandle) => {
 })
 
 watch(
-  () => props.size,
-  (newSize) => {
-    if (newSize && !isResizing.value) {
-      setSize(newSize)
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  () => props.modelValue,
-  (newSize) => {
-    if (newSize && !isResizing.value) {
-      setSize(newSize)
+  [() => props.size, () => props.modelValue],
+  ([newSize, newModelValue]) => {
+    const sizeToUse = newSize || newModelValue
+    if (sizeToUse && !isResizing.value) {
+      setSize(sizeToUse)
     }
   },
   { deep: true },
@@ -201,87 +193,62 @@ const combinedClass = computed(() => {
   return classes.join(' ')
 })
 
-// Function to register custom handle elements with the hook
 function registerHandleElements() {
-  // Clean up any existing handle registrations first
   handleRefs.value.forEach((_, handle) => {
     unregisterHandle(handle)
   })
   handleRefs.value.clear()
 
-  // Only continue processing for custom handles
-  if (currentHandleType.value !== 'custom') {
+  if (handleType.value !== 'custom') {
     return
   }
 
-  // Wait for the DOM to update using nextTick
   nextTick(() => {
     const el = targetRef.value
     if (!el) {
       return
     }
 
-    // Process all handles from the handles prop
     handles.value.forEach((handle) => {
-      // Find the slot content for this handle
       const slotSelector = `.handle-slot-${handle}`
       const slotContainer = el.querySelector(slotSelector)
       const handleEl = slotContainer?.firstElementChild as HTMLElement | null
 
       if (handleEl) {
-        // Store reference to the handle element and register it with the hook
         handleRefs.value.set(handle, handleEl)
         registerHandle(handle, handleEl)
       }
     })
 
-    // Trigger the hook's setupHandleElements to ensure proper registration
-    // If no slot content was found for any handle, the hook will create default handles
-    // This provides a fallback mechanism while avoiding duplicate handle creation
     if (targetRef.value) {
       setupHandleElements(targetRef.value)
     }
   })
 }
 
-// Function to clean up event listeners and handle references
 function cleanupHandleElements() {
-  // Unregister all handles
   handleRefs.value.forEach((_, handle) => {
     unregisterHandle(handle)
   })
   handleRefs.value.clear()
 }
 
-// Register handles when component is mounted
 onMounted(() => {
-  // Wait for the initial render to complete
   nextTick(registerHandleElements)
 })
 
-// Watch for changes to handleType or handles
-watch([currentHandleType, handles], () => {
-  // Clean up existing handles first
+watch([handleType, handles], () => {
   cleanupHandleElements()
-
-  // When handleType or handles change, wait for DOM update then register handles
   nextTick(registerHandleElements)
 }, { flush: 'post' })
 
-// Clean up when component is unmounted
 onUnmounted(cleanupHandleElements)
 </script>
 
 <template>
-  <div ref="targetRef" :class="[combinedClass, `handle-type-${currentHandleType}`]" :style="style">
+  <div ref="targetRef" :class="[combinedClass, `handle-type-${handleType}`]" :style="style">
     <slot />
-
-    <!--
-      Custom handles when handleType is 'custom'
-      We only provide slots here, and let the hook create default handles if needed
-      This avoids duplicate handle creation between component and hook
-    -->
-    <template v-if="currentHandleType === 'custom'">
+    <template v-if="handleType === 'custom'">
       <div
         v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
         style="display: contents;"

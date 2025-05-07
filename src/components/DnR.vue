@@ -13,6 +13,7 @@ interface DnRProps extends DnROptions {
   resizingClassName?: string
   activeClassName?: string
   handleBorderStyle?: string
+  positionType?: 'absolute' | 'relative'
 }
 
 const props = withDefaults(defineProps<DnRProps>(), {
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<DnRProps>(), {
   throttleDelay: 16,
   handleType: 'borders',
   handleBorderStyle: 'none',
+  positionType: 'absolute',
 })
 
 const emit = defineEmits<{
@@ -53,7 +55,7 @@ const targetRef = ref<HTMLElement | null>(null)
 const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
 
 const handle = computed(() => toValue(props.handle) ?? targetRef.value)
-const bounds = computed(() => toValue(props.bounds))
+const containerElement = computed(() => toValue(props.containerElement))
 const grid = computed(() => toValue(props.grid))
 const axis = computed(() => toValue(props.axis) ?? 'both')
 const scale = computed(() => toValue(props.scale) ?? 1)
@@ -67,6 +69,7 @@ const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 const handleType = computed(() => toValue(props.handleType))
 const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
+const positionType = computed(() => toValue(props.positionType) ?? 'absolute')
 
 // Create reactive options object
 const dnrOptions: DnROptions = {
@@ -76,7 +79,7 @@ const dnrOptions: DnROptions = {
   activeOn: props.activeOn,
   preventDeactivation: props.preventDeactivation,
   handle,
-  bounds,
+  containerElement,
   grid,
   axis,
   scale,
@@ -91,6 +94,7 @@ const dnrOptions: DnROptions = {
   handleType,
   handleBorderStyle,
   customHandles: handleRefs,
+  positionType,
   minWidth: props.minWidth,
   minHeight: props.minHeight,
   maxWidth: props.maxWidth,
@@ -141,14 +145,12 @@ const {
   isResizing,
   isActive,
   interactionMode,
-  isNearResizeHandle,
   style: dnrStyle,
   setPosition,
   setSize,
   setActive,
   hoverHandle,
   activeHandle,
-  handleType: currentHandleType,
   registerHandle,
   unregisterHandle,
   setupHandleElements,
@@ -212,7 +214,7 @@ function registerHandleElements() {
   handleRefs.value.clear()
 
   // Only continue processing for custom handles
-  if (currentHandleType.value !== 'custom') {
+  if (handleType.value !== 'custom') {
     return
   }
 
@@ -262,7 +264,7 @@ onMounted(() => {
 })
 
 // Watch for changes to handleType or handles
-watch([currentHandleType, handles], () => {
+watch([handleType, handles], () => {
   // Clean up existing handles first
   cleanupHandleElements()
 
@@ -284,7 +286,7 @@ const combinedClass = computed(() => {
     classes.push(props.draggingClassName)
   }
 
-  if ((isResizing.value || isNearResizeHandle.value) && props.resizingClassName) {
+  if (isResizing.value && props.resizingClassName) {
     classes.push(props.resizingClassName)
   }
 
@@ -304,7 +306,7 @@ const combinedClass = computed(() => {
       We only provide slots here, and let the hook create default handles if needed
       This avoids duplicate handle creation between component and hook
     -->
-    <template v-if="currentHandleType === 'custom'">
+    <template v-if="handleType === 'custom'">
       <div
         v-for="handlePosition in handles" :key="handlePosition" :class="`handle-slot-${handlePosition}`"
         style="display: contents;"
@@ -321,7 +323,6 @@ const combinedClass = computed(() => {
 
 <style scoped>
 .dnr {
-  position: absolute;
   touch-action: none;
   user-select: none;
 }

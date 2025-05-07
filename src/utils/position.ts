@@ -39,7 +39,11 @@ export function applyAxisConstraint(position: Position, axis?: 'x' | 'y' | 'both
 /**
  * Apply bounds constraint to a position
  * @param position - The current position to constrain
- * @param bounds - The bounding element or constraints object
+ * @param bounds - The bounding rectangle or constraints object
+ * @param bounds.left - The left boundary coordinate
+ * @param bounds.top - The top boundary coordinate
+ * @param bounds.right - The right boundary coordinate
+ * @param bounds.bottom - The bottom boundary coordinate
  * @param elementSize - The size of the element being constrained
  * @param elementSize.width - The width of the element being constrained
  * @param elementSize.height - The height of the element being constrained
@@ -47,38 +51,20 @@ export function applyAxisConstraint(position: Position, axis?: 'x' | 'y' | 'both
  */
 export function applyBounds(
   position: Position,
-  bounds?: HTMLElement | 'parent' | { left: number, top: number, right: number, bottom: number },
-  elementSize?: { width: number, height: number },
+  bounds: { left: number, top: number, right: number, bottom: number },
+  elementSize: { width: number, height: number },
 ): Position {
   if (!bounds || !elementSize)
     return position
 
-  let boundingRect: { left: number, top: number, right: number, bottom: number }
-
-  if (bounds === 'parent') {
-    return position
-  }
-  else if (bounds instanceof HTMLElement) {
-    const rect = bounds.getBoundingClientRect()
-    boundingRect = {
-      left: 0,
-      top: 0,
-      right: rect.width,
-      bottom: rect.height,
-    }
-  }
-  else {
-    boundingRect = bounds
-  }
-
   return {
     x: Math.min(
-      Math.max(position.x, boundingRect.left),
-      boundingRect.right - elementSize.width,
+      Math.max(position.x, bounds.left),
+      bounds.right - elementSize.width,
     ),
     y: Math.min(
-      Math.max(position.y, boundingRect.top),
-      boundingRect.bottom - elementSize.height,
+      Math.max(position.y, bounds.top),
+      bounds.bottom - elementSize.height,
     ),
   }
 }
