@@ -100,6 +100,9 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const lockAspectRatioValue = computed(() => toValue(lockAspectRatio))
   const preventDefaultValue = computed(() => toValue(preventDefault))
   const stopPropagationValue = computed(() => toValue(stopPropagation))
+  const preventDeactivationValue = computed(() => toValue(preventDeactivation))
+  const throttleDelayValue = computed(() => toValue(throttleDelay))
+  const pointerTypesValue = computed(() => toValue(pointerTypes))
 
   /**
    * Set the active state and trigger callback
@@ -139,7 +142,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     if (activeOnValue.value !== 'none' && !isActive.value)
       return false
 
-    const types = toValue(pointerTypes)
+    const types = pointerTypesValue.value
     if (types)
       return types.includes(event.pointerType as PointerType)
     return true
@@ -176,7 +179,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     preventDefault,
     stopPropagation,
     capture,
-    pointerTypes,
+    pointerTypes: pointerTypesValue,
     disabled: computed(() => disabledValue.value || disableResizeValue.value || (activeOnValue.value !== 'none' && !isActive.value)),
     onResizeStart: (event: PointerEvent, handle: ResizeHandle) => {
       if (interactionMode.value === 'dragging')
@@ -346,7 +349,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   // Create a throttled version of the updateDragPosition function
-  const throttledUpdateDragPosition = throttle(updateDragPosition, toValue(throttleDelay))
+  const throttledUpdateDragPosition = throttle(updateDragPosition, throttleDelayValue.value)
 
   /**
    * Handle drag movement with throttling
@@ -595,7 +598,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   // Create a throttled version of the updateSize function
-  const throttledUpdateSize = throttle(updateSize, toValue(throttleDelay))
+  const throttledUpdateSize = throttle(updateSize, throttleDelayValue.value)
 
   /**
    * Handle resize movement with throttling
@@ -748,7 +751,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   const onPointerLeave = (_event: PointerEvent) => {
-    if (activeOnValue.value === 'hover' && !preventDeactivation) {
+    if (activeOnValue.value === 'hover' && !preventDeactivationValue.value) {
       setActive(false)
     }
 
@@ -760,7 +763,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
   // Handle clicks outside the element
   const onDocumentPointerDown = (event: PointerEvent) => {
-    if (activeOnValue.value === 'click' && isActive.value && !preventDeactivation) {
+    if (activeOnValue.value === 'click' && isActive.value && !preventDeactivationValue.value) {
       // Check if the click was outside the element
       const el = toValue(target)
       if (!el?.contains(event.target as Node)) {
