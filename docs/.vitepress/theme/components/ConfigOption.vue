@@ -41,19 +41,16 @@ const inputId = computed(() => `config-${props.label.toLowerCase().replace(/\s+/
 </script>
 
 <template>
-  <div class="config-option mb-4">
+  <div class="config-option mb-2">
     <div class="flex justify-between items-center mb-1">
-      <label :for="inputId" class="text-sm font-light  text-gray-700 dark:text-gray-300" :title="description">{{ label }}</label>
+      <label :for="inputId" class="text-sm font-light  text-gray-700 dark:text-gray-300" :title="description">{{ label
+      }}</label>
 
       <!-- Checkbox type -->
       <div v-if="type === 'checkbox'" class="flex items-center">
         <input
-          :id="inputId"
-          type="checkbox"
-          class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-          :checked="modelValue"
-          :title="description"
-          @change="updateValue"
+          :id="inputId" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          :checked="modelValue" :title="description" @change="updateValue"
         >
       </div>
     </div>
@@ -61,9 +58,7 @@ const inputId = computed(() => `config-${props.label.toLowerCase().replace(/\s+/
       <select
         :id="inputId"
         class="block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm shadow-sm focus:border-primary focus:ring-primary p-1 cursor-pointer"
-        :value="modelValue"
-        :title="description"
-        @change="updateValue"
+        :value="modelValue" :title="description" @change="updateValue"
       >
         <option v-for="option in options" :key="option.value" :value="option.value">
           {{ option.label }}
@@ -73,27 +68,16 @@ const inputId = computed(() => `config-${props.label.toLowerCase().replace(/\s+/
 
     <!-- Number type -->
     <input
-      v-if="type === 'number'"
-      :id="inputId"
-      type="number"
+      v-if="type === 'number'" :id="inputId" type="number"
       class="block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm shadow-sm focus:border-primary focus:ring-primary"
-      :value="modelValue"
-      :min="min"
-      :max="max"
-      :step="step"
-      :title="description"
-      @input="updateValue"
+      :value="modelValue" :min="min" :max="max" :step="step" :title="description" @input="updateValue"
     >
 
     <!-- Text type -->
     <input
-      v-if="type === 'text'"
-      :id="inputId"
-      type="text"
+      v-if="type === 'text'" :id="inputId" type="text"
       class="block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm shadow-sm focus:border-primary focus:ring-primary"
-      :value="modelValue"
-      :title="description"
-      @input="updateValue"
+      :value="modelValue" :title="description" @input="updateValue"
     >
 
     <!-- Range type -->
@@ -104,15 +88,9 @@ const inputId = computed(() => `config-${props.label.toLowerCase().replace(/\s+/
         <span>{{ max }}</span>
       </div>
       <input
-        :id="inputId"
-        type="range"
-        class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
-        :value="modelValue"
-        :min="min"
-        :max="max"
-        :step="step"
-        :title="description"
-        @input="updateValue"
+        :id="inputId" type="range"
+        class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" :value="modelValue"
+        :min="min" :max="max" :step="step" :title="description" @input="updateValue"
       >
     </div>
   </div>

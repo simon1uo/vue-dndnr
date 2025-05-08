@@ -51,6 +51,10 @@ const minWidth = ref(100)
 const minHeight = ref(100)
 const maxWidth = ref(500)
 const maxHeight = ref(400)
+const enableMinWidth = ref(true)
+const enableMinHeight = ref(true)
+const enableMaxWidth = ref(true)
+const enableMaxHeight = ref(true)
 
 // Activation settings
 const activeOn = ref('none')
@@ -81,6 +85,12 @@ const gridValue = computed(() => {
   return [gridSize.value, gridSize.value]
 })
 
+// Computed size constraints
+const computedMinWidth = computed(() => enableMinWidth.value ? minWidth.value : undefined)
+const computedMinHeight = computed(() => enableMinHeight.value ? minHeight.value : undefined)
+const computedMaxWidth = computed(() => enableMaxWidth.value ? maxWidth.value : undefined)
+const computedMaxHeight = computed(() => enableMaxHeight.value ? maxHeight.value : undefined)
+
 // Using the useDnR hook
 const {
   position,
@@ -97,6 +107,7 @@ const {
   // Basic options
   initialPosition: initialPosition.value,
   initialSize: initialSize.value,
+  initialActive: true,
   disabled,
   disableDrag,
   disableResize,
@@ -105,10 +116,10 @@ const {
   handleType,
   positionType,
   lockAspectRatio,
-  minWidth,
-  minHeight,
-  maxWidth,
-  maxHeight,
+  minWidth: computedMinWidth,
+  minHeight: computedMinHeight,
+  maxWidth: computedMaxWidth,
+  maxHeight: computedMaxHeight,
   handles: availableHandles,
   customHandles: customHandlesMap,
   handlesSize,
@@ -137,10 +148,10 @@ const {
 // Element class based on state
 const elementClass = computed(() => {
   return {
-    'bg-primary text-white p-4 rounded-lg shadow-md': true,
+    'bg-primary text-white p-4 rounded-lg': true,
     'ring-2 ring-blue-300': isDragging.value,
     'ring-2 ring-green-300': isResizing.value,
-    'ring-2 ring-primary': isActive.value && !isDragging.value && !isResizing.value,
+    'ring-2 ring-secondary shadow-xl': isActive.value,
     'cursor-grab': !disableDrag.value && !isDragging.value,
     'cursor-grabbing': isDragging.value,
   }
@@ -169,19 +180,19 @@ const elementClass = computed(() => {
         <template v-if="handleType === 'custom'">
           <div
             ref="brHandleRef"
-            class="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 rounded-bl cursor-nwse-resize"
+            class="absolute bottom-0 right-0 w-4 h-4 bg-red rounded-bl cursor-nwse-resize"
           ></div>
           <div
             ref="trHandleRef"
-            class="absolute top-0 right-0 w-4 h-4 bg-blue-500 rounded-tr cursor-nesw-resize"
+            class="absolute top-0 right-0 w-4 h-4 bg-red rounded-tr cursor-nesw-resize"
           ></div>
           <div
             ref="blHandleRef"
-            class="absolute bottom-0 left-0 w-4 h-4 bg-blue-500 rounded-bl cursor-nesw-resize"
+            class="absolute bottom-0 left-0 w-4 h-4 bg-red rounded-bl cursor-nesw-resize"
           ></div>
           <div
             ref="tlHandleRef"
-            class="absolute top-0 left-0 w-4 h-4 bg-blue-500 rounded-tl cursor-nwse-resize"
+            class="absolute top-0 left-0 w-4 h-4 bg-red rounded-tl cursor-nwse-resize"
           ></div>
         </template>
       </div>
@@ -253,6 +264,7 @@ const elementClass = computed(() => {
         :disabled="handleType === 'borders'"
       />
       <ConfigOption
+        v-if="handleType === 'borders'"
         label="Handle Border Style"
         description="Border style for border handles"
         type="select"
@@ -265,41 +277,69 @@ const elementClass = computed(() => {
         :disabled="handleType !== 'borders'"
       />
       <ConfigOption
-        label="Minimum Width"
-        description="Minimum width of the element"
-        type="range"
-        :min="50"
-        :max="300"
-        :step="10"
-        v-model="minWidth"
+        label="Enable Min Width"
+        description="Enable minimum width constraint"
+        v-model="enableMinWidth"
       />
+      <template v-if="enableMinWidth">
+        <ConfigOption
+          label="Minimum Width"
+          description="Minimum width of the element"
+          type="range"
+          :min="50"
+          :max="300"
+          :step="10"
+          v-model="minWidth"
+        />
+      </template>
       <ConfigOption
-        label="Minimum Height"
-        description="Minimum height of the element"
-        type="range"
-        :min="50"
-        :max="300"
-        :step="10"
-        v-model="minHeight"
+        label="Enable Min Height"
+        description="Enable minimum height constraint"
+        v-model="enableMinHeight"
       />
+      <template v-if="enableMinHeight">
+        <ConfigOption
+          label="Minimum Height"
+          description="Minimum height of the element"
+          type="range"
+          :min="50"
+          :max="300"
+          :step="10"
+          v-model="minHeight"
+        />
+      </template>
       <ConfigOption
-        label="Maximum Width"
-        description="Maximum width of the element"
-        type="range"
-        :min="200"
-        :max="800"
-        :step="50"
-        v-model="maxWidth"
+        label="Enable Max Width"
+        description="Enable maximum width constraint"
+        v-model="enableMaxWidth"
       />
+      <template v-if="enableMaxWidth">
+        <ConfigOption
+          label="Maximum Width"
+          description="Maximum width of the element"
+          type="range"
+          :min="200"
+          :max="800"
+          :step="50"
+          v-model="maxWidth"
+        />
+      </template>
       <ConfigOption
-        label="Maximum Height"
-        description="Maximum height of the element"
-        type="range"
-        :min="200"
-        :max="800"
-        :step="50"
-        v-model="maxHeight"
+        label="Enable Max Height"
+        description="Enable maximum height constraint"
+        v-model="enableMaxHeight"
       />
+      <template v-if="enableMaxHeight">
+        <ConfigOption
+          label="Maximum Height"
+          description="Maximum height of the element"
+          type="range"
+          :min="200"
+          :max="800"
+          :step="50"
+          v-model="maxHeight"
+        />
+      </template>
     </div>
     <!-- Drag Configuration -->
     <div class="mb-6">
@@ -310,6 +350,7 @@ const elementClass = computed(() => {
         v-model="useGrid"
       />
       <ConfigOption
+        v-if="useGrid"
         label="Grid Size"
         description="Size of grid cells in pixels"
         type="range"
