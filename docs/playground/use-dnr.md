@@ -141,6 +141,8 @@ const elementClass = computed(() => {
     'ring-2 ring-blue-300': isDragging.value,
     'ring-2 ring-green-300': isResizing.value,
     'ring-2 ring-primary': isActive.value && !isDragging.value && !isResizing.value,
+    'cursor-grab': !disableDrag.value && !isDragging.value,
+    'cursor-grabbing': isDragging.value,
   }
 })
 

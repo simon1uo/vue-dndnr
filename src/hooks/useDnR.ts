@@ -677,9 +677,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       else if (hoverHandle.value) {
         baseStyle.cursor = getCursorForHandle(hoverHandle.value)
       }
-      else {
-        baseStyle.cursor = 'default'
-      }
 
       // Add border style if specified
       const borderStyle = toValue(handleBorderStyle)
