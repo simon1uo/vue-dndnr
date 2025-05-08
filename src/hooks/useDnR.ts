@@ -654,13 +654,17 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     const baseStyle: Record<string, string> = {
       position: positionTypeValue.value,
       userSelect: 'none',
-      width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
-      height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
       touchAction: 'none',
+      ...size.value
+        ? {
+            width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
+            height: typeof size.value.height === 'number' ? `${size.value.height}px` : size.value.height,
+          }
+        : {},
     }
 
     // Position styles
-    if (positionTypeValue.value === 'absolute') {
+    if (positionTypeValue.value === 'absolute' && position.value) {
       baseStyle.left = `${position.value.x}px`
       baseStyle.top = `${position.value.y}px`
     }
