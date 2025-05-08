@@ -532,27 +532,88 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       let newX = startPosition.value.x
       let newY = startPosition.value.y
 
+      // Get container bounds if specified
+      let boundsRect: { left: number, top: number, right: number, bottom: number } | null = null
+      if (containerElementValue.value && positionTypeValue.value === 'absolute') {
+        const containerEl = containerElementValue.value
+        if (containerEl) {
+          const containerRect = getElementBounds(containerEl)
+          boundsRect = {
+            left: 0,
+            top: 0,
+            right: containerRect.right - containerRect.left,
+            bottom: containerRect.bottom - containerRect.top,
+          }
+        }
+      }
+
       // Determine size and position changes based on handle
       if (handle.includes('r') || handle === 'right') {
         newWidth = currentWidth + deltaX
+        // Apply container bounds constraint for right handle
+        if (boundsRect && newX + newWidth > boundsRect.right) {
+          newWidth = boundsRect.right - newX
+        }
       }
       else if (handle.includes('l') || handle === 'left') {
-        newWidth = currentWidth - deltaX
-        newX = startPosition.value.x + deltaX
+        const proposedX = startPosition.value.x + deltaX
+        const proposedWidth = currentWidth - deltaX
+
+        // Apply container bounds constraint for left handle
+        if (boundsRect) {
+          // Don't allow moving beyond left boundary
+          if (proposedX < boundsRect.left) {
+            const constrainedX = boundsRect.left
+            const constrainedDeltaX = constrainedX - startPosition.value.x
+            newWidth = currentWidth - constrainedDeltaX
+            newX = constrainedX
+          }
+          else {
+            newWidth = proposedWidth
+            newX = proposedX
+          }
+        }
+        else {
+          newWidth = proposedWidth
+          newX = proposedX
+        }
       }
 
       if (handle.includes('b') || handle === 'bottom') {
         newHeight = currentHeight + deltaY
+        // Apply container bounds constraint for bottom handle
+        if (boundsRect && newY + newHeight > boundsRect.bottom) {
+          newHeight = boundsRect.bottom - newY
+        }
       }
       else if (handle.includes('t') || handle === 'top') {
-        newHeight = currentHeight - deltaY
-        newY = startPosition.value.y + deltaY
+        const proposedY = startPosition.value.y + deltaY
+        const proposedHeight = currentHeight - deltaY
+
+        // Apply container bounds constraint for top handle
+        if (boundsRect) {
+          // Don't allow moving beyond top boundary
+          if (proposedY < boundsRect.top) {
+            const constrainedY = boundsRect.top
+            const constrainedDeltaY = constrainedY - startPosition.value.y
+            newHeight = currentHeight - constrainedDeltaY
+            newY = constrainedY
+          }
+          else {
+            newHeight = proposedHeight
+            newY = proposedY
+          }
+        }
+        else {
+          newHeight = proposedHeight
+          newY = proposedY
+        }
       }
 
       // Create the new size and position objects
       let newSize: Size = {
-        width: Math.round(newWidth),
-        height: Math.round(newHeight),
+        width: Math.max(0, Math.round(newWidth)),
+        height: Math.max(0, Math.round(newHeight)),
       }
 
       const newPosition: Position = {
@@ -570,6 +631,36 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
           },
           true,
         )
+
+        // Re-apply container bounds after aspect ratio lock
+        if (boundsRect && positionTypeValue.value === 'absolute') {
+          const aspectWidth = typeof newSize.width === 'number' ? newSize.width : currentWidth
+          const aspectHeight = typeof newSize.height === 'number' ? newSize.height : currentHeight
+
+          // Check if the element exceeds the right boundary
+          if (newPosition.x + aspectWidth > boundsRect.right) {
+            if (handle.includes('r') || handle === 'right') {
+              // Adjust width if right handle is active
+              newSize.width = boundsRect.right - newPosition.x
+              // Recalculate height to maintain aspect ratio
+              if (typeof newSize.width === 'number') {
+                newSize.height = newSize.width / (currentWidth / currentHeight)
+              }
+            }
+          }
+
+          // Check if the element exceeds the bottom boundary
+          if (newPosition.y + aspectHeight > boundsRect.bottom) {
+            if (handle.includes('b') || handle === 'bottom') {
+              // Adjust height if bottom handle is active
+              newSize.height = boundsRect.bottom - newPosition.y
+              // Recalculate width to maintain aspect ratio
+              if (typeof newSize.height === 'number') {
+                newSize.width = newSize.height * (currentWidth / currentHeight)
+              }
+            }
+          }
+        }
       }
 
       // Apply min/max constraints
@@ -604,45 +695,64 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
         if (typeof newSize.height === 'number' && (handle.includes('t') || handle === 'top')) {
           newPosition.y = startPosition.value.y + (currentHeight - newSize.height)
         }
+
+        // Final bounds check to ensure element stays within container
+        if (boundsRect) {
+          const finalWidth = typeof newSize.width === 'number' ? newSize.width : currentWidth
+          const finalHeight = typeof newSize.height === 'number' ? newSize.height : currentHeight
+
+          // Ensure element doesn't exceed right boundary
+          if (newPosition.x + finalWidth > boundsRect.right) {
+            if (handle.includes('r') || handle === 'right') {
+              // Adjust width if right handle is active
+              if (typeof newSize.width === 'number') {
+                newSize.width = boundsRect.right - newPosition.x
+              }
+            }
+            else if (handle.includes('l') || handle === 'left') {
+              // Adjust position if left handle is active
+              newPosition.x = boundsRect.right - finalWidth
+            }
+          }
+
+          // Ensure element doesn't exceed bottom boundary
+          if (newPosition.y + finalHeight > boundsRect.bottom) {
+            if (handle.includes('b') || handle === 'bottom') {
+              // Adjust height if bottom handle is active
+              if (typeof newSize.height === 'number') {
+                newSize.height = boundsRect.bottom - newPosition.y
+              }
+            }
+            else if (handle.includes('t') || handle === 'top') {
+              // Adjust position if top handle is active
+              newPosition.y = boundsRect.bottom - finalHeight
+            }
+          }
+
+          // Ensure element doesn't exceed left boundary
+          if (newPosition.x < boundsRect.left) {
+            newPosition.x = boundsRect.left
+            // Adjust width if left handle is active
+            if ((handle.includes('l') || handle === 'left') && typeof newSize.width === 'number') {
+              newSize.width = startPosition.value.x + currentWidth - boundsRect.left
+            }
+          }
+
+          // Ensure element doesn't exceed top boundary
+          if (newPosition.y < boundsRect.top) {
+            newPosition.y = boundsRect.top
+            // Adjust height if top handle is active
+            if ((handle.includes('t') || handle === 'top') && typeof newSize.height === 'number') {
+              newSize.height = startPosition.value.y + currentHeight - boundsRect.top
+            }
+          }
+        }
       }
 
       return { newSize, newPosition }
     }
 
     const { newSize, newPosition } = calculateNewDimensions()
-
-    // Check bounds if container element is specified and using absolute positioning
-    if (containerElementValue.value && positionTypeValue.value === 'absolute') {
-      const containerEl = containerElementValue.value
-
-      // Apply bounds to position if a container element is found
-      if (containerEl) {
-        // Calculate the element's dimensions based on the new size
-        const elementWidth = typeof newSize.width === 'number' ? newSize.width : (el as HTMLElement).offsetWidth
-        const elementHeight = typeof newSize.height === 'number' ? newSize.height : (el as HTMLElement).offsetHeight
-        const elementSize = { width: elementWidth, height: elementHeight }
-
-        // Get the container's bounding rectangle
-        const containerRect = getElementBounds(containerEl)
-
-        // Calculate the bounds relative to the container
-        // The container's top-left corner becomes (0,0)
-        const boundsRect = {
-          left: 0,
-          top: 0,
-          right: containerRect.right - containerRect.left,
-          bottom: containerRect.bottom - containerRect.top,
-        }
-
-        // Apply bounds constraints to the position
-        const adjustedPosition = applyBounds(newPosition, boundsRect, elementSize)
-
-        // Only adjust position, not size
-        // This allows the element to resize freely but keeps it within the container
-        newPosition.x = adjustedPosition.x
-        newPosition.y = adjustedPosition.y
-      }
-    }
 
     // Trigger the callback and abort if it returns false
     if (onResizeCallback) {
