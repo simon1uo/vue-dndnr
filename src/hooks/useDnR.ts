@@ -28,6 +28,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // Common options
     initialPosition = { x: 0, y: 0 },
     initialSize = { width: 'auto', height: 'auto' },
+    initialActive = false,
     disabled = false,
     disableDrag = false,
     disableResize = false,
@@ -35,7 +36,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     preventDefault = true,
     stopPropagation = false,
     capture = true,
-    initialActive = false,
     activeOn = 'none' as ActivationTrigger,
     preventDeactivation = false,
     throttleDelay = 16, // Default to ~60fps
@@ -75,7 +75,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const interactionMode = ref<'idle' | 'dragging' | 'resizing'>('idle')
   const position = shallowRef<Position>({ ...initialPosition })
   const size = shallowRef<Size>({ ...initialSize })
-  const isActive = ref(initialActive)
+  const isActive = ref(activeOn === 'none' ? true : initialActive)
   const isDragging = computed(() => interactionMode.value === 'dragging')
   const isResizing = computed(() => interactionMode.value === 'resizing')
   const isNearResizeHandle = ref(false)
@@ -109,6 +109,12 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
    * @param value - New active state
    */
   const setActive = (value: boolean) => {
+    // When activeOn is 'none', the element should always be active
+    if (activeOnValue.value === 'none') {
+      isActive.value = true
+      return
+    }
+
     if (value === isActive.value)
       return
 
@@ -180,7 +186,15 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     stopPropagation,
     capture,
     pointerTypes: pointerTypesValue,
-    disabled: computed(() => disabledValue.value || disableResizeValue.value || (activeOnValue.value !== 'none' && !isActive.value)),
+    disabled: computed(() => {
+      if (disabledValue.value || disableResizeValue.value) {
+        return true
+      }
+      if (activeOnValue.value === 'none') {
+        return false
+      }
+      return !isActive.value
+    }),
     onResizeStart: (event: PointerEvent, handle: ResizeHandle) => {
       if (interactionMode.value === 'dragging')
         return
@@ -217,13 +231,36 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   })
 
   // Watch for active state changes to update handle visibility and cursor styles
-  watch(isActive, (_newActive) => {
-    const el = toValue(target)
-    if (el) {
-      // For 'handles' or 'custom' type, we need to recreate or update the handles
-      if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
-        setupHandleElements(el)
+  watch(isActive, (newActive) => {
+    // Ensure active state is always true when activeOn is 'none'
+    if (activeOnValue.value === 'none' && !newActive) {
+      return
+    }
+
+    if (newActive) {
+      const el = toValue(target)
+      if (el) {
+        // For 'handles' or 'custom' type, we need to recreate or update the handles
+        if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
+          setupHandleElements(el)
+        }
       }
+    }
+    else {
+      cleanupHandles()
+    }
+  })
+
+  // Watch for activeOn changes to update active state and handle elements
+  watch(activeOnValue, (newActiveOn) => {
+    // When activeOn changes to 'none', ensure active state is true
+    if (newActiveOn === 'none' && !isActive.value) {
+      isActive.value = true
+    }
+
+    const el = toValue(target)
+    if (el && (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom')) {
+      setupHandleElements(el)
     }
   })
 
@@ -750,9 +787,18 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
   }
 
-  const onPointerLeave = (_event: PointerEvent) => {
+  const onPointerLeave = (event: PointerEvent) => {
+    // Check if the pointer is moving to a child element
+    const el = toValue(target)
+    const relatedTarget = event.relatedTarget as Node | null
+
+    // Only deactivate if the pointer is truly leaving the element and its children
+    // and not just moving to a child element
     if (activeOnValue.value === 'hover' && !preventDeactivationValue.value) {
-      setActive(false)
+      // Only set active to false if the pointer is not moving to a child element
+      if (el && relatedTarget && !el.contains(relatedTarget)) {
+        setActive(false)
+      }
     }
 
     // Clear hover handle when mouse leaves
@@ -763,6 +809,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
   // Handle clicks outside the element
   const onDocumentPointerDown = (event: PointerEvent) => {
+    // Only deactivate on click mode and when deactivation is not prevented
+    // Never deactivate when activeOn is 'none'
     if (activeOnValue.value === 'click' && isActive.value && !preventDeactivationValue.value) {
       // Check if the click was outside the element
       const el = toValue(target)
@@ -844,6 +892,18 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   // Cleanup on unmount
   onUnmounted(() => {
     cleanupHandles()
+  })
+
+  watch(handleTypeValue, (newHandleType) => {
+    if ((newHandleType === 'handles' || newHandleType === 'custom') && (activeOnValue.value === 'none' || isActive.value)) {
+      const el = toValue(target)
+      if (el) {
+        setupHandleElements(el)
+      }
+    }
+    else {
+      cleanupHandles()
+    }
   })
 
   return {
