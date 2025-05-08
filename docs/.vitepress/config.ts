@@ -58,13 +58,8 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Examples',
-        items: [
-          { text: 'Overview', link: '/examples/' },
-          { text: 'Draggable Examples', link: '/examples/Draggable/' },
-          { text: 'Resizable Examples', link: '/examples/Resizable/' },
-          { text: 'DnR Examples', link: '/examples/DnR/' },
-        ],
+        text: 'Playground',
+        link: '/playground/',
       },
     ],
     sidebar: {
@@ -88,56 +83,14 @@ export default defineConfig({
           ],
         },
       ],
-      '/examples/': [
+      '/playground/': [
         {
-          text: 'Examples',
+          text: 'Playground',
           items: [
-            { text: 'Overview', link: '/examples/' },
+            { text: 'Overview', link: '/playground/' },
+            { text: 'useDnR', link: '/playground/use-dnr' },
           ],
         },
-        {
-          text: 'Draggable Examples',
-          collapsed: false,
-          items: [
-            { text: 'Overview', link: '/examples/Draggable/' },
-            { text: 'Basic Usage', link: '/examples/Draggable/basic' },
-            { text: 'Constrained Dragging', link: '/examples/Draggable/constrained' },
-            { text: 'Grid Alignment', link: '/examples/Draggable/grid' },
-            { text: 'Custom Handle', link: '/examples/Draggable/handle' },
-            { text: 'Axis Constraint', link: '/examples/Draggable/axis' },
-            { text: 'Event Handling', link: '/examples/Draggable/events' },
-            { text: 'Active State Modes', link: '/examples/Draggable/active-modes' },
-          ],
-        },
-        {
-          text: 'Resizable Examples',
-          collapsed: false,
-          items: [
-            { text: 'Overview', link: '/examples/Resizable/' },
-            { text: 'Basic Usage', link: '/examples/Resizable/basic' },
-            { text: 'Constrained Resizing', link: '/examples/Resizable/constrained' },
-            { text: 'Custom Handles', link: '/examples/Resizable/handles' },
-            { text: 'Handle Types', link: '/examples/Resizable/handle-types' },
-            { text: 'Aspect Ratio Lock', link: '/examples/Resizable/aspect-ratio' },
-            { text: 'Event Handling', link: '/examples/Resizable/events' },
-            { text: 'Active State Modes', link: '/examples/Resizable/active-modes' },
-          ],
-        },
-        {
-          text: 'DnR Examples',
-          collapsed: false,
-          items: [
-            { text: 'Overview', link: '/examples/DnR/' },
-            { text: 'Basic Usage', link: '/examples/DnR/basic' },
-            { text: 'Constrained DnR', link: '/examples/DnR/constrained' },
-            { text: 'Custom Handle', link: '/examples/DnR/handle' },
-            { text: 'Handle Types', link: '/examples/DnR/handle-types' },
-            { text: 'Window Style', link: '/examples/DnR/window' },
-            { text: 'Event Handling', link: '/examples/DnR/events' },
-            { text: 'Active State Modes', link: '/examples/DnR/active-modes' },
-          ],
-        },
-
       ],
     },
     socialLinks: [

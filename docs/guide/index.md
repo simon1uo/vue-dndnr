@@ -37,5 +37,5 @@ Each component has a corresponding composable hook:
 
 - [Installation](/guide/installation) - Install Vue DNDNR in your project
 - [API Reference](/api/) - Explore the available components and hooks
-- [Examples](/examples/) - See usage examples
+- [Playground](/playground/) - Try out the interactive playgrounds
 - [Project Progress](/guide/progress) - Check the current development status

@@ -9,6 +9,9 @@ hero:
       text: Get Started
       link: /guide/
     - theme: alt
+      text: Try Playground
+      link: /playground/
+    - theme: alt
       text: View on GitHub
       link: https://github.com/simon1uo/vue-dndnr
 features:
