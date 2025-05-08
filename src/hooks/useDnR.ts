@@ -176,6 +176,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     setupHandleElements,
     cleanup: cleanupHandles,
     detectBoundary,
+    resetActiveHandle,
   } = useResizeHandles(target, {
     handleType: disableResizeValue.value ? 'none' : handleType,
     handles,
@@ -237,17 +238,45 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       return
     }
 
+    const el = toValue(target)
+    if (!el)
+      return
+
     if (newActive) {
-      const el = toValue(target)
-      if (el) {
-        // For 'handles' or 'custom' type, we need to recreate or update the handles
-        if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
-          setupHandleElements(el)
+      // For 'handles' or 'custom' type, we need to recreate or update the handles
+      if (handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') {
+        setupHandleElements(el)
+
+        // For custom handles, make sure they're visible when active
+        if (handleTypeValue.value === 'custom') {
+          const customHandlesValue = toValue(customHandles)
+          if (customHandlesValue && customHandlesValue.size > 0) {
+            customHandlesValue.forEach((handleEl) => {
+              // Show the custom handle when active
+              if (handleEl.style) {
+                handleEl.style.display = ''
+              }
+            })
+          }
         }
       }
     }
     else {
+      // When deactivating, make sure to clean up all handles
       cleanupHandles()
+
+      // For custom handles, we need to make sure they're hidden
+      if (handleTypeValue.value === 'custom') {
+        const customHandlesValue = toValue(customHandles)
+        if (customHandlesValue && customHandlesValue.size > 0) {
+          customHandlesValue.forEach((handleEl) => {
+            // Hide the custom handle when inactive
+            if (handleEl.style) {
+              handleEl.style.display = 'none'
+            }
+          })
+        }
+      }
     }
   })
 
@@ -654,6 +683,10 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       return
 
     interactionMode.value = 'idle'
+
+    // Reset the active handle styles to default
+    resetActiveHandle()
+
     activeHandle.value = null
     startEvent.value = null
 
