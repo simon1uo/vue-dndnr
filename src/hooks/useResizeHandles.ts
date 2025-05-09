@@ -5,6 +5,14 @@ import { computed, onUnmounted, shallowRef, toValue, watch } from 'vue'
 
 // Define handle style constants for consistency
 const HANDLE_STYLES = {
+  // Base styles for all handles
+  base: {
+    position: 'absolute',
+    zIndex: '10',
+    borderRadius: '50%',
+    boxSizing: 'border-box',
+    transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
+  },
   // Default state
   default: {
     backgroundColor: '#4299e1',
@@ -22,6 +30,23 @@ const HANDLE_STYLES = {
     backgroundColor: '#4299e1',
     transform: 'scale(1.2)',
     border: '1px solid #2b6cb0',
+  },
+  // Custom handle styles
+  custom: {
+    default: {
+      backgroundColor: 'rgba(66, 153, 225, 0.8)',
+      border: '1px solid rgba(43, 108, 176, 0.8)',
+    },
+    hover: {
+      backgroundColor: 'rgba(49, 130, 206, 0.8)',
+      transform: 'scale(1.1)',
+      borderColor: 'rgba(43, 108, 176, 0.8)',
+    },
+    active: {
+      backgroundColor: 'rgba(43, 108, 176, 1)',
+      transform: 'scale(1.2)',
+      borderColor: 'rgba(30, 90, 150, 1)',
+    },
   },
 }
 
@@ -171,24 +196,38 @@ export function useResizeHandles(
    * @param isCustom - Whether this is a custom handle
    * @returns The base CSS styles for the handle
    */
+  /**
+   * Get base styles for handle elements with improved organization
+   * @param isCustom - Whether this is a custom handle
+   * @returns The base CSS styles for the handle
+   */
   const getHandleBaseStyles = (isCustom = false): Record<string, string> => {
     const size = `${handlesSizeValue.value}px`
+
+    // Determine border style based on configuration and handle type
     const borderStyle = handleBorderStyleValue.value !== 'none'
       ? handleBorderStyleValue.value
-      : (isCustom ? '1px solid rgba(43, 108, 176, 0.8)' : HANDLE_STYLES.default.border)
+      : (isCustom ? HANDLE_STYLES.custom.default.border : HANDLE_STYLES.default.border)
 
-    // Base styles
+    // Start with base styles common to all handles
     const styles: Record<string, string> = {
-      position: 'absolute',
-      zIndex: '10',
+      ...HANDLE_STYLES.base,
       width: size,
       height: size,
-      borderRadius: '50%',
-      boxSizing: 'border-box',
-      transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
-      backgroundColor: isCustom ? 'rgba(66, 153, 225, 0.8)' : HANDLE_STYLES.default.backgroundColor,
-      border: borderStyle,
     }
+
+    // Add state-specific styles based on handle type
+    if (isCustom) {
+      // Custom handle styles
+      styles.backgroundColor = HANDLE_STYLES.custom.default.backgroundColor
+    }
+    else {
+      // Regular handle styles
+      styles.backgroundColor = HANDLE_STYLES.default.backgroundColor
+    }
+
+    // Apply border style
+    styles.border = borderStyle
 
     // If disabled, hide the handle
     if (disabledValue.value) {
@@ -231,82 +270,86 @@ export function useResizeHandles(
   }
 
   /**
-   * Apply styles to a handle element based on its position
+   * Apply styles to a handle element based on its position with improved organization
    * @param handleEl - The handle element to style
    * @param handle - The handle position
    * @param isCustom - Whether this is a custom handle
    */
   const applyHandleStyles = (handleEl: HTMLElement, handle: ResizeHandle, isCustom = false) => {
-    // For custom handles, we want to preserve user-defined styles
-    // Only apply essential positioning and cursor styles
+    // Apply different styling strategies based on handle type
     if (isCustom) {
-      // Only apply cursor style
-      handleEl.style.cursor = getCursorForHandle(handle)
+      // For custom handles, preserve user-defined styles and only apply essential styles
 
-      // Only apply position styles if the element doesn't have position: absolute
+      // 1. Ensure position is absolute (essential for positioning)
       const computedStyle = window.getComputedStyle(handleEl)
       if (computedStyle.position !== 'absolute') {
         handleEl.style.position = 'absolute'
       }
 
-      // Apply position styles (these are essential for functionality)
+      // 2. Apply cursor style (essential for UX)
+      handleEl.style.cursor = getCursorForHandle(handle)
+
+      // 3. Apply position styles (essential for functionality)
       const positionStyles = getHandlePositionStyles(handle)
       Object.entries(positionStyles).forEach(([prop, value]) => {
         handleEl.style[prop as any] = value
       })
 
-      // Add resize-handle-custom class for identification
+      // 4. Add identification class
       handleEl.classList.add('resize-handle-custom')
     }
     else {
-      // For non-custom handles, apply all styles
-      // Apply base styles
+      // For standard handles, apply all predefined styles
+
+      // 1. Apply base styles
       const baseStyles = getHandleBaseStyles(isCustom)
       Object.entries(baseStyles).forEach(([prop, value]) => {
         handleEl.style[prop as any] = value
       })
 
-      // Apply cursor style
+      // 2. Apply cursor style
       handleEl.style.cursor = getCursorForHandle(handle)
 
-      // Apply position styles
+      // 3. Apply position styles
       const positionStyles = getHandlePositionStyles(handle)
       Object.entries(positionStyles).forEach(([prop, value]) => {
         handleEl.style[prop as any] = value
       })
     }
 
-    // Add hover event listeners
+    // Add hover event listeners with state-based styling
     handleEl.addEventListener('mouseenter', () => {
+      // Update hover state
       hoverHandle.value = handle
 
-      // Apply hover styles only for regular handles
-      // For custom handles, let the user handle hover styles via CSS
-      if (!isCustom) {
-        handleEl.style.backgroundColor = HANDLE_STYLES.hover.backgroundColor
-        handleEl.style.transform = HANDLE_STYLES.hover.transform
-      }
-
-      // Add a hover class that users can style with CSS for custom handles
       if (isCustom) {
+        // For custom handles, use class-based styling
         handleEl.classList.add('resize-handle-hover')
+      }
+      else {
+        // For standard handles, apply hover styles directly
+        const hoverStyles = HANDLE_STYLES.hover
+        handleEl.style.backgroundColor = hoverStyles.backgroundColor
+        handleEl.style.transform = hoverStyles.transform
       }
     })
 
     handleEl.addEventListener('mouseleave', () => {
+      // Only reset styles if not currently active
       if (activeHandle.value !== handle) {
-        // Reset styles when not active, but only for regular handles
-        if (!isCustom) {
-          handleEl.style.backgroundColor = HANDLE_STYLES.default.backgroundColor
-          handleEl.style.transform = HANDLE_STYLES.default.transform
-        }
-
-        // Remove hover class for custom handles
         if (isCustom) {
+          // For custom handles, remove hover class
           handleEl.classList.remove('resize-handle-hover')
+        }
+        else {
+          // For standard handles, reset to default styles
+          const defaultStyles = HANDLE_STYLES.default
+          handleEl.style.backgroundColor = defaultStyles.backgroundColor
+          handleEl.style.transform = defaultStyles.transform
         }
       }
 
+      // Reset hover state if this was the hovered handle
       if (hoverHandle.value === handle) {
         hoverHandle.value = null
       }
@@ -314,11 +357,12 @@ export function useResizeHandles(
   }
 
   /**
-   * Handle pointerdown event on a specific resize handle
+   * Handle pointerdown event on a specific resize handle with improved styling
    * @param event - The pointer event
    * @param handle - The handle that was clicked
    */
   const onHandlePointerDown = (event: PointerEvent, handle: ResizeHandle) => {
+    // Validate event and context
     if (!filterEvent(event))
       return
 
@@ -335,19 +379,18 @@ export function useResizeHandles(
     // Apply active styles to the handle element
     const handleEl = handleElements.value.get(handle)
     if (handleEl) {
-      // Check if it's a custom handle
       const isCustom = handleEl.classList.contains('resize-handle-custom')
 
       if (isCustom) {
-        // For custom handles, use a class instead of inline styles
+        // For custom handles, use class-based styling
         handleEl.classList.add('resize-handle-active')
-        // Remove hover class if it exists
-        handleEl.classList.remove('resize-handle-hover')
+        handleEl.classList.remove('resize-handle-hover') // Remove hover class if exists
       }
       else {
-        // For regular handles, use inline styles
-        handleEl.style.backgroundColor = HANDLE_STYLES.active.backgroundColor
-        handleEl.style.transform = HANDLE_STYLES.active.transform
+        // For standard handles, apply active styles directly from constants
+        const activeStyles = HANDLE_STYLES.active
+        handleEl.style.backgroundColor = activeStyles.backgroundColor
+        handleEl.style.transform = activeStyles.transform
       }
     }
 
@@ -406,26 +449,28 @@ export function useResizeHandles(
   }
 
   /**
-   * Reset the active handle to its default state
+   * Reset the active handle to its default state with improved styling
    */
   const resetActiveHandle = () => {
     if (activeHandle.value) {
       const activeEl = handleElements.value.get(activeHandle.value)
       if (activeEl) {
-        // Check if it's a custom handle
         const isCustom = activeEl.classList.contains('resize-handle-custom')
 
         if (isCustom) {
-          // For custom handles, remove the active class
+          // For custom handles, use class-based styling
           activeEl.classList.remove('resize-handle-active')
           activeEl.classList.remove('resize-handle-hover')
         }
         else {
-          // For regular handles, reset inline styles
-          activeEl.style.backgroundColor = HANDLE_STYLES.default.backgroundColor
-          activeEl.style.transform = HANDLE_STYLES.default.transform
+          // For standard handles, reset to default styles from constants
+          const defaultStyles = HANDLE_STYLES.default
+          activeEl.style.backgroundColor = defaultStyles.backgroundColor
+          activeEl.style.transform = defaultStyles.transform
         }
       }
+
+      // Reset active handle reference
       activeHandle.value = null
     }
   }

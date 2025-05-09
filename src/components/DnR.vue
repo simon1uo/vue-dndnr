@@ -327,26 +327,3 @@ const combinedClass = computed(() => {
     </template>
   </div>
 </template>
-
-<style scoped>
-.dnr {
-  touch-action: none;
-  user-select: none;
-}
-
-.dnr.dragging {
-  opacity: 0.8;
-  z-index: 1;
-  cursor: grabbing;
-}
-
-.dnr.resizing {
-  opacity: 0.8;
-  z-index: 1;
-}
-
-.dnr.active {
-  z-index: 1;
-  outline: 2px solid #4299e1;
-}
-</style>

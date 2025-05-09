@@ -17,6 +17,49 @@ import {
 import { throttle } from '@/utils/throttle'
 import { computed, onMounted, onUnmounted, ref, shallowRef, toValue, watch } from 'vue'
 
+// Define style constants for consistency
+const BASE_STYLES = {
+  userSelect: 'none',
+  touchAction: 'none',
+  boxSizing: 'border-box',
+}
+
+// Cursor styles
+const CURSOR_STYLES = {
+  dragging: 'grabbing',
+  draggable: 'grab',
+}
+
+// Handle visibility
+const HANDLE_VISIBILITY = {
+  visible: '',
+  hidden: 'none',
+}
+
+// State styles
+const STATE_STYLES = {
+  // Active state
+  active: {
+    zIndex: '1',
+    outline: '2px solid #4299e1',
+  },
+  // Dragging state
+  dragging: {
+    opacity: '0.8',
+    zIndex: '1',
+    cursor: 'grabbing',
+  },
+  // Resizing state
+  resizing: {
+    opacity: '0.8',
+    zIndex: '1',
+  },
+  // Hover state (for resize handles)
+  hover: {
+    cursor: 'auto', // Will be overridden by specific handle cursor
+  },
+}
+
 /**
  * Combined hook for draggable and resizable functionality (DnR)
  * @param target - Reference to the element to make draggable and resizable
@@ -254,7 +297,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
             customHandlesValue.forEach((handleEl) => {
               // Show the custom handle when active
               if (handleEl.style) {
-                handleEl.style.display = ''
+                handleEl.style.display = HANDLE_VISIBILITY.visible
               }
             })
           }
@@ -272,7 +315,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
           customHandlesValue.forEach((handleEl) => {
             // Hide the custom handle when inactive
             if (handleEl.style) {
-              handleEl.style.display = 'none'
+              handleEl.style.display = HANDLE_VISIBILITY.hidden
             }
           })
         }
@@ -831,13 +874,14 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
   }
 
-  // Using computed to combine position and size into a style object
+  /**
+   * Compute the element style based on current state
+   */
   const style = computed(() => {
-    // Base styles
-    const baseStyle: Record<string, string> = {
+    // Start with base styles
+    const computedStyle: Record<string, string> = {
       position: positionTypeValue.value,
-      userSelect: 'none',
-      touchAction: 'none',
+      ...BASE_STYLES,
       ...size.value
         ? {
             width: typeof size.value.width === 'number' ? `${size.value.width}px` : size.value.width,
@@ -846,39 +890,55 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
         : {},
     }
 
-    // Position styles
+    // Add position styles for absolute positioning
     if (positionTypeValue.value === 'absolute' && position.value) {
-      baseStyle.left = `${position.value.x}px`
-      baseStyle.top = `${position.value.y}px`
+      computedStyle.left = `${position.value.x}px`
+      computedStyle.top = `${position.value.y}px`
     }
 
-    // Add cursor styles for resize handles only if resize is not disabled and element is active (if activeOn is not 'none')
-    if (handleTypeValue.value === 'borders' && !disableResizeValue.value && (activeOnValue.value === 'none' || isActive.value)) {
-      if (interactionMode.value === 'resizing' && activeHandle.value) {
-        baseStyle.cursor = getCursorForHandle(activeHandle.value)
+    // Apply state styles in order of priority (from lowest to highest)
+    // 1. Active state (lowest priority)
+    if (isActive.value) {
+      Object.assign(computedStyle, STATE_STYLES.active)
+    }
+    // 2. Resizing state (medium priority)
+    if (isResizing.value) {
+      Object.assign(computedStyle, STATE_STYLES.resizing)
+      // Add cursor style for active resize handle
+      if (activeHandle.value) {
+        computedStyle.cursor = getCursorForHandle(activeHandle.value)
       }
-      else if (hoverHandle.value) {
-        baseStyle.cursor = getCursorForHandle(hoverHandle.value)
+    }
+    // 3. Dragging state (highest priority)
+    if (isDragging.value) {
+      Object.assign(computedStyle, STATE_STYLES.dragging)
+    }
+    // Handle cursor styles for different interaction modes
+    if (!isDragging.value && !isResizing.value) {
+      // Cursor for resize handles when hovering
+      if (handleTypeValue.value === 'borders' && !disableResizeValue.value
+        && (activeOnValue.value === 'none' || isActive.value)) {
+        if (hoverHandle.value) {
+          // Show resize cursor when hovering over a handle
+          computedStyle.cursor = getCursorForHandle(hoverHandle.value)
+        }
+
+        // Add border style if specified
+        const borderStyle = toValue(handleBorderStyle)
+        if (borderStyle && borderStyle !== 'none') {
+          computedStyle.border = borderStyle
+        }
       }
 
-      // Add border style if specified
-      const borderStyle = toValue(handleBorderStyle)
-      if (borderStyle && borderStyle !== 'none') {
-        baseStyle.border = borderStyle
+      // Default cursor for draggable elements
+      if (!disableDragValue.value) {
+        if (!computedStyle.cursor || computedStyle.cursor === 'auto') {
+          computedStyle.cursor = CURSOR_STYLES.draggable
+        }
       }
     }
 
-    // Add cursor style for dragging if resize is disabled but drag is enabled
-    if (disableResizeValue.value && !disableDragValue.value) {
-      if (interactionMode.value === 'dragging') {
-        baseStyle.cursor = 'grabbing'
-      }
-      else {
-        baseStyle.cursor = 'grab'
-      }
-    }
-
-    return baseStyle
+    return computedStyle
   })
 
   // Handle mouse movement for resize handle detection

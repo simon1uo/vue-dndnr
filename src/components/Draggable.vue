@@ -162,18 +162,5 @@ const combinedClass = computed(() => {
 <style scoped>
 .draggable {
   position: absolute;
-  touch-action: none;
-  user-select: none;
-}
-
-.draggable.dragging {
-  opacity: 0.8;
-  z-index: 1;
-  cursor: grabbing;
-}
-
-.draggable.active {
-  z-index: 1;
-  outline: 2px solid #4299e1;
 }
 </style>
