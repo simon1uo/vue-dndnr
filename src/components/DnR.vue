@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DnROptions, Position, ResizeHandle, Size } from '@/types'
+import type { DnROptions, HandleStyles, Position, ResizeHandle, Size, StateStyles } from '@/types'
 import useDnR from '@/hooks/useDnR'
 import { getCursorStyle } from '@/utils/cursor'
 import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
@@ -12,7 +12,8 @@ interface DnRProps extends DnROptions {
   draggingClassName?: string
   resizingClassName?: string
   activeClassName?: string
-  handleBorderStyle?: string
+  stateStyles?: Partial<StateStyles>
+  handleStyles?: Partial<HandleStyles>
   positionType?: 'absolute' | 'relative'
   zIndex?: string | number
 }
@@ -33,7 +34,8 @@ const props = withDefaults(defineProps<DnRProps>(), {
   capture: true,
   throttleDelay: 16,
   handleType: 'borders',
-  handleBorderStyle: 'none',
+  stateStyles: () => ({}),
+  handleStyles: () => ({}),
   positionType: 'absolute',
   zIndex: 'auto',
 })
@@ -70,7 +72,8 @@ const throttleDelay = computed(() => toValue(props.throttleDelay))
 const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 const handleType = computed(() => toValue(props.handleType))
-const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
+const stateStyles = computed(() => toValue(props.stateStyles))
+const handleStyles = computed(() => toValue(props.handleStyles))
 const positionType = computed(() => toValue(props.positionType) ?? 'absolute')
 const zIndex = computed(() => toValue(props.zIndex))
 
@@ -95,7 +98,8 @@ const dnrOptions: DnROptions = {
   lockAspectRatio,
   handles,
   handleType,
-  handleBorderStyle,
+  stateStyles,
+  handleStyles,
   customHandles: handleRefs,
   positionType,
   minWidth: props.minWidth,

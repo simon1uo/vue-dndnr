@@ -11,42 +11,31 @@ const HANDLE_STYLES = {
     zIndex: '10',
     borderRadius: '50%',
     boxSizing: 'border-box',
-    transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
+    transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, outline 0.15s ease, box-shadow 0.15s ease',
   },
   // Default state
   default: {
     backgroundColor: '#4299e1',
     transform: '',
     border: '1px solid #2b6cb0',
+    outline: '',
+    boxShadow: '',
   },
   // Hover state
   hover: {
     backgroundColor: '#3182ce',
     transform: 'scale(1.1)',
     border: '1px solid #2b6cb0',
+    outline: '',
+    boxShadow: '',
   },
   // Active state (when being dragged)
   active: {
     backgroundColor: '#4299e1',
     transform: 'scale(1.2)',
     border: '1px solid #2b6cb0',
-  },
-  // Custom handle styles
-  custom: {
-    default: {
-      backgroundColor: 'rgba(66, 153, 225, 0.8)',
-      border: '1px solid rgba(43, 108, 176, 0.8)',
-    },
-    hover: {
-      backgroundColor: 'rgba(49, 130, 206, 0.8)',
-      transform: 'scale(1.1)',
-      borderColor: 'rgba(43, 108, 176, 0.8)',
-    },
-    active: {
-      backgroundColor: 'rgba(43, 108, 176, 1)',
-      transform: 'scale(1.2)',
-      borderColor: 'rgba(30, 90, 150, 1)',
-    },
+    outline: '',
+    boxShadow: '',
   },
 }
 
@@ -65,7 +54,7 @@ export function useResizeHandles(
     handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
     customHandles,
     handlesSize = 8,
-    handleBorderStyle = 'none',
+    handleStyles = {},
     preventDefault = true,
     stopPropagation = false,
     capture = true,
@@ -77,12 +66,37 @@ export function useResizeHandles(
   const handleTypeValue = computed(() => toValue(handleType))
   const handlesSizeValue = computed(() => toValue(handlesSize))
   const handlesValue = computed(() => toValue(handles))
-  const handleBorderStyleValue = computed(() => toValue(handleBorderStyle))
+  const handleStylesValue = computed(() => toValue(handleStyles))
   const disabledValue = computed(() => toValue(disabled))
   const pointerTypesValue = computed(() => toValue(pointerTypes))
   const preventDefaultValue = computed(() => toValue(preventDefault))
   const stopPropagationValue = computed(() => toValue(stopPropagation))
   const captureValue = computed(() => toValue(capture))
+
+  // Merge default handle styles with user-provided styles
+  const mergedHandleStyles = computed(() => {
+    const userStyles = handleStylesValue.value
+    return {
+      default: {
+        // Start with default styles
+        ...HANDLE_STYLES.default,
+        // Override with user-provided styles
+        ...(userStyles?.default || {}),
+      },
+      hover: {
+        // Start with default styles
+        ...HANDLE_STYLES.hover,
+        // Override with user-provided styles
+        ...(userStyles?.hover || {}),
+      },
+      active: {
+        // Start with default styles
+        ...HANDLE_STYLES.active,
+        // Override with user-provided styles
+        ...(userStyles?.active || {}),
+      },
+    }
+  })
 
   const activeHandle = shallowRef<ResizeHandle | null>(null)
   const hoverHandle = shallowRef<ResizeHandle | null>(null)
@@ -192,22 +206,11 @@ export function useResizeHandles(
   }
 
   /**
-   * Get base styles for handle elements
-   * @param isCustom - Whether this is a custom handle
-   * @returns The base CSS styles for the handle
-   */
-  /**
    * Get base styles for handle elements with improved organization
-   * @param isCustom - Whether this is a custom handle
    * @returns The base CSS styles for the handle
    */
-  const getHandleBaseStyles = (isCustom = false): Record<string, string> => {
+  const getHandleBaseStyles = (): Record<string, string> => {
     const size = `${handlesSizeValue.value}px`
-
-    // Determine border style based on configuration and handle type
-    const borderStyle = handleBorderStyleValue.value !== 'none'
-      ? handleBorderStyleValue.value
-      : (isCustom ? HANDLE_STYLES.custom.default.border : HANDLE_STYLES.default.border)
 
     // Start with base styles common to all handles
     const styles: Record<string, string> = {
@@ -216,18 +219,15 @@ export function useResizeHandles(
       height: size,
     }
 
-    // Add state-specific styles based on handle type
-    if (isCustom) {
-      // Custom handle styles
-      styles.backgroundColor = HANDLE_STYLES.custom.default.backgroundColor
-    }
-    else {
-      // Regular handle styles
-      styles.backgroundColor = HANDLE_STYLES.default.backgroundColor
-    }
+    // Apply default styles from merged handle styles (same for both standard and custom handles)
+    const userStyles = mergedHandleStyles.value.default
 
-    // Apply border style
-    styles.border = borderStyle
+    // Apply all user styles
+    Object.entries(userStyles).forEach(([prop, value]) => {
+      if (value) {
+        styles[prop] = value
+      }
+    })
 
     // If disabled, hide the handle
     if (disabledValue.value) {
@@ -251,20 +251,42 @@ export function useResizeHandles(
     }
     el.dataset.handle = handle
 
-    // Apply base styles
-    const baseStyles = getHandleBaseStyles(isCustom)
-    Object.entries(baseStyles).forEach(([prop, value]) => {
-      el.style[prop as any] = value
-    })
+    if (isCustom) {
+      // For custom handles, only apply essential styles
+      // 1. Ensure position is absolute (essential for positioning)
+      el.style.position = 'absolute'
 
-    // Apply cursor style
-    el.style.cursor = getCursorForHandle(handle)
+      // 2. Apply cursor style (essential for UX)
+      el.style.cursor = getCursorForHandle(handle)
 
-    // Apply position styles
-    const positionStyles = getHandlePositionStyles(handle)
-    Object.entries(positionStyles).forEach(([prop, value]) => {
-      el.style[prop as any] = value
-    })
+      // 3. Apply position styles (essential for functionality)
+      const positionStyles = getHandlePositionStyles(handle)
+      Object.entries(positionStyles).forEach(([prop, value]) => {
+        el.style[prop as any] = value
+      })
+
+      // 4. Set size
+      const size = `${handlesSizeValue.value}px`
+      el.style.width = size
+      el.style.height = size
+    }
+    else {
+      // For standard handles, apply all predefined styles
+      // Apply base styles
+      const baseStyles = getHandleBaseStyles()
+      Object.entries(baseStyles).forEach(([prop, value]) => {
+        el.style[prop as any] = value
+      })
+
+      // Apply cursor style
+      el.style.cursor = getCursorForHandle(handle)
+
+      // Apply position styles
+      const positionStyles = getHandlePositionStyles(handle)
+      Object.entries(positionStyles).forEach(([prop, value]) => {
+        el.style[prop as any] = value
+      })
+    }
 
     return el
   }
@@ -302,7 +324,7 @@ export function useResizeHandles(
       // For standard handles, apply all predefined styles
 
       // 1. Apply base styles
-      const baseStyles = getHandleBaseStyles(isCustom)
+      const baseStyles = getHandleBaseStyles()
       Object.entries(baseStyles).forEach(([prop, value]) => {
         handleEl.style[prop as any] = value
       })
@@ -323,14 +345,17 @@ export function useResizeHandles(
       hoverHandle.value = handle
 
       if (isCustom) {
-        // For custom handles, use class-based styling
+        // For custom handles, only add class and don't apply styles
         handleEl.classList.add('resize-handle-hover')
       }
       else {
-        // For standard handles, apply hover styles directly
-        const hoverStyles = HANDLE_STYLES.hover
-        handleEl.style.backgroundColor = hoverStyles.backgroundColor
-        handleEl.style.transform = hoverStyles.transform
+        // For standard handles, apply hover styles
+        const hoverStyles = mergedHandleStyles.value.hover
+        Object.entries(hoverStyles).forEach(([prop, value]) => {
+          if (value) {
+            handleEl.style[prop as any] = value
+          }
+        })
       }
     })
 
@@ -338,14 +363,17 @@ export function useResizeHandles(
       // Only reset styles if not currently active
       if (activeHandle.value !== handle) {
         if (isCustom) {
-          // For custom handles, remove hover class
+          // For custom handles, just remove the class
           handleEl.classList.remove('resize-handle-hover')
         }
         else {
-          // For standard handles, reset to default styles
-          const defaultStyles = HANDLE_STYLES.default
-          handleEl.style.backgroundColor = defaultStyles.backgroundColor
-          handleEl.style.transform = defaultStyles.transform
+          // For standard handles, apply default styles
+          const defaultStyles = mergedHandleStyles.value.default
+          Object.entries(defaultStyles).forEach(([prop, value]) => {
+            if (value) {
+              handleEl.style[prop as any] = value
+            }
+          })
         }
       }
 
@@ -382,15 +410,18 @@ export function useResizeHandles(
       const isCustom = handleEl.classList.contains('resize-handle-custom')
 
       if (isCustom) {
-        // For custom handles, use class-based styling
+        // For custom handles, only add/remove classes and don't apply styles
         handleEl.classList.add('resize-handle-active')
         handleEl.classList.remove('resize-handle-hover') // Remove hover class if exists
       }
       else {
-        // For standard handles, apply active styles directly from constants
-        const activeStyles = HANDLE_STYLES.active
-        handleEl.style.backgroundColor = activeStyles.backgroundColor
-        handleEl.style.transform = activeStyles.transform
+        // For standard handles, apply active styles
+        const activeStyles = mergedHandleStyles.value.active
+        Object.entries(activeStyles).forEach(([prop, value]) => {
+          if (value) {
+            handleEl.style[prop as any] = value
+          }
+        })
       }
     }
 
@@ -458,15 +489,18 @@ export function useResizeHandles(
         const isCustom = activeEl.classList.contains('resize-handle-custom')
 
         if (isCustom) {
-          // For custom handles, use class-based styling
+          // For custom handles, just remove classes
           activeEl.classList.remove('resize-handle-active')
           activeEl.classList.remove('resize-handle-hover')
         }
         else {
-          // For standard handles, reset to default styles from constants
-          const defaultStyles = HANDLE_STYLES.default
-          activeEl.style.backgroundColor = defaultStyles.backgroundColor
-          activeEl.style.transform = defaultStyles.transform
+          // For standard handles, apply default styles
+          const defaultStyles = mergedHandleStyles.value.default
+          Object.entries(defaultStyles).forEach(([prop, value]) => {
+            if (value) {
+              activeEl.style[prop as any] = value
+            }
+          })
         }
       }
 
@@ -674,11 +708,16 @@ export function useResizeHandles(
     if (newSize !== oldSize) {
       // Update styles for all existing handles
       handleElements.value.forEach((handleEl, handle) => {
-        // Update size
-        handleEl.style.width = `${newSize}px`
-        handleEl.style.height = `${newSize}px`
+        // For custom handles, only update position but keep original size
+        const isCustom = handleEl.classList.contains('resize-handle-custom')
 
-        // Update position
+        if (!isCustom) {
+          // Update size for non-custom handles
+          handleEl.style.width = `${newSize}px`
+          handleEl.style.height = `${newSize}px`
+        }
+
+        // Update position for all handles (essential for functionality)
         const positionStyles = getHandlePositionStyles(handle)
         Object.entries(positionStyles).forEach(([prop, value]) => {
           handleEl.style[prop as any] = value
@@ -687,22 +726,36 @@ export function useResizeHandles(
     }
   })
 
-  // Watch for changes in handle border style and update accordingly
-  watch(handleBorderStyleValue, (newBorderStyle: string, oldBorderStyle: string) => {
-    if (newBorderStyle !== oldBorderStyle) {
-      // Update border style for all existing handles
-      handleElements.value.forEach((handleEl) => {
-        const isCustom = handleEl.classList.contains('resize-handle-custom')
+  // Watch for changes in handle styles and update handle styles accordingly
+  watch(handleStylesValue, (newStyles, oldStyles) => {
+    if (JSON.stringify(newStyles) !== JSON.stringify(oldStyles)) {
+      // Update styles for all existing handles
+      handleElements.value.forEach((handleEl, handle) => {
+        // Skip custom handles - they should maintain their own styles
+        if (handleEl.classList.contains('resize-handle-custom')) {
+          return
+        }
 
-        // Apply appropriate border style
-        const borderStyle = newBorderStyle !== 'none'
-          ? newBorderStyle
-          : (isCustom ? '1px solid rgba(43, 108, 176, 0.8)' : HANDLE_STYLES.default.border)
+        // Only update if not currently active or hovering
+        if (activeHandle.value !== handle && hoverHandle.value !== handle) {
+          // Get merged styles
+          const mergedStyles = {
+            // Start with default styles
+            ...HANDLE_STYLES.default,
+            // Override with user-provided styles
+            ...(newStyles?.default || {}),
+          }
 
-        handleEl.style.border = borderStyle
+          // Apply all styles
+          Object.entries(mergedStyles).forEach(([prop, value]) => {
+            if (value) {
+              handleEl.style[prop as any] = value
+            }
+          })
+        }
       })
     }
-  })
+  }, { deep: true })
 
   // Clean up on unmount
   onUnmounted(() => {

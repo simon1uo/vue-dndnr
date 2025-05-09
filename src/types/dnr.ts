@@ -2,6 +2,54 @@ import type { MaybeRefOrGetter } from 'vue'
 import type { ActivationTrigger, PointerType, Position, PositionType, Size } from './common'
 
 /**
+ * Styles for different element states
+ */
+export interface StateStyles {
+  /**
+   * Styles applied when the element is active
+   */
+  active?: Record<string, string>
+
+  /**
+   * Styles applied when the element is being dragged
+   */
+  dragging?: Record<string, string>
+
+  /**
+   * Styles applied when the element is being resized
+   */
+  resizing?: Record<string, string>
+
+  /**
+   * Styles applied when hovering over resize handles
+   */
+  hover?: Record<string, string>
+}
+
+/**
+ * Styles for resize handles in different states
+ */
+export interface HandleStyles {
+  /**
+   * Styles for handles in default state
+   * Supports all CSS style properties
+   */
+  default?: Record<string, string>
+
+  /**
+   * Styles for handles in hover state
+   * Supports all CSS style properties
+   */
+  hover?: Record<string, string>
+
+  /**
+   * Styles for handles in active state
+   * Supports all CSS style properties
+   */
+  active?: Record<string, string>
+}
+
+/**
  * Valid resize handle positions
  * Supports both short ('t', 'b', etc.) and long ('top', 'bottom', etc.) formats
  */
@@ -46,11 +94,10 @@ export interface ResizeHandlesOptions {
   handlesSize?: MaybeRefOrGetter<number>
 
   /**
-   * Border style for handleType 'borders'.
-   * Accepts any valid CSS border value. Default is 'none'.
-   * @default 'none'
+   * Custom styles for resize handles in different states
+   * Allows customizing the appearance of resize handles
    */
-  handleBorderStyle?: MaybeRefOrGetter<string>
+  handleStyles?: MaybeRefOrGetter<Partial<HandleStyles>>
 
   /**
    * Whether to prevent default browser events during resize
@@ -308,11 +355,16 @@ export interface DnROptions {
   handlesSize?: MaybeRefOrGetter<number>
 
   /**
-   * Border style for handleType 'borders'.
-   * Accepts any valid CSS border value. Default is 'none'.
-   * @default 'none'
+   * Custom styles for different element states
+   * Allows customizing the appearance of the element in different states
    */
-  handleBorderStyle?: MaybeRefOrGetter<string>
+  stateStyles?: MaybeRefOrGetter<Partial<StateStyles>>
+
+  /**
+   * Custom styles for resize handles in different states
+   * Allows customizing the appearance of resize handles
+   */
+  handleStyles?: MaybeRefOrGetter<Partial<HandleStyles>>
 
   // Callbacks for dragging
   /**

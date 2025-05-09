@@ -36,8 +36,8 @@ const HANDLE_VISIBILITY = {
   hidden: 'none',
 }
 
-// State styles
-const STATE_STYLES = {
+// Default state styles
+const DEFAULT_STATE_STYLES = {
   // Active state
   active: {
     outline: '2px solid #4299e1',
@@ -99,8 +99,11 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     handles = ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'],
     customHandles,
     handlesSize = 8,
-    handleBorderStyle = 'none',
     zIndex = 'auto',
+
+    // Custom styles
+    stateStyles = {},
+    handleStyles = {},
 
     // Callbacks
     onDragStart: onDragStartCallback,
@@ -145,6 +148,18 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const preventDeactivationValue = computed(() => toValue(preventDeactivation))
   const throttleDelayValue = computed(() => toValue(throttleDelay))
   const pointerTypesValue = computed(() => toValue(pointerTypes))
+  const stateStylesValue = computed(() => toValue(stateStyles))
+
+  // Merge default state styles with user-provided styles
+  const mergedStateStyles = computed(() => {
+    const userStyles = stateStylesValue.value
+    return {
+      active: { ...DEFAULT_STATE_STYLES.active, ...(userStyles?.active || {}) },
+      dragging: { ...DEFAULT_STATE_STYLES.dragging, ...(userStyles?.dragging || {}) },
+      resizing: { ...DEFAULT_STATE_STYLES.resizing, ...(userStyles?.resizing || {}) },
+      hover: { ...DEFAULT_STATE_STYLES.hover, ...(userStyles?.hover || {}) },
+    }
+  })
 
   /**
    * Set the active state and trigger callback
@@ -224,7 +239,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     handles,
     customHandles,
     handlesSize,
-    handleBorderStyle,
+    handleStyles,
     preventDefault,
     stopPropagation,
     capture,
@@ -899,11 +914,11 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // Apply state styles in order of priority (from lowest to highest)
     // 1. Active state (lowest priority)
     if (isActive.value) {
-      Object.assign(computedStyle, STATE_STYLES.active)
+      Object.assign(computedStyle, mergedStateStyles.value.active)
     }
     // 2. Resizing state (medium priority)
     if (isResizing.value) {
-      Object.assign(computedStyle, STATE_STYLES.resizing)
+      Object.assign(computedStyle, mergedStateStyles.value.resizing)
       // Increase z-index during resizing if not explicitly set to 'auto'
       if (zIndexValue.value === 'auto') {
         computedStyle.zIndex = '1'
@@ -915,7 +930,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     }
     // 3. Dragging state (highest priority)
     if (isDragging.value) {
-      Object.assign(computedStyle, STATE_STYLES.dragging)
+      Object.assign(computedStyle, mergedStateStyles.value.dragging)
       // Increase z-index during dragging if not explicitly set to 'auto'
       if (zIndexValue.value === 'auto') {
         computedStyle.zIndex = '1'
@@ -931,10 +946,9 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
           computedStyle.cursor = getCursorForHandle(hoverHandle.value)
         }
 
-        // Add border style if specified
-        const borderStyle = toValue(handleBorderStyle)
-        if (borderStyle && borderStyle !== 'none') {
-          computedStyle.border = borderStyle
+        // Add border style from state styles if available
+        if (stateStylesValue.value?.active?.border) {
+          computedStyle.border = String(stateStylesValue.value.active.border)
         }
       }
 
