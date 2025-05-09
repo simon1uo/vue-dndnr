@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   stopPropagation: false,
   capture: true,
   throttleDelay: 16,
-  handleBorderStyle: 'none',
+
   activeClassName: 'active',
   disableDrag: true,
 })
@@ -58,7 +58,7 @@ const preventDefault = computed(() => toValue(props.preventDefault))
 const stopPropagation = computed(() => toValue(props.stopPropagation))
 const capture = computed(() => toValue(props.capture))
 const throttleDelay = computed(() => toValue(props.throttleDelay))
-const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
+const handleStyles = computed(() => toValue(props.handleStyles) || {})
 const preventDeactivation = computed(() => toValue(props.preventDeactivation))
 
 const {
@@ -94,7 +94,7 @@ const {
   stopPropagation,
   capture,
   throttleDelay,
-  handleBorderStyle,
+  handleStyles,
   preventDeactivation,
   onResizeStart: (size, event) => {
     if (activeHandle.value) {
