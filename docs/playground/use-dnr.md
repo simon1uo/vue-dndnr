@@ -67,7 +67,6 @@ const gridSize = ref(20)
 const axis = ref('both')
 const scale = ref(1)
 const handlesSize = ref(8)
-const handleBorderStyle = ref('none')
 const availableHandles = ref(['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
 
 // Event logs
@@ -123,9 +122,6 @@ const {
   handles: availableHandles,
   customHandles: customHandlesMap,
   handlesSize,
-  handleBorderStyle,
-
-  // Drag options
   containerElement,
   grid: gridValue,
   axis,
@@ -145,18 +141,6 @@ const {
   onActiveChange: (active) => logEvent('activeChange', { active })
 })
 
-// Element class based on state
-const elementClass = computed(() => {
-  return {
-    'bg-primary text-white p-4 rounded-lg': true,
-    'ring-2 ring-blue-300': isDragging.value,
-    'ring-2 ring-green-300': isResizing.value,
-    'ring-2 ring-secondary shadow-xl': isActive.value,
-    'cursor-grab': !disableDrag.value && !isDragging.value,
-    'cursor-grabbing': isDragging.value,
-  }
-})
-
 </script>
 
 <PlaygroundContainer title="useDnR Hook" description="Combined drag and resize functionality">
@@ -165,9 +149,9 @@ const elementClass = computed(() => {
       <div
         ref="elementRef"
         :style="style"
-        :class="elementClass"
+        class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl cursor-move"
       >
-        <div>Drag and Resize</div>
+        <div>👋 Drag & ↔️ Resize me!</div>
         <div class="text-sm mt-2">Position: {{ position.x }}, {{ position.y }}</div>
         <div class="text-sm mt-1">Size: {{ size.width }} x {{ size.height }}</div>
         <div class="text-sm mt-1">
@@ -262,19 +246,6 @@ const elementClass = computed(() => {
         :step="2"
         v-model="handlesSize"
         :disabled="handleType === 'borders'"
-      />
-      <ConfigOption
-        v-if="handleType === 'borders'"
-        label="Handle Border Style"
-        description="Border style for border handles"
-        type="select"
-        :options="[
-          { label: 'None', value: 'none' },
-          { label: 'Solid', value: '1px solid rgba(0,0,0,0.2)' },
-          { label: 'Dashed', value: '1px dashed rgba(0,0,0,0.2)' }
-        ]"
-        v-model="handleBorderStyle"
-        :disabled="handleType !== 'borders'"
       />
       <ConfigOption
         label="Enable Min Width"

@@ -21,7 +21,7 @@ const { position, size, style, active } = useDnR(elementRef, {
   <div
     ref="elementRef"
     :style="style"
-    class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl cursor-move"
+    class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl"
   >
     👋 Drag & ↔️ Resize me!
     <div class="text-sm mt-2">Position: {{ position.x }}, {{ position.y }}</div>
@@ -129,13 +129,14 @@ The `DnROptions` interface provides a comprehensive set of configuration options
 | `activeOn` | `MaybeRefOrGetter<ActivationTrigger>` | `'none'` | How the element becomes active |
 | `preventDeactivation` | `MaybeRefOrGetter<boolean>` | `false` | Prevent deactivation when clicking outside |
 | `throttleDelay` | `number` | `16` | Delay in ms for throttling move events |
+| `stateStyles` | `MaybeRefOrGetter<Partial<StateStyles>>` | `{}` | Custom styles for different element states |
 
 #### Drag Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `handle` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | `target` | Element that triggers dragging |
-| `containerElement` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | `undefined` | Element for calculating bounds |
+| `containerElement` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | `undefined` | Element for calculating bounds and limiting draggable element boundaries |
 | `grid` | `MaybeRefOrGetter<[number, number] \| undefined \| null>` | `undefined` | Grid size for snapping |
 | `axis` | `MaybeRefOrGetter<'x' \| 'y' \| 'both'>` | `'both'` | Axis to constrain movement |
 | `scale` | `MaybeRefOrGetter<number>` | `1` | Scale factor for the element |
@@ -150,11 +151,12 @@ The `DnROptions` interface provides a comprehensive set of configuration options
 | `maxWidth` | `MaybeRefOrGetter<number>` | `undefined` | Maximum width constraint |
 | `maxHeight` | `MaybeRefOrGetter<number>` | `undefined` | Maximum height constraint |
 | `lockAspectRatio` | `MaybeRefOrGetter<boolean>` | `false` | Maintain aspect ratio during resize |
-| `handleType` | `MaybeRefOrGetter<ResizeHandleType>` | `'borders'` | Type of resize handles |
+| `handleType` | `MaybeRefOrGetter<ResizeHandleType>` | `'borders'` | Type of resize handles: 'borders', 'handles', 'custom', or 'none' |
 | `handles` | `MaybeRefOrGetter<ResizeHandle[]>` | `['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl']` | Active resize handles |
 | `customHandles` | `MaybeRefOrGetter<Map<ResizeHandle, HTMLElement> \| null \| undefined>` | `undefined` | Custom handle elements |
 | `handlesSize` | `MaybeRefOrGetter<number>` | `8` | Size of handles in pixels |
-| `handleBorderStyle` | `MaybeRefOrGetter<string>` | `'none'` | Border style for handles |
+| `handleStyles` | `MaybeRefOrGetter<Partial<HandleStyles>>` | `{}` | Custom styles for resize handles in different states |
+| `zIndex` | `MaybeRefOrGetter<string \| number>` | `'auto'` | Z-index value for the element |
 
 #### Callback Options
 
@@ -203,3 +205,72 @@ The `DnR` component accepts all options from the `useDnR` hook as props, plus th
 |------|-------|-------------|
 | default | `{ position, size, isDragging, isResizing, isActive, activeHandle, hoverHandle, style }` | The content to be made draggable and resizable. |
 | handle-[position] | `{ active, hover, isResizing, cursor, size }` | Custom resize handle for the specified position (e.g., `handle-br` for bottom-right). Only used when `handleType="custom"`. |
+
+### Type Definitions
+
+#### StateStyles
+
+The `StateStyles` interface allows you to customize the appearance of the element in different states:
+
+```typescript
+interface StateStyles {
+  /**
+   * Styles applied when the element is active
+   */
+  active?: Record<string, string>
+
+  /**
+   * Styles applied when the element is being dragged
+   */
+  dragging?: Record<string, string>
+
+  /**
+   * Styles applied when the element is being resized
+   */
+  resizing?: Record<string, string>
+
+  /**
+   * Styles applied when hovering over resize handles
+   */
+  hover?: Record<string, string>
+}
+```
+
+#### HandleStyles
+
+The `HandleStyles` interface allows you to customize the appearance of resize handles in different states:
+
+```typescript
+interface HandleStyles {
+  /**
+   * Styles for handles in default state
+   * Supports all CSS style properties
+   */
+  default?: Record<string, string>
+
+  /**
+   * Styles for handles in hover state
+   * Supports all CSS style properties
+   */
+  hover?: Record<string, string>
+
+  /**
+   * Styles for handles in active state
+   * Supports all CSS style properties
+   */
+  active?: Record<string, string>
+}
+```
+
+#### ResizeHandleType
+
+The `ResizeHandleType` type defines the available types of resize handles:
+
+```typescript
+type ResizeHandleType = 'borders' | 'handles' | 'custom' | 'none'
+```
+
+- `'borders'`: Uses the element's borders as resize handles (default)
+- `'handles'`: Displays visible handles at corners and edges
+- `'custom'`: Uses custom handles provided via slots or the `customHandles` option
+- `'none'`: Disables resize handles completely
