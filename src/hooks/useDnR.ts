@@ -40,19 +40,16 @@ const HANDLE_VISIBILITY = {
 const STATE_STYLES = {
   // Active state
   active: {
-    zIndex: '1',
     outline: '2px solid #4299e1',
   },
   // Dragging state
   dragging: {
     opacity: '0.8',
-    zIndex: '1',
     cursor: 'grabbing',
   },
   // Resizing state
   resizing: {
     opacity: '0.8',
-    zIndex: '1',
   },
   // Hover state (for resize handles)
   hover: {
@@ -103,6 +100,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     customHandles,
     handlesSize = 8,
     handleBorderStyle = 'none',
+    zIndex = 'auto',
 
     // Callbacks
     onDragStart: onDragStartCallback,
@@ -141,6 +139,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   const scaleValue = computed(() => toValue(scale))
   const containerElementValue = computed(() => toValue(containerElement))
   const lockAspectRatioValue = computed(() => toValue(lockAspectRatio))
+  const zIndexValue = computed(() => toValue(zIndex))
   const preventDefaultValue = computed(() => toValue(preventDefault))
   const stopPropagationValue = computed(() => toValue(stopPropagation))
   const preventDeactivationValue = computed(() => toValue(preventDeactivation))
@@ -881,6 +880,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // Start with base styles
     const computedStyle: Record<string, string> = {
       position: positionTypeValue.value,
+      zIndex: String(zIndexValue.value),
       ...BASE_STYLES,
       ...size.value
         ? {
@@ -904,6 +904,10 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // 2. Resizing state (medium priority)
     if (isResizing.value) {
       Object.assign(computedStyle, STATE_STYLES.resizing)
+      // Increase z-index during resizing if not explicitly set to 'auto'
+      if (zIndexValue.value === 'auto') {
+        computedStyle.zIndex = '1'
+      }
       // Add cursor style for active resize handle
       if (activeHandle.value) {
         computedStyle.cursor = getCursorForHandle(activeHandle.value)
@@ -912,6 +916,10 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
     // 3. Dragging state (highest priority)
     if (isDragging.value) {
       Object.assign(computedStyle, STATE_STYLES.dragging)
+      // Increase z-index during dragging if not explicitly set to 'auto'
+      if (zIndexValue.value === 'auto') {
+        computedStyle.zIndex = '1'
+      }
     }
     // Handle cursor styles for different interaction modes
     if (!isDragging.value && !isResizing.value) {

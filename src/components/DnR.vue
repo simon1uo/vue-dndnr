@@ -14,6 +14,7 @@ interface DnRProps extends DnROptions {
   activeClassName?: string
   handleBorderStyle?: string
   positionType?: 'absolute' | 'relative'
+  zIndex?: string | number
 }
 
 const props = withDefaults(defineProps<DnRProps>(), {
@@ -34,6 +35,7 @@ const props = withDefaults(defineProps<DnRProps>(), {
   handleType: 'borders',
   handleBorderStyle: 'none',
   positionType: 'absolute',
+  zIndex: 'auto',
 })
 
 const emit = defineEmits<{
@@ -70,6 +72,7 @@ const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', '
 const handleType = computed(() => toValue(props.handleType))
 const handleBorderStyle = computed(() => toValue(props.handleBorderStyle))
 const positionType = computed(() => toValue(props.positionType) ?? 'absolute')
+const zIndex = computed(() => toValue(props.zIndex))
 
 // Create reactive options object
 const dnrOptions: DnROptions = {
@@ -99,6 +102,7 @@ const dnrOptions: DnROptions = {
   minHeight: props.minHeight,
   maxWidth: props.maxWidth,
   maxHeight: props.maxHeight,
+  zIndex,
   onDragStart: (position: Position, event: PointerEvent) => {
     emit('dragStart', position, event)
     if (props.onDragStart)

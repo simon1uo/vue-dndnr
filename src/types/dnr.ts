@@ -272,6 +272,13 @@ export interface DnROptions {
   lockAspectRatio?: MaybeRefOrGetter<boolean>
 
   /**
+   * Z-index value for the element
+   * Controls the stacking order of elements
+   * @default 'auto'
+   */
+  zIndex?: MaybeRefOrGetter<string | number>
+
+  /**
    * Type of resize handles to display
    * - 'borders': Use element borders as resize handles (default)
    * - 'handles': Display visible handles at corners and edges
