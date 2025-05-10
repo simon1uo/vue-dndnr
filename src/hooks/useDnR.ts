@@ -40,7 +40,7 @@ const HANDLE_VISIBILITY = {
 const DEFAULT_STATE_STYLES = {
   // Active state
   active: {
-    outline: '2px solid #4299e1',
+    outline: '1px solid #aaaaaa',
   },
   // Dragging state
   dragging: {

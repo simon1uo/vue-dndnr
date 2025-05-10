@@ -9,31 +9,31 @@ const HANDLE_STYLES = {
   base: {
     position: 'absolute',
     zIndex: '10',
-    borderRadius: '50%',
+    borderRadius: '10%',
     boxSizing: 'border-box',
-    transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, outline 0.15s ease, box-shadow 0.15s ease',
+    transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
   },
   // Default state
   default: {
-    backgroundColor: '#4299e1',
+    backgroundColor: '#cccccc',
     transform: '',
-    border: '1px solid #2b6cb0',
+    border: '1px solid #aaaaaa',
     outline: '',
     boxShadow: '',
   },
   // Hover state
   hover: {
-    backgroundColor: '#3182ce',
+    backgroundColor: '#dddddd',
     transform: 'scale(1.1)',
-    border: '1px solid #2b6cb0',
+    border: '1px solid #aaaaaa',
     outline: '',
     boxShadow: '',
   },
   // Active state (when being dragged)
   active: {
-    backgroundColor: '#4299e1',
+    backgroundColor: '#eeeeee',
     transform: 'scale(1.2)',
-    border: '1px solid #2b6cb0',
+    border: '1px solid #aaaaaa',
     outline: '',
     boxShadow: '',
   },
