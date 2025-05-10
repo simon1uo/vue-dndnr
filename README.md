@@ -2,7 +2,7 @@
 
 Vue DNDNR is a powerful, flexible, and type-safe Vue 3 component library for draggable and resizable elements.
 
-## Features
+## 🚀 Features
 
 - 🖱️ **Draggable**: Easily add drag functionality to any element with customizable constraints and events.
 - ↔️ **Resizable**: Resize elements from any edge or corner with configurable minimum and maximum dimensions.
@@ -35,35 +35,6 @@ yarn add vue-dndnr
 
 ## Usage
 
-### Components
-
-```vue
-<script setup>
-import { ref } from 'vue'
-import { DnR, Draggable, Resizable } from 'vue-dndnr'
-
-const position = ref({ x: 100, y: 100 })
-const size = ref({ width: 200, height: 150 })
-</script>
-
-<template>
-  <!-- Draggable component -->
-  <Draggable v-model:position="position" bounds="parent">
-    <div>Drag me!</div>
-  </Draggable>
-
-  <!-- Resizable component -->
-  <Resizable v-model:size="size" :min-width="100" :min-height="100">
-    <div>Resize me!</div>
-  </Resizable>
-
-  <!-- Combined Drag and Resize component -->
-  <DnR v-model:position="position" v-model:size="size" bounds="parent">
-    <div>Drag and resize me!</div>
-  </DnR>
-</template>
-```
-
 ### Hooks
 
 ```vue
@@ -72,19 +43,6 @@ import { ref } from 'vue'
 import { useDnR, useDraggable, useResizable } from 'vue-dndnr'
 
 const elementRef = ref(null)
-
-// Use the draggable hook
-const { position, isDragging } = useDraggable(elementRef, {
-  initialPosition: { x: 0, y: 0 },
-  bounds: 'parent',
-})
-
-// Use the resizable hook
-const { size, isResizing } = useResizable(elementRef, {
-  initialSize: { width: 200, height: 150 },
-  minWidth: 100,
-  minHeight: 100,
-})
 
 // Use the combined hook
 const { position, size, isDragging, isResizing } = useDnR(elementRef, {
@@ -98,6 +56,35 @@ const { position, size, isDragging, isResizing } = useDnR(elementRef, {
   <div ref="elementRef" :style="{ left: `${position.x}px`, top: `${position.y}px` }">
     This element can be dragged and resized using hooks
   </div>
+</template>
+```
+
+### Components
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import { DnR, Draggable, Resizable } from 'vue-dndnr'
+
+const position = ref({ x: 100, y: 100 })
+const size = ref({ width: 200, height: 150 })
+</script>
+
+<template>
+  <!-- Draggable component -->
+  <Draggable v-model:position="position">
+    <div>Drag me!</div>
+  </Draggable>
+
+  <!-- Resizable component -->
+  <Resizable v-model:size="size" :min-width="100" :min-height="100">
+    <div>Resize me!</div>
+  </Resizable>
+
+  <!-- Combined Drag and Resize component -->
+  <DnR v-model:position="position" v-model:size="size">
+    <div>Drag and resize me!</div>
+  </DnR>
 </template>
 ```
 
@@ -132,6 +119,17 @@ pnpm docs:dev
 ```sh
 pnpm docs:build
 ```
+
+## Thanks To
+
+This project is based on and inspired by the following ope projects:
+
+- [vueuse/vueuse](https://github.com/vueuse/vueuse)
+- [vue-hooks](https://github.com/u3u/vue-hooks)
+
+## Guideline
+
+This Project is strictly stands with the [Composable Vue](https://antfu.me/posts/composable-vue-vueday-2021) and Composition API of Vue 3.
 
 ## License
 
