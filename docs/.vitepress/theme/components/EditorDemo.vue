@@ -1,19 +1,10 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import type { Position, Size } from 'vue-dndnr'
+import { ref } from 'vue'
 import { DnR } from 'vue-dndnr'
 import ShapeElement from './ShapeElement.vue'
 
 type ShapeType = 'rectangle' | 'circle' | 'triangle'
-
-interface Position {
-  x: number
-  y: number
-}
-
-interface Size {
-  width: number
-  height: number
-}
 
 interface Shape {
   id: string
@@ -22,7 +13,7 @@ interface Shape {
   size: Size
   color: string
   zIndex: number
-  isNew?: boolean
+  active?: boolean
 }
 
 // Helper function to generate random position
@@ -38,6 +29,8 @@ function getRandomPosition(width: number, height: number): Position {
   }
 }
 
+const editorCanvasRef = ref<HTMLElement | null>(null)
+
 const shapes = ref<Shape[]>([
   {
     id: 'rect1',
@@ -46,7 +39,7 @@ const shapes = ref<Shape[]>([
     size: { width: 120, height: 80 },
     color: '#40B38C',
     zIndex: 1,
-    isNew: true,
+    active: false,
   },
   {
     id: 'circle1',
@@ -55,7 +48,7 @@ const shapes = ref<Shape[]>([
     size: { width: 100, height: 100 },
     color: '#2E87BA',
     zIndex: 2,
-    isNew: true,
+    active: false,
   },
   {
     id: 'triangle1',
@@ -64,21 +57,12 @@ const shapes = ref<Shape[]>([
     size: { width: 100, height: 100 },
     color: '#F29933',
     zIndex: 3,
-    isNew: true,
+    active: false,
   },
 ])
 
 // Track the currently selected shape
 const selectedShapeId = ref<string | null>(null)
-
-// Reset isNew property for initial shapes after animation completes
-onMounted(() => {
-  setTimeout(() => {
-    shapes.value.forEach((shape) => {
-      shape.isNew = false
-    })
-  }, 800) // Animation duration is 0.6s, add a little extra time
-})
 
 // Function to select a shape and bring it to front
 function selectShape(id: string): void {
@@ -109,22 +93,10 @@ function addShape(type: ShapeType): void {
     size: shapeSize,
     color: getRandomColor(),
     zIndex: Math.max(...shapes.value.map(s => s.zIndex), 0) + 1,
-    isNew: true,
   }
 
   shapes.value.push(newShape)
   selectShape(id)
-
-  // Use nextTick to ensure DOM is updated before modifying the shape again
-  nextTick(() => {
-    // Reset isNew property after animation completes
-    setTimeout(() => {
-      const shape = shapes.value.find(s => s.id === id)
-      if (shape) {
-        shape.isNew = false
-      }
-    }, 800) // Animation duration is 0.6s, add a little extra time
-  })
 }
 
 // Helper function to generate random colors
@@ -180,7 +152,7 @@ function resetCanvas(): void {
       size: { width: 120, height: 80 },
       color: '#40B38C',
       zIndex: 1,
-      isNew: true,
+      active: false,
     },
     {
       id: `circle${timestamp}`,
@@ -189,7 +161,7 @@ function resetCanvas(): void {
       size: { width: 100, height: 100 },
       color: '#2E87BA',
       zIndex: 2,
-      isNew: true,
+      active: false,
     },
     {
       id: `triangle${timestamp}`,
@@ -198,20 +170,9 @@ function resetCanvas(): void {
       size: { width: 100, height: 100 },
       color: '#F29933',
       zIndex: 3,
-      isNew: true,
+      active: false,
     },
   ]
-
-  // Use nextTick to ensure DOM is updated before modifying the shapes again
-  // This breaks the reactivity chain and prevents recursive updates
-  nextTick(() => {
-    // Reset isNew property after animation completes
-    setTimeout(() => {
-      shapes.value.forEach((shape) => {
-        shape.isNew = false
-      })
-    }, 800) // Animation duration is 0.6s, add a little extra time
-  })
 }
 </script>
 
@@ -235,15 +196,17 @@ function resetCanvas(): void {
     </div>
 
     <!-- Canvas with shapes -->
-    <div class="editor-canvas">
+    <div ref="editorCanvasRef" class="editor-canvas">
       <DnR
         v-for="shape in shapes" :key="shape.id" v-model:position="shape.position" v-model:size="shape.size"
-        :style="{ zIndex: shape.zIndex }" :class="{ 'shape-selected': selectedShapeId === shape.id }" bounds="parent"
-        :min-width="20" :min-height="20" @click="selectShape(shape.id)" @drag-start="selectShape(shape.id)"
+        v-model:active="shape.active" handle-type="handles" active-on="click" :z-index="shape.zIndex"
+        :class="{ 'shape-selected': selectedShapeId === shape.id }" bounds="parent" :min-width="20" :min-height="20"
+        :container-element="editorCanvasRef" @click="selectShape(shape.id)" @drag-start="selectShape(shape.id)"
         @resize-start="selectShape(shape.id)" @drag="updateShapePosition(shape.id, $event)"
         @resize="updateShapeSize(shape.id, $event)"
+        @active-change="(active: boolean) => { if (active) selectShape(shape.id) }"
       >
-        <ShapeElement :type="shape.type" :color="shape.color" :selected="selectedShapeId === shape.id" :is-new="shape.isNew" />
+        <ShapeElement :type="shape.type" :color="shape.color" :selected="selectedShapeId === shape.id" />
       </DnR>
     </div>
 
@@ -256,8 +219,12 @@ function resetCanvas(): void {
           {{ shapes.find(s => s.id === selectedShapeId)?.position.y.toFixed(0) }}
         </span>
         <span v-if="selectedShapeId">
-          {{ shapes.find(s => s.id === selectedShapeId)?.size.width.toFixed(0) }} x
-          {{ shapes.find(s => s.id === selectedShapeId)?.size.height.toFixed(0) }}
+          {{ typeof shapes.find(s => s.id === selectedShapeId)?.size.width === 'number'
+            ? (shapes.find(s => s.id === selectedShapeId)?.size.width as number).toFixed(0)
+            : shapes.find(s => s.id === selectedShapeId)?.size.width }} x
+          {{ typeof shapes.find(s => s.id === selectedShapeId)?.size.height === 'number'
+            ? (shapes.find(s => s.id === selectedShapeId)?.size.height as number).toFixed(0)
+            : shapes.find(s => s.id === selectedShapeId)?.size.height }}
         </span>
       </div>
       <div v-else class="status-info">
