@@ -222,11 +222,11 @@ export function useResizeHandles(
     // Apply default styles from merged handle styles (same for both standard and custom handles)
     const userStyles = mergedHandleStyles.value.default
 
-    // Apply all user styles
+    // Apply all user styles, ensuring empty values are properly handled
     Object.entries(userStyles).forEach(([prop, value]) => {
-      if (value) {
-        styles[prop] = value
-      }
+      // Always set the style property, even if value is empty
+      // This ensures that any previous non-default styles are properly reset
+      styles[prop] = value || ''
     })
 
     // If disabled, hide the handle
@@ -368,11 +368,18 @@ export function useResizeHandles(
         }
         else {
           // For standard handles, apply default styles
+          // First, ensure all properties from hover state are reset
+          const hoverStyles = mergedHandleStyles.value.hover
+          Object.keys(hoverStyles).forEach((prop) => {
+            if (prop in HANDLE_STYLES.default) {
+              handleEl.style[prop as any] = HANDLE_STYLES.default[prop as keyof typeof HANDLE_STYLES.default] || ''
+            }
+          })
+
+          // Then apply all default styles
           const defaultStyles = mergedHandleStyles.value.default
           Object.entries(defaultStyles).forEach(([prop, value]) => {
-            if (value) {
-              handleEl.style[prop as any] = value
-            }
+            handleEl.style[prop as any] = value || ''
           })
         }
       }
@@ -495,11 +502,18 @@ export function useResizeHandles(
         }
         else {
           // For standard handles, apply default styles
+          // First, ensure all properties from active state are reset
+          const activeStyles = mergedHandleStyles.value.active
+          Object.keys(activeStyles).forEach((prop) => {
+            if (prop in HANDLE_STYLES.default) {
+              activeEl.style[prop as any] = HANDLE_STYLES.default[prop as keyof typeof HANDLE_STYLES.default] || ''
+            }
+          })
+
+          // Then apply all default styles
           const defaultStyles = mergedHandleStyles.value.default
           Object.entries(defaultStyles).forEach(([prop, value]) => {
-            if (value) {
-              activeEl.style[prop as any] = value
-            }
+            activeEl.style[prop as any] = value || ''
           })
         }
       }
@@ -738,6 +752,15 @@ export function useResizeHandles(
 
         // Only update if not currently active or hovering
         if (activeHandle.value !== handle && hoverHandle.value !== handle) {
+          // First, reset any styles that might have been set by previous styles
+          if (oldStyles?.default) {
+            Object.keys(oldStyles.default).forEach((prop) => {
+              if (prop in HANDLE_STYLES.default) {
+                handleEl.style[prop as any] = HANDLE_STYLES.default[prop as keyof typeof HANDLE_STYLES.default] || ''
+              }
+            })
+          }
+
           // Get merged styles
           const mergedStyles = {
             // Start with default styles
@@ -746,11 +769,11 @@ export function useResizeHandles(
             ...(newStyles?.default || {}),
           }
 
-          // Apply all styles
+          // Apply all styles, ensuring empty values are properly handled
           Object.entries(mergedStyles).forEach(([prop, value]) => {
-            if (value) {
-              handleEl.style[prop as any] = value
-            }
+            // Always set the style property, even if value is empty
+            // This ensures that any previous non-default styles are properly reset
+            handleEl.style[prop as any] = value || ''
           })
         }
       })
