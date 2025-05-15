@@ -1,6 +1,10 @@
 # Vue DNDNR
 
-Vue DNDNR is a powerful, flexible, and type-safe Vue 3 component library for draggable and resizable elements.
+<p align="center">
+  <img src="./docs/public/favicon.svg" alt="Vue DNDNR Logo" width="128" height="128" />
+  <br />
+  👋↔️ a composable first draggable / resizable / droppable(more) Utilities for Vue3.
+</p>
 
 ## 🚀 Features
 
