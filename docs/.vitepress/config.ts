@@ -8,7 +8,7 @@ export default defineConfig({
   // When deploying to Vercel or other platforms that serve from the root, remove the base path
   // base: '/vue-dndnr/',
   themeConfig: {
-    logo: '/logo.svg',
+    logo: '/favicon.svg',
     search: {
       provider: 'local',
       options: {
@@ -101,6 +101,9 @@ export default defineConfig({
       copyright: 'Copyright © 2023-present Simon Luo',
     },
   },
+  head: [
+    ['link', { rel: 'icon', href: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
+  ],
   vite: {
     resolve: {
       alias: [
@@ -113,4 +116,5 @@ export default defineConfig({
       ],
     },
   },
+
 })
