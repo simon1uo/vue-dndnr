@@ -52,15 +52,13 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
     class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs select-none"
   >
     <div class="mb-2">This card is draggable using the handle below</div>
-
     <!-- Drag handle -->
     <div
       ref="handleRef"
       class="bg-slate-600 dark:bg-slate-600 p-2 rounded flex items-center justify-center cursor-grab"
     >
-      <span class="mr-2">⋮⋮</span> Drag using this handle
+      <span class="mr-2">⋮⋮👋</span> Drag using this handle
     </div>
-
     <div class="text-sm mt-2">Drag State: {{ isDragging ? 'Dragging' : 'Idle' }}</div>
   </div>
 

@@ -6,41 +6,42 @@ The `useDrop` hook provides drop zone functionality using the HTML5 Drag and Dro
 
 <script setup>
 import { ref } from 'vue'
-import { useDrop } from 'vue-dndnr'
+import { useDrop, Drag } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
 const dropData = ref(null)
 
-const { isOver, isValidDrop, data, style } = useDrop(dropZoneRef, {
+const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
   accept: ['demo', 'text', 'files'],
   onDrop: (data, event) => {
     console.log('Dropped data:', data)
     dropData.value = data
   },
-  stateStyles: {
-    over: {
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      borderStyle: 'dashed'
-    },
-    valid: {
-      borderWidth: '2px',
-      borderColor: '#22c55e'
-    },
-    invalid: {
-      borderWidth: '2px',
-      borderColor: '#ef4444'
-    }
-  }
 })
 </script>
 
 <DemoContainer>
+  <Drag forceFallback :data="{
+    type: 'demo',
+    payload: { message: 'Hello from drag item!' }
+  }">
+    <div
+      class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs select-none mb-10"
+    ><span class="mr-2">⋮⋮👋</span> Drag me and drop below!
+    </div>
+    <template #dragPreview>
+        <div
+          class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs"
+        > 👋 Dragging with custom preview!
+        </div>
+    </template>
+  </Drag>
+
   <div
     ref="dropZoneRef"
-    class="bg-slate dark:bg-slate-700 text-sm text-white p-8 rounded-xl shadow-xl min-h-[200px] flex items-center justify-center border-2 border-dashed"
-    :style="style"
+    class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl min-h-[200px] flex items-center justify-start"
   >
-    <div class="text-center">
+    <div class="text-left">
       <div class="text-lg mb-2">Drop Zone</div>
       <div class="text-sm">State: {{ isOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
       <div v-if="dropData" class="drop-data">
@@ -62,23 +63,9 @@ import { ref } from 'vue'
 import { useDrop } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
-const { isOver, isValidDrop, data, style } = useDrop(dropZoneRef, {
+const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
   accept: ['item', 'text', 'files'],
   dropEffect: 'move',
-  stateStyles: {
-    over: {
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      borderStyle: 'dashed'
-    },
-    valid: {
-      borderWidth: '2px',
-      borderColor: '#22c55e'
-    },
-    invalid: {
-      borderWidth: '2px',
-      borderColor: '#ef4444'
-    }
-  },
   scroll: {
     enabled: true,
     speed: 1,
@@ -109,7 +96,6 @@ const { isOver, isValidDrop, data, style } = useDrop(dropZoneRef, {
   <div
     ref="dropZoneRef"
     class="drop-zone"
-    :style="style"
   >
     <div>Drop Zone</div>
     <div>State: {{ isOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
@@ -146,7 +132,6 @@ const { isOver, isValidDrop, data, style } = useDrop(dropZoneRef, {
 | `isOver` | `Ref<boolean>` | Whether an item is currently over the drop zone |
 | `isValidDrop` | `Ref<boolean>` | Whether the current drop would be valid |
 | `data` | `Ref<DragData<T> \| null>` | The data of the item being dragged over the drop zone |
-| `style` | `ComputedRef<Record<string, string>>` | Computed styles based on the current drop state |
 
 ### Options
 
@@ -156,7 +141,6 @@ The `DropOptions` interface provides a comprehensive set of configuration option
 |--------|------|---------|-------------|
 | `accept` | `MaybeRefOrGetter<readonly string[] \| ((types: readonly string[]) => boolean) \| undefined>` | `undefined` | Acceptance criteria for dropped items |
 | `dropEffect` | `MaybeRefOrGetter<'copy' \| 'move' \| 'link' \| 'none'>` | `'move'` | Visual effect for drop operation |
-| `stateStyles` | `MaybeRefOrGetter<{ over?: Record<string, string>, valid?: Record<string, string>, invalid?: Record<string, string> }>` | `{}` | User-defined styles to override or augment the default visual feedback for 'over', 'valid', and 'invalid' drop states. |
 | `allowFallbackDrags` | `MaybeRefOrGetter<boolean>` | `true` | Enables fallback drag handling using Pointer Events for drags not initiated via native HTML5 drag API (e.g., from `useDrag` with pointer fallback). |
 | `onDragEnter` | `(data: DragData<T> \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable enters the drop zone. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
 | `onDragOver` | `(data: DragData<T> \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable is over the drop zone. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
@@ -209,9 +193,7 @@ interface DragData<T = unknown> {
 - Global drag state management via an internal store (shared with `useDrag`), enabling communication for complex drag-and-drop scenarios.
 - Fallback drag and drop mechanism using Pointer Events, controlled by the `allowFallbackDrags` option, for drags not initiated via the native HTML5 API (e.g., initiated by `useDrag` with pointer fallback).
 - Type-based (`string[]`) and validator-function-based acceptance criteria for dropped items.
-- Customizable visual feedback for different drop states (`over`, `valid`, `invalid`) through the `stateStyles` option, which merges with pre-defined default styles.
 - Accessibility support with the `aria-droptarget="true"` attribute automatically set on the drop zone element.
-- Performance optimizations with computed reactive styles applied to the drop zone.
 - Comprehensive event lifecycle callbacks: `onDragEnter`, `onDragOver`, `onDragLeave`, and `onDrop`.
 - Automatic cleanup of all event listeners when the component is unmounted.
 
