@@ -81,7 +81,6 @@ const {
   isOver,
   isValidDrop,
   data,
-  style,
 } = useDrop(targetRef, {
   ...props,
   onDragEnter: (data: DragData | null, event: DragEvent) => {
@@ -157,7 +156,7 @@ const combinedClass = computed(() => {
 </script>
 
 <template>
-  <div ref="targetRef" :class="combinedClass" :style="style">
+  <div ref="targetRef" :class="combinedClass">
     <slot />
   </div>
 </template>
