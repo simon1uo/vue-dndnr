@@ -10,20 +10,30 @@ import { useDrag } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const customDragRef = ref(null)
+const handleRef = ref(null)
 
 const { isDragging, dragData, style } = useDrag(elementRef, {
   data: {
     type: 'demo',
     payload: { message: 'Hello from drag item!' }
   },
+  // Use a specific element as the drag handle
+  handle: handleRef,
+  // Custom drag preview
   dragPreview: {
     element: customDragRef,
     offset: { x: 10, y: 10 }
   },
+  // Use fallback mode for better touch device support
+  forceFallback: true,
+  // Attach pointer events to the document
+  draggingElement: document,
+  // Add a small delay for touch devices
+  delay: 100,
+  delayOnTouchOnly: true,
   stateStyles: {
     dragging: {
       opacity: '0.7',
-      transform: 'scale(1.05)',
     }
   },
   onDragStart: (event) => {
@@ -41,15 +51,25 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
     :style="style"
     class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs select-none"
   >
-    👋 Drag me!
+    <div class="mb-2">This card is draggable using the handle below</div>
+
+    <!-- Drag handle -->
+    <div
+      ref="handleRef"
+      class="bg-slate-600 dark:bg-slate-600 p-2 rounded flex items-center justify-center cursor-grab"
+    >
+      <span class="mr-2">⋮⋮</span> Drag using this handle
+    </div>
+
     <div class="text-sm mt-2">Drag State: {{ isDragging ? 'Dragging' : 'Idle' }}</div>
   </div>
 
+  <!-- Hidden drag preview element -->
   <div
     ref="customDragRef"
     class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs"
     style="position: absolute; left: -9999px; top: -9999px;"
-  > 👋 Dragging!</div>
+  > 👋 Dragging with custom preview!</div>
 </DemoContainer>
 
 :::details Hook Usage
@@ -60,11 +80,22 @@ import { ref } from 'vue'
 import { useDrag } from 'vue-dndnr'
 
 const elementRef = ref<HTMLElement | null>(null)
+const handleRef = ref<HTMLElement | null>(null)
+
 const { isDragging, dragData, style } = useDrag(elementRef, {
   data: () => ({
     type: 'text',
     payload: 'Hello World'
   }),
+  // Use a specific element as the drag handle
+  handle: handleRef,
+  // Attach pointer events to the document when using fallback mode
+  draggingElement: document,
+  // Enable fallback mode for better touch device support
+  forceFallback: true,
+  // Add a delay before drag starts (only on touch devices)
+  delay: 150,
+  delayOnTouchOnly: true,
   onDragStart: (event) => {
     console.log('Drag started')
   },
@@ -78,8 +109,16 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
 </script>
 
 <template>
-  <div ref="elementRef" class="draggable">
-    Drag me!
+  <div ref="elementRef" class="draggable" :style="style">
+    <div class="content">
+      This entire card is draggable, but you can also use the handle
+    </div>
+
+    <!-- Dedicated drag handle -->
+    <div ref="handleRef" class="drag-handle">
+      <span class="handle-icon">⋮⋮</span> Drag using this handle
+    </div>
+
     <div v-if="isDragging" class="text-sm mt-1">
       Dragging...
     </div>
@@ -114,11 +153,14 @@ The `DragOptions` interface provides a comprehensive set of configuration option
 |--------|------|---------|-------------|
 | `data` | `MaybeRefOrGetter<DragData<T>>` | `{ type: 'default', payload: null }` | The data to be dragged |
 | `dragPreview` | `{ element?: MaybeRefOrGetter<HTMLElement \| null>, offset?: { x: number, y: number }, scale?: number }` | `undefined` | Custom drag preview configuration |
+| `handle` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | `undefined` | Element that triggers dragging (drag handle). Defaults to the target element itself. |
+| `draggingElement` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| Window \| Document \| null \| undefined>` | `window` | Element to attach pointer event listeners to when `forceFallback` is true. |
 | `forceFallback` | `boolean` | `false` | If `true`, forces the use of pointer events for dragging, bypassing native HTML5 drag and drop. Useful for touch devices or specific interaction needs. |
 | `fallbackClass` | `string` | `'dndnr-fallback'` | CSS class applied to the fallback drag preview element when `forceFallback` is `true` or when native drag fails. |
 | `fallbackOnBody` | `boolean` | `true` | If `true` (and using fallback mode), the fallback drag preview is appended to `document.body`. If `false`, it's appended to the draggable element's parent. |
 | `fallbackTolerance` | `number` | `0` | In fallback mode, the distance in pixels the pointer must move before a drag operation is initiated. |
 | `delay` | `number` | `0` | Delay before drag starts in milliseconds. Applies to both native and fallback modes. |
+| `delayOnTouchOnly` | `boolean` | `false` | Whether to only apply delay on touch devices. |
 | `onDragStart` | `(event: DragEvent \| PointerEvent) => void` | `undefined` | Called when drag starts. Receives `PointerEvent` if fallback mode is active. |
 | `onDrag` | `(event: DragEvent \| PointerEvent) => void` | `undefined` | Called during drag. Receives `PointerEvent` if fallback mode is active. |
 | `onDragEnd` | `(event: DragEvent \| PointerEvent) => void` | `undefined` | Called when drag ends. Receives `PointerEvent` if fallback mode is active. |
@@ -199,10 +241,13 @@ export type DragEffect = 'none' | 'copy' | 'link' | 'move'
 - Multiple data format support (JSON, text, URL, HTML, Files)
 - Global drag state management via an internal store
 - Customizable drag preview (native and fallback)
-- Pointer Events fallback mode for wider compatibility (e.g., touch devices or when native HTML5 D&D is not desired).
-- Customizable element styling for different drag states (`normal`, `dragging`).
-- Sets `effectAllowed` on `DataTransfer` for native drags.
-- Improved touch device support via Pointer Events fallback mode.
+- Support for dedicated drag handles via the `handle` option
+- Configurable event target for pointer events via `draggingElement` option
+- Pointer Events fallback mode for wider compatibility (e.g., touch devices or when native HTML5 D&D is not desired)
+- Customizable element styling for different drag states (`normal`, `dragging`)
+- Sets `effectAllowed` on `DataTransfer` for native drags
+- Improved touch device support via Pointer Events fallback mode
+- Touch-specific delay configuration with `delayOnTouchOnly` option
 - Accessibility support (e.g., `aria-grabbed` attribute management)
 - Performance optimizations
 - Configurable delay for initiating drag

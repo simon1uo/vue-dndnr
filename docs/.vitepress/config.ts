@@ -64,7 +64,6 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/playground/' },
           { text: 'useDnR', link: '/playground/use-dnr' },
-          { text: 'useDrag & useDrop', link: '/playground/use-drag-drop' },
         ],
       },
     ],
@@ -97,7 +96,6 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/playground/' },
             { text: 'useDnR', link: '/playground/use-dnr' },
-            { text: 'useDrag & useDrop', link: '/playground/use-drag-drop' },
           ],
         },
       ],
