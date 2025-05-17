@@ -13,8 +13,7 @@ import {
   getElementSize,
   isClient,
 } from '@/utils'
-import { throttle } from '@/utils/throttle'
-import { tryOnUnmounted, useEventListener } from '@vueuse/core'
+import { tryOnUnmounted, useEventListener, useThrottleFn } from '@vueuse/core'
 import { computed, onMounted, ref, shallowRef, toValue, watch } from 'vue'
 
 // Define style constants for consistency
@@ -472,8 +471,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   // Create a throttled version of the updateDragPosition function
-  const throttledUpdateDragPosition = throttle(updateDragPosition, throttleDelayValue.value) as unknown as
-    (((...args: Parameters<typeof updateDragPosition>) => ReturnType<typeof updateDragPosition> | void) & { cancel: () => void })
+  const throttledUpdateDragPosition = useThrottleFn(updateDragPosition, throttleDelayValue, true, true)
 
   /**
    * Handle drag movement with throttling
@@ -832,8 +830,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   // Create a throttled version of the updateSize function
-  const throttledUpdateSize = throttle(updateSize, throttleDelayValue.value) as unknown as
-    (((...args: Parameters<typeof updateSize>) => ReturnType<typeof updateSize> | void) & { cancel: () => void })
+  const throttledUpdateSize = useThrottleFn(updateSize, throttleDelayValue, true, true)
 
   /**
    * Handle resize movement with throttling
@@ -1124,15 +1121,11 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
 
   // Cleanup on unmount
   tryOnUnmounted(() => {
-    cleanupHandles() // Cleanup for resize handles from useResizeHandles
-    throttledUpdateDragPosition.cancel() // Cancel any pending throttled drag updates
-    throttledUpdateSize.cancel() // Cancel any pending throttled resize updates
-
+    // Cleanup for resize handles from useResizeHandles
+    cleanupHandles()
     // Reset state refs
     interactionMode.value = 'idle'
     startEvent.value = null
-    // activeHandle is managed by useResizeHandles, cleanupHandles should cover it.
-    // hoverHandle is also managed by useResizeHandles.
 
     // Reset styles on the target element
     const el = toValue(target)
@@ -1142,7 +1135,7 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
         mergedStateStyles.value.active,
         mergedStateStyles.value.dragging,
         mergedStateStyles.value.resizing,
-        mergedStateStyles.value.hover, // Hover styles are typically managed by CSS pseudo-classes or dynamic onPointerEnter/Leave
+        mergedStateStyles.value.hover,
       ]
       stylesToRemove.forEach((styleGroup) => {
         if (styleGroup) {
