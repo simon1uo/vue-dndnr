@@ -6,12 +6,12 @@ The `useDrop` hook provides drop zone functionality using the HTML5 Drag and Dro
 
 <script setup>
 import { ref } from 'vue'
-import { useDrop, Drop,Drag } from 'vue-dndnr'
+import { useDrop, Drag } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
 const dropData = ref(null)
 
-const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
+const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
   accept: ['demo', 'text', 'files'],
   onDrop: (data, event) => {
     console.log('Dropped data:', data)
@@ -43,7 +43,7 @@ const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
   >
     <div class="text-left">
       <div class="text-lg mb-2">Drop Zone</div>
-      <div class="text-sm">State: {{ isOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
+      <div class="text-sm">State: {{ isDragOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
       <div v-if="dropData" class="drop-data">
         <div>Type: {{ dropData.type }}</div>
         <div>Payload: {{ JSON.stringify(dropData.payload) }}</div>
@@ -64,7 +64,7 @@ import { ref } from 'vue'
 import { useDrop } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
-const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
+const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
   accept: ['item', 'text', 'files'],
   dropEffect: 'move',
   scroll: {
@@ -99,7 +99,7 @@ const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
     class="drop-zone"
   >
     <div>Drop Zone</div>
-    <div>State: {{ isOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
+    <div>State: {{ isDragOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
     <div v-if="data" class="drop-data">
       <div>Type: {{ data.type }}</div>
       <div>Payload: {{ JSON.stringify(data.payload) }}</div>
@@ -130,7 +130,7 @@ const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `isOver` | `Ref<boolean>` | Whether an item is currently over the drop zone |
+| `isDragOver` | `Ref<boolean>` | Whether an item is currently over the drop zone |
 | `isValidDrop` | `Ref<boolean>` | Whether the current drop would be valid |
 | `data` | `Ref<DragData<T> \| null>` | The data of the item being dragged over the drop zone |
 
