@@ -53,6 +53,7 @@ const { position, size, style } = useDnR(elementRef, {
   </div>
 </template>
 ```
+
 :::
 
 :::details Component Usage
@@ -78,6 +79,7 @@ const size = ref({ width: 200, height: 150 })
   </DnR>
 </template>
 ```
+
 :::
 
 ## Type and Options Declarations
@@ -107,6 +109,8 @@ const size = ref({ width: 200, height: 150 })
 | `setActive` | `(active: boolean) => void` | Function to programmatically set the active state |
 | `registerHandle` | `(handle: ResizeHandle, element: HTMLElement) => void` | Register a custom resize handle |
 | `unregisterHandle` | `(handle: ResizeHandle) => void` | Unregister a custom resize handle |
+| `detectBoundary` | `(event: PointerEvent, el: HTMLElement) => ResizeHandle \| null` | Detects if a pointer event is near a resizable boundary |
+| `setupHandleElements` | `(parentElement: HTMLElement) => void` | Sets up or recreates resize handle elements |
 
 ### Options
 
@@ -228,11 +232,6 @@ interface StateStyles {
    * Styles applied when the element is being resized
    */
   resizing?: Record<string, string>
-
-  /**
-   * Styles applied when hovering over resize handles
-   */
-  hover?: Record<string, string>
 }
 ```
 

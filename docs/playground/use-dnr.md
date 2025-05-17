@@ -135,9 +135,9 @@ const {
   onDragStart: (e) => logEvent('dragStart', { x: position.x, y: position.y }),
   onDrag: (e) => logEvent('drag', { x: position.x, y: position.y }),
   onDragEnd: (e) => logEvent('dragEnd', { x: position.x, y: position.y }),
-  onResizeStart: (e, handle) => logEvent('resizeStart', { handle, size: { ...size } }),
-  onResize: (e, handle) => logEvent('resize', { handle, size: { ...size } }),
-  onResizeEnd: (e, handle) => logEvent('resizeEnd', { handle, size: { ...size } }),
+  onResizeStart: (currentSize, event) => logEvent('resizeStart', { handle: activeHandle.value, size: { ...currentSize } }),
+  onResize: (currentSize, event) => logEvent('resize', { handle: activeHandle.value, size: { ...currentSize } }),
+  onResizeEnd: (currentSize, event) => logEvent('resizeEnd', { handle: activeHandle.value, size: { ...currentSize } }),
   onActiveChange: (active) => logEvent('activeChange', { active })
 })
 
