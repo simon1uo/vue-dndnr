@@ -27,8 +27,8 @@ export function useDrop<T = unknown>(
 
   // State
   const isDragOver = shallowRef(false)
-  const isValidCurrentDrop = shallowRef(false)
-  const currentDragOverData = shallowRef<DragData<T> | null>(null)
+  const isValidDrop = shallowRef(false)
+  const currentData = shallowRef<DragData<T> | null>(null)
 
   // Computed values
   const acceptValue = computed(() => toValue(accept))
@@ -218,15 +218,15 @@ export function useDrop<T = unknown>(
 
     // Update state based on our best guess
     isDragOver.value = true
-    isValidCurrentDrop.value = potentiallyValid
-    currentDragOverData.value = null
+    isValidDrop.value = potentiallyValid
+    currentData.value = null
 
     // Set drop effect based on our validation
-    event.dataTransfer.dropEffect = isValidCurrentDrop.value ? dropEffectValue.value : 'none'
+    event.dataTransfer.dropEffect = isValidDrop.value ? dropEffectValue.value : 'none'
 
     // Call user-provided callback if available
     if (onDragEnter)
-      onDragEnter(currentDragOverData.value, event)
+      onDragEnter(currentData.value, event)
   }
 
   const handleNativeDragOver = (event: DragEvent) => {
@@ -237,11 +237,11 @@ export function useDrop<T = unknown>(
     event.preventDefault()
 
     // Update drop effect
-    event.dataTransfer.dropEffect = isValidCurrentDrop.value ? dropEffectValue.value : 'none'
+    event.dataTransfer.dropEffect = isValidDrop.value ? dropEffectValue.value : 'none'
 
     // Call user-provided callback if available
     if (onDragOver)
-      onDragOver(currentDragOverData.value, event)
+      onDragOver(currentData.value, event)
   }
 
   const handleNativeDragLeave = (event: DragEvent) => {
@@ -253,12 +253,12 @@ export function useDrop<T = unknown>(
 
     // Reset state
     isDragOver.value = false
-    isValidCurrentDrop.value = false
-    currentDragOverData.value = null
+    isValidDrop.value = false
+    currentData.value = null
 
     // Call user-provided callback if available
     if (onDragLeave)
-      onDragLeave(currentDragOverData.value, event)
+      onDragLeave(currentData.value, event)
   }
 
   const handleNativeDrop = (event: DragEvent) => {
@@ -278,8 +278,8 @@ export function useDrop<T = unknown>(
         isValid = validateDrop(extractedData)
 
         // Update our data state
-        currentDragOverData.value = extractedData
-        isValidCurrentDrop.value = isValid
+        currentData.value = extractedData
+        isValidDrop.value = isValid
 
         // Set drop effect in dataTransfer if needed
         if (event.dataTransfer) {
@@ -298,8 +298,8 @@ export function useDrop<T = unknown>(
 
     // Reset state
     isDragOver.value = false
-    isValidCurrentDrop.value = false
-    currentDragOverData.value = null
+    isValidDrop.value = false
+    currentData.value = null
   }
 
   // --- Fallback Event Handlers ---
@@ -316,8 +316,8 @@ export function useDrop<T = unknown>(
       }
 
       isDragOver.value = true
-      currentDragOverData.value = activeDrag.data
-      isValidCurrentDrop.value = validateDrop(activeDrag.data)
+      currentData.value = activeDrag.data
+      isValidDrop.value = validateDrop(activeDrag.data)
       onDragEnter?.(activeDrag.data, event as any) // Pass PointerEvent, cast as any for now
     }
   }
@@ -328,9 +328,9 @@ export function useDrop<T = unknown>(
 
     const activeDrag = dragStore.getActiveDrag<T>()
     if (activeDrag && activeDrag.isFallback) {
-      // currentDragOverData.value should already be set by pointerenter
+      // currentData.value should already be set by pointerenter
       // isValidCurrentDrop.value should also be set
-      onDragOver?.(currentDragOverData.value, event as any) // Pass PointerEvent
+      onDragOver?.(currentData.value, event as any) // Pass PointerEvent
     }
   }
 
@@ -351,8 +351,8 @@ export function useDrop<T = unknown>(
 
       // The core logic for resetting state when leaving the drop zone:
       isDragOver.value = false
-      isValidCurrentDrop.value = false
-      currentDragOverData.value = null
+      isValidDrop.value = false
+      currentData.value = null
       onDragLeave?.(null, event as any) // Pass PointerEvent
     }
   }
@@ -363,13 +363,13 @@ export function useDrop<T = unknown>(
 
     const activeDrag = dragStore.getActiveDrag<T>()
     if (activeDrag && activeDrag.isFallback) {
-      if (isValidCurrentDrop.value && currentDragOverData.value) {
-        onDrop?.(currentDragOverData.value, event as any) // Pass PointerEvent
+      if (isValidDrop.value && currentData.value) {
+        onDrop?.(currentData.value, event as any) // Pass PointerEvent
       }
       // Reset state regardless of successful drop, dragend from useDrag will clear store
       isDragOver.value = false
-      isValidCurrentDrop.value = false
-      currentDragOverData.value = null
+      isValidDrop.value = false
+      currentData.value = null
     }
   }
 
@@ -397,8 +397,8 @@ export function useDrop<T = unknown>(
     // For pointermove and pointerup during a fallback drag, we might need to listen on a broader scope (e.g., document or draggingElement from useDrag)
     // However, for simply handling the drop (pointerup over the target), this should be sufficient.
     // We also listen on document for pointermove to update dragOver state when pointer is over the element during fallback drag
-    useEventListener(document, 'pointermove', handlePointerMoveForDrop, { capture: true, passive: true })
-    useEventListener(document, 'pointerup', handlePointerUpForDrop, { capture: true, passive: false })
+    useEventListener(target, 'pointermove', handlePointerMoveForDrop, { capture: true, passive: true })
+    useEventListener(target, 'pointerup', handlePointerUpForDrop, { capture: true, passive: false })
 
     // Initial setup
     onMounted(() => {
@@ -419,14 +419,14 @@ export function useDrop<T = unknown>(
   tryOnUnmounted(() => {
     // Reset state variables
     isDragOver.value = false
-    isValidCurrentDrop.value = false
-    currentDragOverData.value = null
+    isValidDrop.value = false
+    currentData.value = null
   })
 
   return {
     isDragOver,
-    isValidDropTarget: isValidCurrentDrop,
-    draggedData: currentDragOverData,
+    isValidDrop,
+    data: currentData,
   }
 }
 

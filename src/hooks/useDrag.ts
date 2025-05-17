@@ -690,7 +690,7 @@ export function useDrag<T = unknown>(
   return {
     isDragging,
     dragData,
-    style, // Expose the computed style
+    style,
   }
 }
 
