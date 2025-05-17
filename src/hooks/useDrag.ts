@@ -1,9 +1,8 @@
 import type { DragData, DragOptions, DragStateStyles } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import { useEventListener } from '@/hooks/useEventListener'
 import { defaultWindow, isClient } from '@/utils'
 import dragStore, { generateDragId } from '@/utils/dragStore'
-import { tryOnUnmounted } from '@vueuse/core'
+import { tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, shallowRef, toValue, watch } from 'vue'
 
 /**

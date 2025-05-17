@@ -1,6 +1,5 @@
 import type { ActivationTrigger, DnROptions, PointerType, Position, ResizeHandle, Size } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import { useEventListener } from '@/hooks/useEventListener'
 import { useResizeHandles } from '@/hooks/useResizeHandles'
 import {
   applyAspectRatioLock,
@@ -15,6 +14,7 @@ import {
   isClient,
 } from '@/utils'
 import { throttle } from '@/utils/throttle'
+import { useEventListener } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, shallowRef, toValue, watch } from 'vue'
 
 // Define style constants for consistency
