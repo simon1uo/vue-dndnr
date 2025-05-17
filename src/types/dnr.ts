@@ -19,11 +19,6 @@ export interface StateStyles {
    * Styles applied when the element is being resized
    */
   resizing?: Record<string, string>
-
-  /**
-   * Styles applied when hovering over resize handles
-   */
-  hover?: Record<string, string>
 }
 
 /**

@@ -50,10 +50,6 @@ const DEFAULT_STATE_STYLES = {
   resizing: {
     opacity: '0.8',
   },
-  // Hover state (for resize handles)
-  hover: {
-    cursor: 'auto', // Will be overridden by specific handle cursor
-  },
 }
 
 /**
@@ -156,7 +152,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       active: { ...DEFAULT_STATE_STYLES.active, ...(userStyles?.active || {}) },
       dragging: { ...DEFAULT_STATE_STYLES.dragging, ...(userStyles?.dragging || {}) },
       resizing: { ...DEFAULT_STATE_STYLES.resizing, ...(userStyles?.resizing || {}) },
-      hover: { ...DEFAULT_STATE_STYLES.hover, ...(userStyles?.hover || {}) },
     }
   })
 
@@ -1135,7 +1130,6 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
         mergedStateStyles.value.active,
         mergedStateStyles.value.dragging,
         mergedStateStyles.value.resizing,
-        mergedStateStyles.value.hover,
       ]
       stylesToRemove.forEach((styleGroup) => {
         if (styleGroup) {
