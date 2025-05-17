@@ -1,10 +1,10 @@
 import type { DragData, DragOptions, DragStateStyles } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { useEventListener } from '@/hooks/useEventListener'
-import { isClient } from '@/utils'
+import { defaultWindow, isClient } from '@/utils'
 import dragStore, { generateDragId } from '@/utils/dragStore'
 import { tryOnUnmounted } from '@vueuse/core'
-import { computed, onMounted, shallowRef, toValue, watch } from 'vue'
+import { computed, shallowRef, toValue, watch } from 'vue'
 
 /**
  * Hook for making an element draggable with HTML5 Drag and Drop API
@@ -19,15 +19,17 @@ export function useDrag<T = unknown>(
   const {
     data = () => ({ type: 'default', payload: null as unknown as T }),
     dragPreview,
+    handle: draggingHandle = target,
+    draggingElement = defaultWindow,
     forceFallback = false,
     fallbackClass = 'dndnr-fallback',
     fallbackOnBody = true,
     fallbackTolerance = 0,
     delay = 0,
+    stateStyles = {},
     onDragStart,
     onDrag,
     onDragEnd,
-    stateStyles = {},
   } = options
 
   // State
@@ -177,7 +179,7 @@ export function useDrag<T = unknown>(
   }
 
   const createFallbackDragImage = (originalTargetElement: HTMLElement, event: PointerEvent) => {
-    if (fallbackElement.value) { // Remove existing one if any
+    if (fallbackElement.value) {
       fallbackElement.value.remove()
       fallbackElement.value = null
     }
@@ -512,9 +514,23 @@ export function useDrag<T = unknown>(
   }
 
   const handlePointerDown = (event: PointerEvent) => {
-    const el = toValue(target)
+    const el = toValue(draggingHandle)
     if (!el || event.button !== 0)
       return // Only main button
+
+    // Check if the event target is within the dragHandle
+    // This is important if the handle is a child of the target, or vice-versa, or they are different elements.
+    let currentElement = event.target as Node | null
+    let isTargetInHandle = false
+    while (currentElement) {
+      if (currentElement === el) {
+        isTargetInHandle = true
+        break
+      }
+      currentElement = currentElement.parentNode
+    }
+    if (!isTargetInHandle)
+      return
 
     isPointerDown = true
     initialPointerPosition.value = { x: event.clientX, y: event.clientY }
@@ -544,10 +560,6 @@ export function useDrag<T = unknown>(
 
       // Call user's onDragStart
       onDragStart?.(event) // Pass PointerEvent
-
-      // Add global listeners for pointermove and pointerup
-      useEventListener(document, 'pointermove', handlePointerMove)
-      useEventListener(document, 'pointerup', handlePointerUp)
     }
 
     if (delay > 0) {
@@ -566,7 +578,8 @@ export function useDrag<T = unknown>(
 
   // Setup drag attributes
   const setupDragAttributes = () => {
-    const el = toValue(target)
+    const el = toValue(draggingHandle)
+
     if (!el)
       return
 
@@ -579,12 +592,12 @@ export function useDrag<T = unknown>(
     // Always set cursor to grab for draggable elements
     (el as HTMLElement).style.cursor = 'grab'
 
-    // aria-grabbed might still be relevant for both
+    // aria-grabbed might still be relevant for both, but usually on the main target
     el.setAttribute('aria-grabbed', 'false') // Will be updated during drag
   }
 
   // Watch for target changes to update attributes
-  watch(() => toValue(target), (el, oldEl) => {
+  watch(() => toValue(draggingHandle), (el, oldEl) => {
     if (oldEl && (oldEl as HTMLElement).style) { // Cleanup old styles if target changes
       try { // oldEl might not be in DOM or style could be null
         (oldEl as HTMLElement).style.cursor = ''
@@ -593,36 +606,29 @@ export function useDrag<T = unknown>(
     }
     if (el) {
       setupDragAttributes()
-      // Update aria-grabbed based on isDragging state
+      // Update aria-grabbed based on isDragging state on the target element
       watch(isDragging, (dragging) => {
         el.setAttribute('aria-grabbed', dragging ? 'true' : 'false')
-        // Cursor will be handled by applyDragStyles based on isDragging state
-        // So, remove specific cursor logic here for forceFallback
-        applyDragStyles() // Apply styles when isDragging changes
+        // Apply styles to target when isDragging changes
+        applyDragStyles()
       }, { immediate: true })
     }
-  }, { immediate: true })
+  }, { immediate: true, deep: true })
 
   // Setup event listeners
   if (isClient) {
     if (forceFallback) {
-      useEventListener(target, 'pointerdown', handlePointerDown as EventListener)
-      // pointermove and pointerup are added to document dynamically in handlePointerDown
+      useEventListener(draggingElement, 'pointerdown', handlePointerDown as EventListener)
+      useEventListener(draggingElement, 'pointermove', handlePointerMove as EventListener)
+      useEventListener(draggingElement, 'pointerup', handlePointerUp as EventListener)
     }
     else {
-      useEventListener(target, 'dragstart', handleDragStart)
-      useEventListener(target, 'drag', handleDrag)
-      useEventListener(target, 'dragend', handleDragEnd)
-    }
+      const draggingElementValue = toValue(draggingElement) || defaultWindow
 
-    onMounted(() => {
-      const el = toValue(target)
-      if (el) {
-        // setupDragAttributes() // This is called by the immediate watch on target already
-        // The watch for isDragging is also set up by the immediate watch on target.
-        // No need for duplicated watch here.
-      }
-    })
+      useEventListener(draggingElementValue, 'dragstart', handleDragStart as EventListener)
+      useEventListener(draggingElementValue, 'drag', handleDrag as EventListener)
+      useEventListener(draggingElementValue, 'dragend', handleDragEnd as EventListener)
+    }
 
     // Cleanup
     tryOnUnmounted(() => {
@@ -650,7 +656,8 @@ export function useDrag<T = unknown>(
       }
 
       // Reset styles on unmount
-      const el = toValue(target)
+      const el = toValue(draggingHandle)
+
       if (el && mergedStateStyles.value.dragging) {
         Object.keys(mergedStateStyles.value.dragging).forEach((key) => {
           try { // Element might not be in DOM or style could be null

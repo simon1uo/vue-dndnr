@@ -90,6 +90,18 @@ export interface DragOptions<T = unknown> {
   dragPreview?: MaybeRefOrGetter<DragPreview | undefined>
 
   /**
+   * Element that triggers dragging (drag handle).
+   * Defaults to the target element itself.
+   */
+  handle?: MaybeRefOrGetter<HTMLElement | SVGElement | null | undefined>
+
+  /**
+   * Element to attach pointer event listeners to when `forceFallback` is true.
+   * Defaults to the window.
+   */
+  draggingElement?: MaybeRefOrGetter<HTMLElement | SVGElement | Window | Document | null | undefined>
+
+  /**
    * Delay before drag starts in milliseconds
    * @default 0
    */
