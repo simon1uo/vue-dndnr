@@ -382,48 +382,51 @@ export function useDrop<T = unknown>(
     el.setAttribute('aria-droptarget', 'true')
   }
 
-  // Watch for target changes to update attributes
-  watch(() => toValue(target), (el) => {
-    if (el) {
-      setupDropZoneAttributes()
-    }
-  })
-
   // Setup event listeners
   if (isClient) {
-    onMounted(() => {
-      const el = toValue(target)
-      if (el) {
-        setupDropZoneAttributes()
-      }
-    })
-
-    // Add native D&D event listeners
+    // Native HTML5 Drag and Drop events
     useEventListener(target, 'dragenter', handleNativeDragEnter)
     useEventListener(target, 'dragover', handleNativeDragOver)
     useEventListener(target, 'dragleave', handleNativeDragLeave)
     useEventListener(target, 'drop', handleNativeDrop)
 
-    // Add fallback pointer event listeners if enabled
-    // These are added to the specific drop target element
-    watch(allowFallbackDragsValue, (enabled) => {
-      if (enabled) {
-        useEventListener(target, 'pointerenter', handlePointerEnterForDrop as EventListener)
-        useEventListener(target, 'pointermove', handlePointerMoveForDrop as EventListener)
-        useEventListener(target, 'pointerleave', handlePointerLeaveForDrop as EventListener)
-        useEventListener(target, 'pointerup', handlePointerUpForDrop as EventListener)
-      }
-    }, { immediate: true })
+    // Fallback pointer event listeners for drop zone interaction
+    // These are attached to the drop target element itself
+    useEventListener(target, 'pointerenter', handlePointerEnterForDrop, { capture: true })
+    useEventListener(target, 'pointerleave', handlePointerLeaveForDrop, { capture: true })
+    // For pointermove and pointerup during a fallback drag, we might need to listen on a broader scope (e.g., document or draggingElement from useDrag)
+    // However, for simply handling the drop (pointerup over the target), this should be sufficient.
+    // We also listen on document for pointermove to update dragOver state when pointer is over the element during fallback drag
+    useEventListener(document, 'pointermove', handlePointerMoveForDrop, { capture: true, passive: true })
+    useEventListener(document, 'pointerup', handlePointerUpForDrop, { capture: true, passive: false })
 
-    // Cleanup
-    tryOnUnmounted(() => {
+    // Initial setup
+    onMounted(() => {
+      setupDropZoneAttributes()
     })
-  }
+
+    // Watch for target changes to re-apply attributes if necessary
+    watch(
+      () => toValue(target),
+      (newTarget) => {
+        if (newTarget)
+          setupDropZoneAttributes()
+      },
+    )
+  } // End of isClient block
+
+  // Cleanup on unmount
+  tryOnUnmounted(() => {
+    // Reset state variables
+    isDragOver.value = false
+    isValidCurrentDrop.value = false
+    currentDragOverData.value = null
+  })
 
   return {
-    isOver: isDragOver,
-    isValidDrop: isValidCurrentDrop,
-    data: currentDragOverData,
+    isDragOver,
+    isValidDropTarget: isValidCurrentDrop,
+    draggedData: currentDragOverData,
   }
 }
 

@@ -1,7 +1,8 @@
 import type { PointerType, ResizeHandle, ResizeHandlesOptions, ResizeHandleType } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
 import { getCursorStyle } from '@/utils/cursor'
-import { computed, onUnmounted, shallowRef, toValue, watch } from 'vue'
+import { tryOnUnmounted, useEventListener } from '@vueuse/core'
+import { computed, shallowRef, toValue, watch } from 'vue'
 
 // Define handle style constants for consistency
 const HANDLE_STYLES = {
@@ -103,6 +104,7 @@ export function useResizeHandles(
   const handleElements = shallowRef<Map<ResizeHandle, HTMLElement>>(new Map())
   const createdHandleElements = shallowRef<HTMLElement[]>([])
 
+  const customHandleStopFunctions = new Map<ResizeHandle, () => void>()
   const handleEventListeners = new Map<ResizeHandle, (e: PointerEvent) => void>()
 
   /**
@@ -470,20 +472,15 @@ export function useResizeHandles(
    * @param element - The handle element
    */
   const registerHandle = (handle: ResizeHandle, element: HTMLElement) => {
-    // Remove any existing event listeners before adding new ones
-    unregisterHandle(handle)
+    const existingStop = customHandleStopFunctions.get(handle)
+    if (existingStop) {
+      existingStop()
+    }
 
-    // Create a new event handler for this handle
     const handleEventListener = (e: PointerEvent) => onHandlePointerDown(e, handle)
-
-    // Store the event listener for later removal
-    handleEventListeners.set(handle, handleEventListener)
-
-    // Add the element to the map
+    const stop = useEventListener(element, 'pointerdown', handleEventListener, getEventConfig.value)
+    customHandleStopFunctions.set(handle, stop)
     handleElements.value.set(handle, element)
-
-    // Add pointerdown event listener to the handle element
-    element.addEventListener('pointerdown', handleEventListener, getEventConfig.value)
   }
 
   /**
@@ -527,26 +524,21 @@ export function useResizeHandles(
    * Clean up event listeners and remove created elements
    */
   const cleanup = () => {
-    // Reset active handle if there is one
-    resetActiveHandle()
-
-    // Clean up all handle event listeners
-    handleEventListeners.forEach((listener, handle) => {
-      const element = handleElements.value.get(handle)
-      if (element) {
-        element.removeEventListener('pointerdown', listener, getEventConfig.value)
-      }
-    })
-
-    // Remove all created elements from DOM
+    // Remove dynamically created handle elements
     createdHandleElements.value.forEach((el) => {
-      el.parentNode?.removeChild(el)
+      if (el.parentElement)
+        el.remove()
     })
-
-    // Clear all references
     createdHandleElements.value = []
-    handleEventListeners.clear()
+
+    // For custom handles, call the stop functions returned by useEventListener
+    // This ensures listeners are removed if handles are unregistered manually or during cleanup.
+    customHandleStopFunctions.forEach(stop => stop())
+    customHandleStopFunctions.clear()
+
     handleElements.value.clear()
+    activeHandle.value = null
+    hoverHandle.value = null
   }
 
   /**
@@ -780,10 +772,8 @@ export function useResizeHandles(
     }
   }, { deep: true })
 
-  // Clean up on unmount
-  onUnmounted(() => {
-    cleanup()
-  })
+  // Cleanup on unmount
+  tryOnUnmounted(cleanup)
 
   return {
     activeHandle,

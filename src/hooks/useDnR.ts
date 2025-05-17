@@ -14,8 +14,8 @@ import {
   isClient,
 } from '@/utils'
 import { throttle } from '@/utils/throttle'
-import { useEventListener } from '@vueuse/core'
-import { computed, onMounted, onUnmounted, ref, shallowRef, toValue, watch } from 'vue'
+import { tryOnUnmounted, useEventListener } from '@vueuse/core'
+import { computed, onMounted, ref, shallowRef, toValue, watch } from 'vue'
 
 // Define style constants for consistency
 const BASE_STYLES = {
@@ -472,7 +472,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   // Create a throttled version of the updateDragPosition function
-  const throttledUpdateDragPosition = throttle(updateDragPosition, throttleDelayValue.value)
+  const throttledUpdateDragPosition = throttle(updateDragPosition, throttleDelayValue.value) as unknown as
+    (((...args: Parameters<typeof updateDragPosition>) => ReturnType<typeof updateDragPosition> | void) & { cancel: () => void })
 
   /**
    * Handle drag movement with throttling
@@ -831,7 +832,8 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
   }
 
   // Create a throttled version of the updateSize function
-  const throttledUpdateSize = throttle(updateSize, throttleDelayValue.value)
+  const throttledUpdateSize = throttle(updateSize, throttleDelayValue.value) as unknown as
+    (((...args: Parameters<typeof updateSize>) => ReturnType<typeof updateSize> | void) & { cancel: () => void })
 
   /**
    * Handle resize movement with throttling
@@ -1095,28 +1097,71 @@ export function useDnR(target: MaybeRefOrGetter<HTMLElement | SVGElement | null 
       const el = toValue(target)
       if (el) {
         setupElementSize()
+        // Initial setup of handle elements if needed (e.g., if active from start)
+        if ((handleTypeValue.value === 'handles' || handleTypeValue.value === 'custom') && (activeOnValue.value === 'none' || isActive.value)) {
+          setupHandleElements(el)
+        }
       }
     })
 
     // Add event listeners to the target element
+    // Use useEventListener for automatic cleanup
     useEventListener(target, 'pointerdown', onPointerDown, getConfig.value)
     useEventListener(target, 'pointerenter', onPointerEnter, getConfig.value)
     useEventListener(target, 'pointerleave', onPointerLeave, getConfig.value)
-    useEventListener(target, 'pointermove', onMouseMove, getConfig.value)
+    // mousemove on target is primarily for hover effects on handles or border detection
+    useEventListener(target, 'mousemove', onMouseMove, getConfig.value)
 
-    // Add document-level event listeners for pointer events
-    const draggingElementValue = toValue(draggingElement) || defaultWindow
-    if (draggingElementValue) {
-      useEventListener(draggingElementValue, 'pointermove', onMouseMove, getConfig.value)
-      useEventListener(draggingElementValue, 'pointerup', onPointerUp, getConfig.value)
-      useEventListener(draggingElementValue, 'pointercancel', onPointerUp, getConfig.value)
-      useEventListener(draggingElementValue, 'pointerdown', onDocumentPointerDown, getConfig.value)
-    }
+    // Add document-level event listeners for pointer events during interaction
+    // These are dynamically added/removed or managed by useEventListener with changing refs
+    const draggingElementValue = computed(() => toValue(draggingElement) || defaultWindow)
+
+    useEventListener(draggingElementValue, 'pointermove', onMouseMove, getConfig.value)
+    useEventListener(draggingElementValue, 'pointerup', onPointerUp, getConfig.value)
+    useEventListener(draggingElementValue, 'pointercancel', onPointerUp, getConfig.value) // Treat cancel as up
+    useEventListener(defaultWindow?.document, 'pointerdown', onDocumentPointerDown, getConfig.value) // For deactivation
   }
 
   // Cleanup on unmount
-  onUnmounted(() => {
-    cleanupHandles()
+  tryOnUnmounted(() => {
+    cleanupHandles() // Cleanup for resize handles from useResizeHandles
+    throttledUpdateDragPosition.cancel() // Cancel any pending throttled drag updates
+    throttledUpdateSize.cancel() // Cancel any pending throttled resize updates
+
+    // Reset state refs
+    interactionMode.value = 'idle'
+    startEvent.value = null
+    // activeHandle is managed by useResizeHandles, cleanupHandles should cover it.
+    // hoverHandle is also managed by useResizeHandles.
+
+    // Reset styles on the target element
+    const el = toValue(target)
+    if (el) {
+      // Remove all known state styles
+      const stylesToRemove = [
+        mergedStateStyles.value.active,
+        mergedStateStyles.value.dragging,
+        mergedStateStyles.value.resizing,
+        mergedStateStyles.value.hover, // Hover styles are typically managed by CSS pseudo-classes or dynamic onPointerEnter/Leave
+      ]
+      stylesToRemove.forEach((styleGroup) => {
+        if (styleGroup) {
+          Object.keys(styleGroup).forEach((key) => {
+            try {
+              (el as HTMLElement).style[key as any] = ''
+            }
+            catch { }
+          })
+        }
+      })
+      // Re-apply base styles if they were part of the initial setup or options (if any)
+      Object.keys(BASE_STYLES).forEach((key) => {
+        try {
+          (el as HTMLElement).style[key as any] = ''
+        }
+        catch { }
+      })
+    }
   })
 
   watch(handleTypeValue, (newHandleType) => {

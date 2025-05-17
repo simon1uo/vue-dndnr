@@ -162,7 +162,7 @@ export function useDrag<T = unknown>(
 
       // Schedule cleanup. It needs to be slightly delayed for the browser to capture the image.
       dragTimeout.value = window.setTimeout(() => {
-        if (dragPreviewElement.value) {
+        if (dragPreviewElement.value && dragPreviewElement.value.parentElement) {
           document.body.removeChild(dragPreviewElement.value)
           dragPreviewElement.value = null
         }
@@ -170,18 +170,23 @@ export function useDrag<T = unknown>(
     }
     catch (error) {
       console.error('Error creating native drag image:', error)
-      if (dragPreviewElement.value) { // Cleanup if partially created
+      if (dragPreviewElement.value && dragPreviewElement.value.parentElement) {
         document.body.removeChild(dragPreviewElement.value)
         dragPreviewElement.value = null
       }
     }
   }
-
-  const createFallbackDragImage = (originalTargetElement: HTMLElement, event: PointerEvent) => {
+  const removeFallbackDragImage = () => {
     if (fallbackElement.value) {
-      fallbackElement.value.remove()
+      if (fallbackElement.value.parentElement) {
+        fallbackElement.value.remove()
+      }
       fallbackElement.value = null
     }
+  }
+
+  const createFallbackDragImage = (originalTargetElement: HTMLElement, event: PointerEvent) => {
+    removeFallbackDragImage()
 
     const previewOpts = toValue(dragPreviewValue)
     let elementToClone: HTMLElement
@@ -272,13 +277,6 @@ export function useDrag<T = unknown>(
     // on the fallback element stays under the cursor.
     fallbackElement.value.style.left = `${event.clientX - activeDragImageOffset.value.x}px`
     fallbackElement.value.style.top = `${event.clientY - activeDragImageOffset.value.y}px`
-  }
-
-  const removeFallbackDragImage = () => {
-    if (fallbackElement.value) {
-      fallbackElement.value.remove()
-      fallbackElement.value = null
-    }
   }
 
   // Event handlers
@@ -380,43 +378,44 @@ export function useDrag<T = unknown>(
   }
 
   const handleDragEnd = (event: DragEvent | PointerEvent) => {
-    if (!isDragging.value)
+    if (!isDragging.value && activeDragId.value !== dragStore.getActiveDrag()?.id) {
       return
+    }
+
+    if (dragTimeout.value) {
+      window.clearTimeout(dragTimeout.value)
+      dragTimeout.value = null
+    }
+    if (delayTimeout.value) {
+      window.clearTimeout(delayTimeout.value)
+      delayTimeout.value = null
+    }
+
+    const currentActiveDrag = dragStore.getActiveDrag()
+    if (activeDragId.value && currentActiveDrag && activeDragId.value === currentActiveDrag.id) {
+      if (event.type === 'drop' || event.type === 'dragend') {
+        if (dragPreviewElement.value && dragPreviewElement.value.parentElement) {
+          document.body.removeChild(dragPreviewElement.value)
+          dragPreviewElement.value = null
+        }
+      }
+      else if (event.type === 'pointerup') {
+        removeFallbackDragImage()
+      }
+      dragStore.clearActiveDrag(activeDragId.value)
+    }
+    else if (event.type === 'pointerup' && fallbackElement.value) {
+      removeFallbackDragImage()
+    }
 
     // Call the user's drag end handler if provided
     onDragEnd?.(event)
 
-    // Reset state
+    // Reset state for this instance
     isDragging.value = false
     dragData.value = null
-    // activeDragId.value = null // Will be set to null after clearing from store
-    // Reset styles when drag ends
+    activeDragId.value = null
     applyDragStyles()
-
-    // Clean up native drag preview if it exists
-    if (dragPreviewElement.value) {
-      // Timeout should handle removal, but as a safeguard:
-      window.clearTimeout(dragTimeout.value as number) // dragTimeout.value might be number or null
-      dragTimeout.value = null
-      if (dragPreviewElement.value.parentElement) { // Check if still in DOM
-        try {
-          document.body.removeChild(dragPreviewElement.value)
-        }
-        catch (error) {
-          console.warn('Error removing drag preview element on dragend:', error)
-        }
-      }
-      dragPreviewElement.value = null
-    }
-
-    // Clean up fallback drag image
-    removeFallbackDragImage()
-
-    // Clean up drag data from store
-    if (activeDragId.value) { // Ensure activeDragId is not null
-      dragStore.clearActiveDrag(activeDragId.value)
-    }
-    activeDragId.value = null // Now set to null
   }
 
   // --- Fallback Mode Event Handlers ---
@@ -452,7 +451,6 @@ export function useDrag<T = unknown>(
 
           const dragId = generateDragId()
           activeDragId.value = dragId // Store the generated ID
-          // dragStore.set(dragId, currentDragData) // Old way
           dragStore.setActiveDrag(dragId, currentDragData, true) // Set as active fallback drag
 
           createFallbackDragImage(el as HTMLElement, event) // Create with current event for position
@@ -477,39 +475,42 @@ export function useDrag<T = unknown>(
     }
   }
 
+  const stopPointerMoveListeners = useEventListener(draggingElement, 'pointermove', handlePointerMove, { capture: true, passive: false })
+
   const handlePointerUp = (event: PointerEvent) => {
+    stopPointerMoveListeners()
     isPointerDown = false
+
     if (delayTimeout.value) {
       window.clearTimeout(delayTimeout.value)
       delayTimeout.value = null
     }
 
-    // Remove global listeners
-    // useEventListener should handle removal if component unmounts, but explicit removal is cleaner
-    // For now, relying on tryOnUnmounted for broader cleanup, or useEventListener's return to unregister.
-    // This part needs robust listener cleanup. For now, we assume they get cleaned up on unmount.
-
-    if (isDragging.value) {
-      onDragEnd?.(event) // Pass PointerEvent
-
-      // Clearing the active drag is now more specific
-      if (activeDragId.value) { // Ensure activeDragId is not null
-        dragStore.clearActiveDrag(activeDragId.value)
-      }
+    if (!isDragging.value && initialPointerPosition.value) {
+      initialPointerPosition.value = null
+      return
     }
 
-    // Reset states
-    isDragging.value = false
-    dragData.value = null
-    activeDragId.value = null
-    removeFallbackDragImage()
-    initialPointerPosition.value = null
-    hasMovedEnoughForFallbackDrag = false
-    applyDragStyles() // Reset styles on pointer up (end of fallback drag)
+    if (isDragging.value) {
+      handleDragEnd(event)
+    }
+    else if (fallbackElement.value) {
+      removeFallbackDragImage()
+      const currentActiveDrag = dragStore.getActiveDrag()
+      if (activeDragId.value && currentActiveDrag && activeDragId.value === currentActiveDrag.id && currentActiveDrag.isFallback) {
+        dragStore.clearActiveDrag(activeDragId.value)
+      }
+      activeDragId.value = null
+    }
 
-    // Note: handleDragEnd(event) is not called here because its logic is tied to DragEvent
-    // and dataTransfer. We called onDragEnd directly with PointerEvent.
-    // The general reset logic from handleDragEnd is partially duplicated or handled here.
+    isDragging.value = false
+    applyDragStyles()
+    initialPointerPosition.value = null
+    const currentActiveDragAfterEnd = dragStore.getActiveDrag()
+    if (activeDragId.value && currentActiveDragAfterEnd && activeDragId.value === currentActiveDragAfterEnd.id) {
+      dragStore.clearActiveDrag(activeDragId.value)
+      activeDragId.value = null
+    }
   }
 
   const handlePointerDown = (event: PointerEvent) => {
@@ -548,10 +549,8 @@ export function useDrag<T = unknown>(
       // dragEffect and position are handled by pointermove in fallback
 
       // Store data in dragStore (no DataTransfer object here)
-      const dragId = generateDragId() // We still need an ID for potential drop zones
+      const dragId = generateDragId()
       activeDragId.value = dragId // Store the generated ID
-      // dragStore.set(dragId, currentDragData) // Old way
-      // Set this as the active drag operation, explicitly as fallback
       dragStore.setActiveDrag(dragId, currentDragData, true)
 
       createFallbackDragImage(el as HTMLElement, event)
@@ -562,9 +561,18 @@ export function useDrag<T = unknown>(
     }
 
     if (delay > 0) {
-      // Basic delay implementation
-      // TODO: Consider delayOnTouchOnly
-      delayTimeout.value = window.setTimeout(startDrag, delay)
+      isDragging.value = false
+      delayTimeout.value = window.setTimeout(() => {
+        delayTimeout.value = null
+        if (initialPointerPosition.value) {
+          const dx = event.clientX - initialPointerPosition.value.x
+          const dy = event.clientY - initialPointerPosition.value.y
+          if (Math.sqrt(dx * dx + dy * dy) >= fallbackTolerance)
+            startDrag()
+          else
+            initialPointerPosition.value = null
+        }
+      }, delay)
     }
     else {
       if (hasMovedEnoughForFallbackDrag) {
@@ -572,8 +580,6 @@ export function useDrag<T = unknown>(
       }
     }
   }
-
-  // Function declarations for handlePointerMove and handlePointerUp were moved to the top of the event handlers section
 
   // Setup drag attributes
   const setupDragAttributes = () => {
@@ -617,21 +623,28 @@ export function useDrag<T = unknown>(
   // Setup event listeners
   if (isClient) {
     if (forceFallback) {
-      useEventListener(draggingElement, 'pointerdown', handlePointerDown as EventListener)
-      useEventListener(draggingElement, 'pointermove', handlePointerMove as EventListener)
-      useEventListener(draggingElement, 'pointerup', handlePointerUp as EventListener)
+      useEventListener(draggingElement, 'pointerdown', handlePointerDown)
+      useEventListener(draggingElement, 'pointermove', handlePointerMove)
+      useEventListener(draggingElement, 'pointerup', handlePointerUp)
     }
     else {
       const draggingElementValue = toValue(draggingElement) || defaultWindow
 
-      useEventListener(draggingElementValue, 'dragstart', handleDragStart as EventListener)
-      useEventListener(draggingElementValue, 'drag', handleDrag as EventListener)
-      useEventListener(draggingElementValue, 'dragend', handleDragEnd as EventListener)
+      useEventListener(draggingElementValue, 'dragstart', handleDragStart)
+      useEventListener(draggingElementValue, 'drag', handleDrag)
+      useEventListener(draggingElementValue, 'dragend', handleDragEnd)
     }
 
     // Cleanup
     tryOnUnmounted(() => {
-      // Clean up native drag preview element if it exists
+      if (dragTimeout.value) {
+        window.clearTimeout(dragTimeout.value)
+        dragTimeout.value = null
+      }
+      if (delayTimeout.value) {
+        window.clearTimeout(delayTimeout.value)
+        delayTimeout.value = null
+      }
       if (dragPreviewElement.value && dragPreviewElement.value.parentElement) {
         try {
           document.body.removeChild(dragPreviewElement.value)
@@ -642,17 +655,7 @@ export function useDrag<T = unknown>(
           dragPreviewElement.value = null
         }
       }
-      if (dragTimeout.value) {
-        window.clearTimeout(dragTimeout.value)
-        dragTimeout.value = null
-      }
-
-      // Clean up fallback element
       removeFallbackDragImage()
-      if (delayTimeout.value) {
-        window.clearTimeout(delayTimeout.value)
-        delayTimeout.value = null
-      }
 
       // Reset styles on unmount
       const el = toValue(draggingHandle)
@@ -666,11 +669,12 @@ export function useDrag<T = unknown>(
         })
       }
 
-      // Clean up any data in the drag store
-      if (activeDragId.value) { // Ensure activeDragId is not null before clearing
+      // Clean up global store if this instance was the active dragger
+      const currentActiveDrag = dragStore.getActiveDrag()
+      if (activeDragId.value && currentActiveDrag && activeDragId.value === currentActiveDrag.id) {
         dragStore.clearActiveDrag(activeDragId.value)
-        activeDragId.value = null // Ensure it's cleared on unmount
       }
+      activeDragId.value = null // Clear local ref
     })
   }
 
