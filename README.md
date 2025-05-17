@@ -44,7 +44,7 @@ yarn add vue-dndnr
 ```vue
 <script setup>
 import { ref } from 'vue'
-import { useDnR, useDraggable, useResizable } from 'vue-dndnr'
+import { useDnR } from 'vue-dndnr'
 
 const elementRef = ref(null)
 
@@ -52,7 +52,6 @@ const elementRef = ref(null)
 const { position, size, isDragging, isResizing } = useDnR(elementRef, {
   initialPosition: { x: 0, y: 0 },
   initialSize: { width: 200, height: 150 },
-  bounds: 'parent',
 })
 </script>
 
@@ -92,44 +91,14 @@ const size = ref({ width: 200, height: 150 })
 </template>
 ```
 
-## Development
+## ✨ Thanks To
 
-### Project Setup
-
-```sh
-pnpm install
-```
-
-### Build the Library
-
-```sh
-pnpm build
-```
-
-This will build the library and generate type declarations.
-
-## Documentation
-
-The documentation is built with VitePress and can be found in the `docs` directory.
-
-### Running Documentation Locally
-
-```sh
-pnpm docs:dev
-```
-
-### Building Documentation
-
-```sh
-pnpm docs:build
-```
-
-## Thanks To
-
-This project is based on and inspired by the following ope projects:
+This project is based on and inspired by the following projects:
 
 - [vueuse/vueuse](https://github.com/vueuse/vueuse)
-- [vue-hooks](https://github.com/u3u/vue-hooks)
+- [u3u/vue-hooks](https://github.com/u3u/vue-hooks)
+- [sortablejs/vue.draggable.next](https://github.com/SortableJS/vue.draggable.next)
+- [bcakmakoglu/revue-draggable](https://github.com/bcakmakoglu/revue-draggable)
 
 ## Guideline
 
