@@ -55,11 +55,16 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/api/' },
           { text: 'useDnR', link: '/api/use-dnr' },
+          { text: 'useDrag', link: '/api/use-drag' },
+          { text: 'useDrop', link: '/api/use-drop' },
         ],
       },
       {
         text: 'Playground',
-        link: '/playground/',
+        items: [
+          { text: 'Overview', link: '/playground/' },
+          { text: 'useDnR', link: '/playground/use-dnr' },
+        ],
       },
     ],
     sidebar: {
@@ -80,6 +85,8 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/api/' },
             { text: 'useDnR', link: '/api/use-dnr' },
+            { text: 'useDrag', link: '/api/use-drag' },
+            { text: 'useDrop', link: '/api/use-drop' },
           ],
         },
       ],

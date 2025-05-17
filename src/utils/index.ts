@@ -1,5 +1,6 @@
 export * from './config'
 export * from './dimensions'
 export * from './dom'
+export { default as dragStore, generateDragId } from './dragStore'
 export * from './position'
 export * from './throttle'
