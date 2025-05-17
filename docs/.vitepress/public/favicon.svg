@@ -9,7 +9,7 @@
       <stop offset="100%" stop-color="#1f2937"/>
     </linearGradient>
   </defs>
-  <rect x="96" y="96" width="320" height="320" rx="0" fill="url(#bg-gradient)"/>
-  <rect x="160" y="160" width="192" height="192" rx="0" fill="url(#rect2-gradient)" stroke="#cccccc" stroke-width="10"/>
-  <rect x="325" y="325" width="50" height="50" rx="10" fill="#cccccc"/>
+  <rect x="25.6" y="25.6" width="460.8" height="460.8" rx="0" fill="url(#bg-gradient)"/>
+  <rect x="117.76" y="117.76" width="276.48" height="276.48" rx="0" fill="url(#rect2-gradient)" stroke="#cccccc" stroke-width="14"/>
+  <rect x="355.36" y="355.36" width="72" height="72" rx="14.4" fill="#cccccc"/>
 </svg>
