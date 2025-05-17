@@ -202,7 +202,6 @@ export function useDrop<T = unknown>(
     let potentiallyValid = false
 
     // Check if this is likely from our drag system
-    // Note: IDE may flag 'dndnr' as unknown word, but this is intentional
     if (types.includes('application/x-vue-dndnr-id')
       || types.includes('text/plain')
       || types.includes('application/json')) {
@@ -223,7 +222,7 @@ export function useDrop<T = unknown>(
     currentDragOverData.value = null
 
     // Set drop effect based on our validation
-    event.dataTransfer.dropEffect = potentiallyValid ? dropEffectValue.value : 'none'
+    event.dataTransfer.dropEffect = isValidCurrentDrop.value ? dropEffectValue.value : 'none'
 
     // Call user-provided callback if available
     if (onDragEnter)
@@ -238,8 +237,7 @@ export function useDrop<T = unknown>(
     event.preventDefault()
 
     // Update drop effect
-    if (isValidCurrentDrop.value)
-      event.dataTransfer.dropEffect = dropEffectValue.value
+    event.dataTransfer.dropEffect = isValidCurrentDrop.value ? dropEffectValue.value : 'none'
 
     // Call user-provided callback if available
     if (onDragOver)
