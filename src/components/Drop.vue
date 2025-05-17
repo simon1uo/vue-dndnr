@@ -78,9 +78,9 @@ const targetRef = ref<HTMLElement | null>(null)
 
 // Use the drop hook
 const {
-  isOver,
-  isValidDrop,
-  data,
+  isDragOver,
+  isValidDropTarget,
+  draggedData,
 } = useDrop(targetRef, {
   ...props,
   onDragEnter: (data: DragData | null, event: DragEvent) => {
@@ -111,21 +111,21 @@ const {
 
 // Watch for changes and emit events
 watch(
-  isOver,
+  isDragOver,
   (newIsOver) => {
     emit('update:isOver', newIsOver)
   },
 )
 
 watch(
-  isValidDrop,
+  isValidDropTarget,
   (newIsValidDrop) => {
     emit('update:isValidDrop', newIsValidDrop)
   },
 )
 
 watch(
-  data,
+  draggedData,
   (newData) => {
     emit('update:data', newData)
   },
@@ -140,10 +140,10 @@ const combinedClass = computed(() => {
     classes.push(props.className)
   }
 
-  if (isOver.value) {
+  if (isDragOver.value) {
     classes.push(props.overClassName)
 
-    if (isValidDrop.value) {
+    if (isValidDropTarget.value) {
       classes.push(props.validClassName)
     }
     else {
