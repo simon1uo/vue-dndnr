@@ -1,5 +1,4 @@
 import type { Theme } from 'vitepress'
-import { MotionPlugin } from '@vueuse/motion'
 import DefaultTheme from 'vitepress/theme'
 
 import ConfigOption from './components/ConfigOption.vue'
@@ -13,7 +12,6 @@ export default {
   extends: DefaultTheme,
   Layout,
   enhanceApp({ app }) {
-    app.use(MotionPlugin)
     app.component('DemoContainer', DemoContainer)
     app.component('ConfigOption', ConfigOption)
     app.component('PlaygroundContainer', PlaygroundContainer)
