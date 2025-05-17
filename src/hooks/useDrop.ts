@@ -5,24 +5,6 @@ import dragStore from '@/utils/dragStore'
 import { tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, onMounted, shallowRef, toValue, watch } from 'vue'
 
-// Default state styles
-const DEFAULT_STATE_STYLES = {
-  // Over state
-  over: {
-    outline: '1px dashed #4a90e2',
-  },
-  // Valid drop state
-  valid: {
-    outline: '2px solid #4caf50',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-  },
-  // Invalid drop state
-  invalid: {
-    outline: '2px solid #f44336',
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-  },
-}
-
 /**
  * Hook for creating a drop zone that can receive dragged items
  * @param target - Reference to the element to make a drop zone
@@ -36,7 +18,6 @@ export function useDrop<T = unknown>(
   const {
     accept,
     dropEffect = 'move',
-    stateStyles = {},
     allowFallbackDrags = true,
     onDragEnter,
     onDragOver,
@@ -52,18 +33,7 @@ export function useDrop<T = unknown>(
   // Computed values
   const acceptValue = computed(() => toValue(accept))
   const dropEffectValue = computed(() => toValue(dropEffect))
-  const stateStylesValue = computed(() => toValue(stateStyles))
   const allowFallbackDragsValue = computed(() => toValue(allowFallbackDrags))
-
-  // Merge default state styles with user-provided styles
-  const mergedStateStyles = computed(() => {
-    const userStyles = stateStylesValue.value
-    return {
-      over: { ...DEFAULT_STATE_STYLES.over, ...(userStyles?.over || {}) },
-      valid: { ...DEFAULT_STATE_STYLES.valid, ...(userStyles?.valid || {}) },
-      invalid: { ...DEFAULT_STATE_STYLES.invalid, ...(userStyles?.invalid || {}) },
-    }
-  })
 
   // Helper functions
   const validateDrop = (dataToValidate: DragData<T>): boolean => {
@@ -216,51 +186,6 @@ export function useDrop<T = unknown>(
     }
   }
 
-  /**
-   * Apply styles to the target element based on current state
-   */
-  const applyStyles = () => {
-    const el = toValue(target)
-    if (!el)
-      return
-
-    // Reset all styles first
-    Object.keys(mergedStateStyles.value.over).forEach((key) => {
-      (el as HTMLElement).style[key as any] = ''
-    })
-    Object.keys(mergedStateStyles.value.valid).forEach((key) => {
-      (el as HTMLElement).style[key as any] = ''
-    })
-    Object.keys(mergedStateStyles.value.invalid).forEach((key) => {
-      (el as HTMLElement).style[key as any] = ''
-    })
-
-    // Then apply new styles based on state
-    if (isDragOver.value) {
-      // Apply 'over' styles
-      Object.entries(mergedStateStyles.value.over).forEach(([key, value]) => {
-        (el as HTMLElement).style[key as any] = value
-      })
-
-      // Apply 'valid' or 'invalid' styles
-      if (isValidCurrentDrop.value) {
-        Object.entries(mergedStateStyles.value.valid).forEach(([key, value]) => {
-          (el as HTMLElement).style[key as any] = value
-        })
-      }
-      else {
-        Object.entries(mergedStateStyles.value.invalid).forEach(([key, value]) => {
-          (el as HTMLElement).style[key as any] = value
-        })
-      }
-    }
-  }
-
-  // Watch for state changes to update styles
-  watch([isDragOver, isValidCurrentDrop], () => {
-    applyStyles()
-  })
-
   // Event handlers
   const handleNativeDragEnter = (event: DragEvent) => {
     if (!event.dataTransfer)
@@ -300,9 +225,6 @@ export function useDrop<T = unknown>(
     // Set drop effect based on our validation
     event.dataTransfer.dropEffect = potentiallyValid ? dropEffectValue.value : 'none'
 
-    // Apply styles
-    applyStyles()
-
     // Call user-provided callback if available
     if (onDragEnter)
       onDragEnter(currentDragOverData.value, event)
@@ -335,9 +257,6 @@ export function useDrop<T = unknown>(
     isDragOver.value = false
     isValidCurrentDrop.value = false
     currentDragOverData.value = null
-
-    // Apply (reset) styles
-    applyStyles()
 
     // Call user-provided callback if available
     if (onDragLeave)
@@ -383,9 +302,6 @@ export function useDrop<T = unknown>(
     isDragOver.value = false
     isValidCurrentDrop.value = false
     currentDragOverData.value = null
-
-    // Apply (reset) styles
-    applyStyles()
   }
 
   // --- Fallback Event Handlers ---
@@ -404,7 +320,6 @@ export function useDrop<T = unknown>(
       isDragOver.value = true
       currentDragOverData.value = activeDrag.data
       isValidCurrentDrop.value = validateDrop(activeDrag.data)
-      applyStyles()
       onDragEnter?.(activeDrag.data, event as any) // Pass PointerEvent, cast as any for now
     }
   }
@@ -417,7 +332,6 @@ export function useDrop<T = unknown>(
     if (activeDrag && activeDrag.isFallback) {
       // currentDragOverData.value should already be set by pointerenter
       // isValidCurrentDrop.value should also be set
-      applyStyles() // In case styles depend on pointer position (though not by default)
       onDragOver?.(currentDragOverData.value, event as any) // Pass PointerEvent
     }
   }
@@ -441,7 +355,6 @@ export function useDrop<T = unknown>(
       isDragOver.value = false
       isValidCurrentDrop.value = false
       currentDragOverData.value = null
-      applyStyles()
       onDragLeave?.(null, event as any) // Pass PointerEvent
     }
   }
@@ -459,7 +372,6 @@ export function useDrop<T = unknown>(
       isDragOver.value = false
       isValidCurrentDrop.value = false
       currentDragOverData.value = null
-      applyStyles()
     }
   }
 
@@ -476,7 +388,6 @@ export function useDrop<T = unknown>(
   watch(() => toValue(target), (el) => {
     if (el) {
       setupDropZoneAttributes()
-      applyStyles()
     }
   })
 
@@ -511,32 +422,10 @@ export function useDrop<T = unknown>(
     })
   }
 
-  // Computed style based on current state
-  const style = computed(() => {
-    const computedStyle: Record<string, string> = {}
-
-    // Apply state styles based on current state
-    if (isDragOver.value) {
-      // Apply 'over' styles
-      Object.assign(computedStyle, mergedStateStyles.value.over)
-
-      // Apply 'valid' or 'invalid' styles
-      if (isValidCurrentDrop.value) {
-        Object.assign(computedStyle, mergedStateStyles.value.valid)
-      }
-      else {
-        Object.assign(computedStyle, mergedStateStyles.value.invalid)
-      }
-    }
-
-    return computedStyle
-  })
-
   return {
     isOver: isDragOver,
     isValidDrop: isValidCurrentDrop,
     data: currentDragOverData,
-    style,
   }
 }
 

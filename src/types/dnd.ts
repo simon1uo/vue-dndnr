@@ -177,11 +177,6 @@ export interface DropOptions<T = unknown> {
   dropEffect?: 'none' | 'copy' | 'link' | 'move'
 
   /**
-   * Styles for different drop states
-   */
-  stateStyles?: MaybeRefOrGetter<DropStateStyles | undefined>
-
-  /**
    * Determines if the drop zone should accept drags initiated in fallback mode (using pointer events).
    * @default true
    */
@@ -213,27 +208,4 @@ export interface DropOptions<T = unknown> {
    * @param event The original dragleave event
    */
   onDragLeave?: (data: DragData<T> | null, event: DragEvent) => void
-}
-
-/**
- * Drop state styles configuration
- */
-export interface DropStateStyles {
-  /**
-   * Styles applied when item is over the drop zone
-   * Supports all CSS style properties
-   */
-  over?: Record<string, string>
-
-  /**
-   * Styles applied when drop is valid
-   * Supports all CSS style properties
-   */
-  valid?: Record<string, string>
-
-  /**
-   * Styles applied when drop is invalid
-   * Supports all CSS style properties
-   */
-  invalid?: Record<string, string>
 }
