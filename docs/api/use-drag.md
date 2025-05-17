@@ -26,8 +26,6 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
   },
   // Use fallback mode for better touch device support
   forceFallback: true,
-  // Attach pointer events to the document
-  draggingElement: document,
   // Add a small delay for touch devices
   delay: 100,
   delayOnTouchOnly: true,
@@ -257,6 +255,5 @@ The hook uses the HTML5 Drag and Drop API, which is supported in all modern brow
 
 ## Related
 
-- [Drag](./drag.md) - Component wrapper for useDrag
 - [useDrop](./use-drop.md) - Hook for creating drop zones
 - [useDnR](./use-dnr.md) - Combined drag and resize functionality

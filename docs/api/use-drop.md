@@ -6,7 +6,7 @@ The `useDrop` hook provides drop zone functionality using the HTML5 Drag and Dro
 
 <script setup>
 import { ref } from 'vue'
-import { useDrop, Drag } from 'vue-dndnr'
+import { useDrop, Drop,Drag } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
 const dropData = ref(null)
@@ -39,7 +39,7 @@ const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
 
   <div
     ref="dropZoneRef"
-    class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl min-h-[200px] flex items-center justify-start"
+    class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl min-h-[200px] w-50% flex items-center justify-start"
   >
     <div class="text-left">
       <div class="text-lg mb-2">Drop Zone</div>
@@ -53,6 +53,7 @@ const { isOver, isValidDrop, data } = useDrop(dropZoneRef, {
       </div>
     </div>
   </div>
+
 </DemoContainer>
 
 :::details Hook Usage
