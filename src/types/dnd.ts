@@ -317,12 +317,6 @@ export interface SortableDragOptions<T> extends DragOptions<SortableDragData<T>>
    * The indices of all selected items in a multi-selection
    */
   selectedIndices?: number[]
-
-  /**
-   * Class applied to the item being dragged.
-   * Overwrites dragClass from UseDnDOptions if both are provided.
-   */
-  dragClass?: MaybeRefOrGetter<string>
 }
 
 /**
@@ -384,6 +378,32 @@ export interface DragItemContext {
 }
 
 /**
+ * Configuration for animation effects.
+ * Can be a boolean to enable/disable with default settings,
+ * or an object to customize animation behavior.
+ */
+export interface AnimationConfig {
+  /**
+   * CSS easing function for animations.
+   * @default 'cubic-bezier(0.33, 1, 0.68, 1)' // easeOutCubic as a common default
+   */
+  easing?: string
+
+  /**
+   * Duration of the animation in milliseconds.
+   * @default 150
+   */
+  duration?: number
+
+  /**
+   * Whether to disable animations.
+   * If set to true, other animation options are ignored.
+   * @default false
+   */
+  disabled?: boolean
+}
+
+/**
  * Configuration options for the useDnD hook
  */
 export interface UseDnDOptions<T> {
@@ -413,13 +433,6 @@ export interface UseDnDOptions<T> {
    * Items can be dragged between lists with the same group
    */
   group?: MaybeRefOrGetter<string>
-
-  /**
-   * Class applied to the item being dragged.
-   * Can be overwritten by dragOptions.dragClass.
-   * Consider removing this if dragClass is solely in dragOptions.
-   */
-  dragClass?: MaybeRefOrGetter<string>
 
   /**
    * Class for the placeholder/ghost element
@@ -487,19 +500,12 @@ export interface UseDnDOptions<T> {
   }>
 
   /**
-   * Configuration for animation effects
+   * Configuration for animation effects.
+   * Set to `false` to disable all animations.
+   * Set to `true` to enable animations with default settings.
+   * Provide an `AnimationConfig` object for custom animation behavior.
    */
-  animation?: MaybeRefOrGetter<number | {
-    /**
-     * CSS easing function for animations
-     */
-    easing?: string
-
-    /**
-     * Duration of the animation in milliseconds
-     */
-    duration?: number
-  }>
+  animation?: MaybeRefOrGetter<boolean | AnimationConfig>
 
   /**
    * Configuration for virtual scrolling
