@@ -281,9 +281,15 @@ export function useDrag<T = unknown>(
 
   // Event handlers
   const handleDragStart = (event: DragEvent) => {
-    const el = toValue(target)
+    const el = toValue(draggingHandle)
     if (!el || !event.dataTransfer)
       return
+
+    // Critical check: Ensure the event originated from the element this hook is bound to.
+    // The `event.target` is the actual element that started the drag.
+    if (event.target !== el) {
+      return
+    }
 
     // Set drag data
     const currentDragData = dataValue.value

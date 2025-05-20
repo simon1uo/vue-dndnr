@@ -3,7 +3,7 @@ import type { MaybeRefOrGetter } from 'vue'
 import { isClient } from '@/utils'
 import dragStore from '@/utils/dragStore'
 import { tryOnUnmounted, useEventListener } from '@vueuse/core'
-import { computed, onMounted, shallowRef, toValue, watch } from 'vue'
+import { computed, shallowRef, toValue, watch } from 'vue'
 
 /**
  * Hook for creating a drop zone that can receive dragged items
@@ -245,11 +245,13 @@ export function useDrop<T = unknown>(
   }
 
   const handleNativeDragLeave = (event: DragEvent) => {
-    // Check if we're actually leaving the element
     const el = toValue(target)
-    const relatedTarget = event.relatedTarget as Node | null
-    if (el && relatedTarget && el.contains(relatedTarget))
+    const relatedTargetNode = event.relatedTarget as Node | null
+
+    // Check if we're actually leaving the element
+    if (el && relatedTargetNode && el.contains(relatedTargetNode)) {
       return
+    }
 
     // Reset state
     isDragOver.value = false
@@ -400,20 +402,17 @@ export function useDrop<T = unknown>(
     useEventListener(target, 'pointermove', handlePointerMoveForDrop, { capture: true, passive: true })
     useEventListener(target, 'pointerup', handlePointerUpForDrop, { capture: true, passive: false })
 
-    // Initial setup
-    onMounted(() => {
-      setupDropZoneAttributes()
-    })
-
-    // Watch for target changes to re-apply attributes if necessary
+    // Initial setup and watch for target changes to re-apply attributes if necessary
     watch(
       () => toValue(target),
       (newTarget) => {
-        if (newTarget)
-          setupDropZoneAttributes()
+        if (newTarget) {
+          setupDropZoneAttributes() // Call directly
+        }
       },
+      { immediate: true, flush: 'post' }, // Added immediate: true and flush: 'post' might be safer
     )
-  } // End of isClient block
+  }
 
   // Cleanup on unmount
   tryOnUnmounted(() => {
