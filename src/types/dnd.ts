@@ -232,6 +232,14 @@ export interface DataItem<T> {
 }
 
 /**
+ * Extended DataItem with processing information for internal use and exposure in UseDnDReturn.
+ */
+export interface ProcessedDataItem<T> extends DataItem<T> {
+  originalIndex: number
+  selected: boolean
+}
+
+/**
  * Represents the source and target information for a sort operation
  */
 export interface SortInfo {
@@ -343,6 +351,36 @@ export interface SortableDropOptions<T> extends DropOptions<SortableDragData<T>>
    * Only used when allowOnItems is true
    */
   maxDepth?: number
+}
+
+/**
+ * Helper type for item-specific drag and drop context
+ */
+export interface DragItemContext {
+  /**
+   * The ref to the item element
+   */
+  itemRef: Ref<HTMLElement | null>
+
+  /**
+   * Whether the item is currently being dragged
+   */
+  isDragging: Ref<boolean>
+
+  /**
+   * The style of the item
+   */
+  itemStyle: ComputedRef<Record<string, string>>
+
+  /**
+   * Whether the item is currently a drop target
+   */
+  isDropTarget: Ref<boolean>
+
+  /**
+   * The cleanup function for the item
+   */
+  cleanup: () => void
 }
 
 /**
@@ -512,7 +550,7 @@ export interface UseDnDReturn<T> {
    * Items with internal state, ready for rendering
    * Includes computed properties like selection state
    */
-  processedItems: ComputedRef<DataItem<T>[]>
+  processedItems: ComputedRef<ProcessedDataItem<T>[]>
 
   /**
    * Array of currently selected items
@@ -574,7 +612,7 @@ export interface UseDnDReturn<T> {
    * @param index The index of the item in the list
    * @returns Object containing props to be spread on the item element
    */
-  getItemProps: (item: DataItem<T>, index: number) => Record<string, any>
+  getItemProps: (item: ProcessedDataItem<T>, index: number) => Record<string, any>
 
   /**
    * Function to get props for the placeholder element
