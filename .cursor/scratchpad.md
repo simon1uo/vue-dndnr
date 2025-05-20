@@ -49,45 +49,53 @@
   - [x] 实现基本的放置逻辑 (已在 `getItemProps` 中集成 `useDrop`，实现了项目间的初步放置和排序逻辑触发)
   - [x] 实现排序回调 (已在项目间 `onDrop` 中触发 `onSort` 和 `onChange`)
 
-- [ ] 2.2 实现基础动画
-  - [ ] 2.2.1 准备 `useDnD` 以配合 `<TransitionGroup>`
-    - 目标：确保 `useDnD` 的输出 (`processedItems`, `getItemProps`) 与 Vue 的 `<TransitionGroup>` 组件兼容，以实现列表项的平滑移动动画。
+- [x] 2.2 实现基础动画
+  - [x] 2.2.1 动画方案调研与API设计
+    - 目标：实现使 `useDnD` 输出的 props 直接支持平滑移动动画。
     - 任务：
-      - 确认 `getItemProps` 提供的 `key` 对于 `<TransitionGroup>` 是唯一且稳定的。 (当前已提供 `key`)
-      - 确保当 `options.items` 排序发生变化并触发 `onChange/onSort` 后，`processedItems` 的更新能够被 `<TransitionGroup>` 正确捕获以产生动画。 (当前 `processedItems` 是 `computed`, `options.items` 是 `MaybeRefOrGetter`, 应该能正常工作)
-    - 成功标准：在示例代码中，当列表项排序变化时，`<TransitionGroup>` 能够平滑地动画处理列表项的移动。
+      [x] 调研 `@vueuse/core` 动画相关钩子（如 `useTransition`），分析其适用性。
+      [x] 设计 `useDnD` 的动画API（如 `animation` 选项、动画参数、开关等）。
+    - 成功标准：明确动画实现技术路线，API设计合理，具备可扩展性。
 
-  - [ ] 2.2.2 实现拖拽项的"幽灵"样式 (Ghost Class for Dragged Item)
-    - 目标：当一个列表项被拖动时，该项本身（或其视觉替代物）应有独特的样式，以区别于列表中的其他静态项。
+  - [x] 2.2.2 实现拖拽项的"幽灵"样式 (Ghost Class for Dragged Item)
+    - 目标：当一个列表项被拖动时，该项本身应有独特的视觉效果（"幽灵"态），以区别于列表中的其他静态项。这是通过 `useDrag` 的 `stateStyles` 选项实现的。
     - 任务：
-      - 利用 `useDnD` 中已有的 `dragClassToApply` (来自 `options.dragClass` 或 `options.dragOptions.dragClass`)。
-      - 在示例/Demo中提供默认的CSS样式给这个 `dragClassToApply`，例如半透明效果、阴影等。
-      - 确保此样式在拖拽开始时应用，在拖拽结束时移除。 (当前 `useDrag` 的 `onDragStart/onDragEnd` 已处理类名切换)
-    - 成功标准：被拖拽的列表项在视觉上呈现"幽灵"状态（例如，半透明）。
+      [x] 移除 `UseDnDOptions` 和 `SortableDragOptions` 中的 `dragClass` 选项，推广使用 `dragOptions.stateStyles.dragging`。
+      [x] 移除 `useDnD.ts` 中手动应用拖拽类名的逻辑。
+      [x] 确保 `getItemProps` 返回的 `style` 属性能够正确应用来自 `useDrag` 的 `stateStyles.dragging`。
+      [x] 在示例/Demo中，指导用户通过向 `useDnD` 的 `dragOptions.stateStyles.dragging` 传递样式对象来实现拖拽项的"幽灵"效果（例如，半透明、阴影等）。
+    - 成功标准：被拖拽的列表项在视觉上通过内联样式（来自 `stateStyles.dragging`）呈现"幽灵"状态，不再依赖外部CSS类进行此特定效果。`useDnD` API 得到简化。
 
-  - [ ] 2.2.3 实现列表项排序时的过渡动画 (Transition for Sorting)
+  - [x] 2.2.3 实现FLIP动画的平滑排序过渡 (已完成)
     - 目标：当一个项目被拖放到新的位置，导致列表重新排序时，其他列表项应平滑地移动到它们的新位置。
     - 任务：
-      - 在使用 `useDnD` 的示例/Demo中，将列表项的渲染包裹在 `<TransitionGroup>` 组件内。
-      - 为 `<TransitionGroup>` 定义必要的 CSS 过渡类，特别是 `*-move` 类 (例如 `list-move`，如果 `<TransitionGroup name="list">`)。
-      - 提供示例CSS，实现平滑的 `transform` 过渡效果。
-    - 成功标准：列表项在排序操作后，能够平滑地动画到其新位置。
+      [x] 在 `useDnD` 内部追踪每个列表项的前后位置（可用 `getBoundingClientRect`）。
+      [x] 在排序变更时，计算每个元素的"位移差"，用 `requestAnimationFrame` 平滑过渡 transform。
+      [x] 提供动画 style 给 `getItemProps。
+      [x] 支持动画参数配置（如时长、缓动）。
+      [x] 更新`docs/api/use-dnd.md` 中的 Demo 以测试动画效果。
+    - 成功标准：列表项在排序操作后，能够平滑地动画到其新位置，且动画参数可配置。
 
-  - [ ] 2.2.4 实现拖放占位符效果 (Placeholder/Drop Target Indication)
-    - 目标：在拖拽过程中，当鼠标悬停在有效的放置位置（项目之间或容器的有效区域）时，应有视觉指示，表明如果释放鼠标，项目将被放置在哪里。
+  - [x] 2.2.4 实现拖放占位符效果 (Placeholder/Drop Target Indication) (已完成 - Scheme 2)
+    - 目标：在拖拽过程中，当鼠标悬停在有效的放置位置（项目之间或容器的有效区域）时，应有视觉指示（一个独立的占位符元素），表明如果释放鼠标，项目将被放置在哪里。
     - 任务：
-      - 方案1 (优先): 增强现有 `ghostClassValue` (来自 `options.ghostClass`) 的应用。当前它应用于 `isDropTarget` 的项。调整逻辑或CSS，使其能清晰指示插入位置（例如，在目标项上方或下方添加边框或背景）。
-      - 方案2 (备选): 利用 `getPlaceholderProps`。当前 `getPlaceholderProps` 主要用于容器末尾的占位符。考虑是否扩展其功能或引入新的机制，以便在项目之间显示占位符。这可能涉及到在拖拽悬停时计算精确的插入索引，并在该位置动态渲染一个占位符元素。
-      - 在示例/Demo中提供默认的CSS样式给占位符类。
-    - 成功标准：当拖拽项悬停在两个列表项之间或列表的有效插入点时，出现清晰的视觉占位符（例如，一条线、一个高亮区域或被推开的项目的视觉效果）。
+      [-] ~~方案1 (优先): 增强现有 `ghostClassValue` (来自 `options.ghostClass`) 的应用。通过在 `ManagedDragItemContext` 中添加 `dropIndicatorPosition` 状态，并在 item 的 `onDragOver`/`onDragLeave` 中更新此状态。~~
+      [-] ~~`getItemProps` 已更新，会输出 `data-drop-indicator-position` 属性。~~
+      [-] ~~在示例/Demo中 (`docs/api/use-dnd.md`) 添加了 CSS 样式，利用 `ghostClass` 和 `data-drop-indicator-position` 来显示顶部或底部边框作为插入指示。~~
+      [x] 方案2 (实施): 利用 `getPlaceholderProps`。
+        [x] 添加 `placeholderIndex` 状态到 `useDnD`。
+        [x] 更新 item 和 container 的 `useDrop` (onDragOver, onDragLeave, onDrop) 逻辑来管理 `placeholderIndex`。
+        [x] `getPlaceholderProps(index)` 现在根据 `placeholderIndex` 控制占位符的显示，并应用 `ghostClass`。
+        [x] 更新 `docs/api/use-dnd.md` Demo 以使用 `v-for` 和 `getPlaceholderProps` 渲染占位符元素，并调整/确认 `ghostClass` 的 CSS。
+    - 成功标准：当拖拽项悬停在两个列表项之间或列表的有效插入点时，出现一个独立的、清晰的占位符元素（使用 `ghostClass` 样式）。占位符在拖拽结束或离开有效区域后正确消失。
 
-  - [ ] 2.2.5 更新文档和示例
-    - 目标：在文档中说明如何配置和使用动画及占位符效果，并提供完整的示例代码。
+  - [ ] 2.2.5 动画开关、兼容性与文档示例
+    - 目标：动画能力可选、可配置，兼容虚拟滚动、SSR等场景，并有完善文档和示例。
     - 任务：
-      - 更新 `docs/api/use-dnd.md`，添加关于如何集成 `<TransitionGroup>` 的说明。
-      - 提供使用动画和占位符效果的完整代码示例。
-      - 包含必要的CSS样式片段或说明如何自定义这些样式。
-    - 成功标准：文档清晰地解释了如何实现和自定义拖拽动画和占位符，并提供了可工作的示例。
+      - 提供动画开关（如 `animation: false` 可禁用动画）。
+      - 兼容 SSR、虚拟滚动等场景，确保动画逻辑不会引发异常。
+      - 在 API 文档中说明动画选项、用法和自定义方式。
+    - 成功标准：动画与拖拽、排序等核心功能无冲突，兼容复杂场景，文档和示例清晰。
 
 ### 阶段 2.5: 文档和示例
 
@@ -137,7 +145,7 @@
 
 ## 项目状态看板
 
-- 当前阶段：阶段 2.5.2 创建基础示例 - **基础列表排序 Demo 已创建用于测试**
+- 当前阶段：阶段 2.2.5 动画开关、兼容性与文档示例
 - 已完成：
   - [x] 创建 `src/types/dnd.ts` 文件，定义基本类型和接口
   - [x] 创建 `src/hooks/useDnD.ts` 文件，实现基本钩子框架
@@ -150,27 +158,13 @@
   - [x] 在 `getItemProps` 中为每个列表项集成了 `useDrop`，初步实现了项目到项目的放置逻辑，包括基于位置的 `newIndex` 计算，并触发了 `onSort` 和 `onChange` 回调。
   - [x] 创建了 `docs/api/use-dnd.md` 文件。
   - [-] 在 `docs/api/use-dnd.md` 中添加了一个基本的 Demo 部分，用于测试当前的列表排序功能。
+  - [x] 扩展 `src/types/dnd.ts` 中类型定义以支持排序功能，并优化
+  - [x] 2.2.1 动画方案调研与API设计 - 完成
+  - [x] 2.2.2 实现拖拽项的"幽灵"样式 - 完成
+  - [x] 2.2.3 实现FLIP动画的平滑排序过渡 - 完成
+  - [x] 2.2.4 实现拖放占位符效果 (Placeholder/Drop Target Indication) - 完成 (Scheme 2)
 
 ## 执行者反馈或请求帮助
-
-已按照指示，跳过阶段 2.2，并为阶段 2.5 创建了 `docs/api/use-dnd.md` 文件。该文件中已包含一个基础的 Demo，用于测试目前已实现的列表拖拽排序功能，包括项目间的放置逻辑和 `onSort` 回调。
-
-Demo关键点：
-
-- 使用 `shallowRef` 管理 `initialItems`。
-- `onSort` 回调中，使用 `initialItems.value = [...newSortedItems]` 来确保响应式更新。
-- 提供了基本的Vue模板来渲染可排序列表，并绑定了 `getItemProps`。
-- 添加了简单的CSS样式，包括对 `item-is-drop-target` 的高亮显示。
-
-**建议：**
-请您现在使用这个 Demo (`docs/api/use-dnd.md`) 来测试以下功能点：
-
-1. **基本拖拽**: 能否拖动列表项。
-2. **项目间排序**: 能否将一个列表项拖动到另一个列表项的上方或下方，并使其正确排序。
-3. **`newIndex` 计算**: 特别关注 `newIndex` 的计算是否在各种情况下都准确（例如，向上拖动、向下拖动、拖动到列表首尾）。这对应您之前在 `src/hooks/useDnD.ts` 中关于 `canDrop` 和 `newIndex` 计算的注释。
-4. **`onSort` 和 `onChange` 回调**: 检查控制台输出，确认回调被正确触发，并且参数 (`oldIndex`, `newIndex`, `item`, `items`) 的值符合预期。
-5. **数据响应性**: 确认列表在排序后能够正确地在界面上响应更新。
-6. **拖拽到容器边缘**: 测试将项目拖到容器的空白区域（特别是末尾）是否按预期工作（目前应添加到列表末尾）。
 
 ## 经验教训
 
