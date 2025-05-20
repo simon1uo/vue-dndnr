@@ -24,16 +24,26 @@ const {
   processedItems,
   containerProps,
   getItemProps,
+  getPlaceholderProps,
   isDragging,
   draggedItem,
-  // isDropTarget, // For container drop target state
 } = useDnD(listContainerRef, {
   items: initialItems,
   getKey: item => item.id,
-  // Example onSort handler to update the items array
+  animation: {
+    duration: 100, // milliseconds
+    easing: 'cubic-bezier(0.33, 1, 0.68, 1)',
+  },
+  ghostClass: 'ghost-item-class',
+  dragOptions: {
+    stateStyles: {
+      dragging: {
+        opacity: '0.5',
+      },
+    },
+  },
   onSort: (event) => {
     console.log('Sort event:', event)
-
   },
   onChange: (items, type) => {
     console.log('Change event:', type, items)
@@ -41,7 +51,6 @@ const {
   },
 })
 
-// Helper to see the internal state for the demo
 const getRawData = (item) => JSON.stringify(item.data)
 const getRawDragged = () => draggedItem.value ? JSON.stringify({id: draggedItem.value.id, data: draggedItem.value.data }) : 'null'
 
@@ -57,17 +66,24 @@ const getRawDragged = () => draggedItem.value ? JSON.stringify({id: draggedItem.
     v-bind="containerProps"
     class="bg-gray-200 dark:bg-gray-700 p-2.5 rounded min-h-25 mt-3"
   >
-    <p v-if="!processedItems.length" class="text-gray-500 dark:text-gray-400">No items to display.</p>
-    <div
-      v-for="(item, index) in processedItems"
-      v-bind="getItemProps(item, index)"
-      :key="item.id"
-      class="p-2.5 my-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded cursor-grab select-none hover:bg-gray-50 dark:hover:bg-gray-700 active:cursor-grabbing dark:text-gray-200"
-      :class="{ 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700': item['data-is-item-drop-target'] }"
-    >
-      <strong>ID: {{ item.id }}</strong> - {{ getRawData(item) }}
-      <span v-if="item['data-is-item-drop-target']" class="font-bold text-green-600 dark:text-green-400 ml-2.5"> (Drop Target)</span>
-    </div>
+    <template v-if="!processedItems.length">
+      <div v-bind="getPlaceholderProps(0)" />
+      <p class="text-gray-500 dark:text-gray-400 text-center py-2">No items to display. Drop here to add.</p>
+    </template>
+    <template v-else>
+      <template v-for="(item, index) in processedItems" :key="item.id">
+        <div v-bind="getPlaceholderProps(index)" />
+        <div
+          v-bind="getItemProps(item, index)"
+          class="p-2.5 my-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded cursor-grab select-none hover:bg-gray-50 dark:hover:bg-gray-700 active:cursor-grabbing dark:text-gray-200"
+          :class="{ 'item-is-drop-target': item['data-is-item-drop-target'] }"
+        >
+          <strong>ID: {{ item.id }}</strong> - {{ getRawData(item) }}
+          <span v-if="item['data-is-item-drop-target']" class="font-bold text-green-600 dark:text-green-400 ml-2.5"> (Item Drop Target)</span>
+        </div>
+      </template>
+      <div v-bind="getPlaceholderProps(processedItems.length)" />
+    </template>
   </div>
 
   <div class="mt-5 bg-white dark:bg-gray-800 p-2.5 rounded">
@@ -78,17 +94,43 @@ const getRawDragged = () => draggedItem.value ? JSON.stringify({id: draggedItem.
 
 <style>
 .dragging-item-class {
-  @apply opacity-50 bg-blue-50 dark:bg-blue-900/30 border border-dashed border-blue-500 dark:border-blue-400;
+  opacity: 0.5;
+  background-color: #EFF6FF;
+  border: 1px dashed #3B82F6;
+}
+
+.dark .dragging-item-class {
+  background-color: rgba(30, 58, 138, 0.3);
+  border-color: #60A5FA;
 }
 
 .ghost-item-class {
-  @apply opacity-70 bg-gray-100 dark:bg-gray-700 border border-dashed border-gray-500 dark:border-gray-400 min-h-10 flex items-center justify-center text-gray-500 dark:text-gray-400;
+  opacity: 0.7;
+  background-color: #F3F4F6;
+  border: 2px dashed #60A5FA;
+  min-height: 2.5rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  border-radius: 0.25rem;
 }
 
-/* Example styling for when an item is a drop target */
+.dark .ghost-item-class {
+  background-color: #374151;
+  border-color: #3B82F6;
+}
+
 .item-is-drop-target {
-  background-color: #d4edda !important; /* Light green */
-  border-color: #c3e6cb !important;
+  background-color: #F0FDF4;
+  border-color: #BBF7D0;
+}
+
+.dark .item-is-drop-target {
+  background-color: rgba(6, 78, 59, 0.3);
+  border-color: #047857;
 }
 
 .sortable-list-container > div:active {
