@@ -54,6 +54,8 @@ export function useDnD<T = unknown>(
   const draggedItemInternal = shallowRef<(DataItem<T> & { originalIndex: number, selected: boolean }) | null>(null)
   const currentDropPayloadInternal = shallowRef<SortableDragData<T> | null>(null)
   const previousItemPositions = shallowRef(new Map<string | number, DOMRect>())
+  const placeholderIndex = shallowRef<number | null>(null)
+  const isExternalDragOverContainer = shallowRef<boolean>(false) // To handle drags to container end
 
   // --- Item-specific Drag and Drop Contexts ---
   const itemContextsInternal = shallowRef<Map<string | number, ManagedDragItemContext<T>>>(new Map())
@@ -113,6 +115,8 @@ export function useDnD<T = unknown>(
       onDragEnd: (event) => {
         isDraggingGlobal.value = false
         draggedItemInternal.value = null
+        placeholderIndex.value = null
+        isExternalDragOverContainer.value = false
         userDragOptions.value.onDragEnd?.(event)
       },
     })
@@ -148,6 +152,9 @@ export function useDnD<T = unknown>(
       }),
       onDrop: (dragEventData, event) => {
         userDropOptions.value.onDrop?.(dragEventData, event)
+        placeholderIndex.value = null
+        isExternalDragOverContainer.value = false
+
         const droppedPayload = dragEventData.payload as SortableDragData<T> | undefined
 
         if (!droppedPayload || typeof droppedPayload.id === 'undefined' || typeof droppedPayload.index === 'undefined') {
@@ -209,6 +216,20 @@ export function useDnD<T = unknown>(
         if (event && typeof event.stopPropagation === 'function') {
           event.stopPropagation()
         }
+      },
+      onDragOver: (dragEventData, event) => {
+        userDropOptions.value.onDragOver?.(dragEventData, event)
+        if (event && itemRef.value) {
+          // Determine if over top or bottom half of the item
+          const rect = itemRef.value.getBoundingClientRect()
+          const isOverTopHalf = event.clientY < rect.top + rect.height / 2
+          placeholderIndex.value = itemDataRef.value.originalIndex + (isOverTopHalf ? 0 : 1)
+          isExternalDragOverContainer.value = false // Drag is over an item, not just container
+        }
+      },
+      onDragLeave: (dragEventData, event) => {
+        userDropOptions.value.onDragLeave?.(dragEventData, event)
+        // placeholderIndex.value = null; // Let container onDragOver handle it if moving to container edge
       },
     })
 
@@ -272,6 +293,11 @@ export function useDnD<T = unknown>(
   watch(processedItems, (newItems, _oldItems) => {
     if (animationOptions.value.disabled || previousItemPositions.value.size === 0) {
       previousItemPositions.value.clear() // Clear if animations disabled or no prev positions
+      // Also clear placeholder if animations are off and list changes
+      if (animationOptions.value.disabled) {
+        placeholderIndex.value = null
+        isExternalDragOverContainer.value = false
+      }
       return
     }
 
@@ -333,6 +359,10 @@ export function useDnD<T = unknown>(
       return [itemType]
     }),
     onDrop: (dragEventData, event) => {
+      // Reset placeholder states immediately on container drop
+      placeholderIndex.value = null
+      isExternalDragOverContainer.value = false
+
       userDropOptions.value.onDrop?.(dragEventData, event)
       const sortablePayload = dragEventData.payload as SortableDragData<T> | undefined
 
@@ -408,13 +438,50 @@ export function useDnD<T = unknown>(
     onDragEnter: (dragEventData, event) => {
       userDropOptions.value.onDragEnter?.(dragEventData, event)
       currentDropPayloadInternal.value = dragEventData ? dragEventData.payload : null
+      // Potentially set placeholder for drag entering the main container if empty or to the end
+      if (!itemContextsInternal.value.size) { // If list is empty
+        placeholderIndex.value = 0
+        isExternalDragOverContainer.value = true
+      }
     },
     onDragOver: (dragEventData, event) => {
       userDropOptions.value.onDragOver?.(dragEventData, event)
+      const anyItemIsDropTarget = Array.from(itemContextsInternal.value.values()).some(ctx => ctx.isDropTarget.value)
+      if (!anyItemIsDropTarget && targetRef.value && event) {
+        const containerRect = targetRef.value.getBoundingClientRect()
+        if (processedItems.value.length === 0) {
+          placeholderIndex.value = 0
+          isExternalDragOverContainer.value = true
+        }
+        else {
+          // Check if cursor is below the midpoint of the last item or near container bottom
+          const lastItemContext = itemContextsInternal.value.get(processedItems.value[processedItems.value.length - 1].id)
+          if (lastItemContext?.itemRef?.value) {
+            const lastItemRect = lastItemContext.itemRef.value.getBoundingClientRect()
+            if (event.clientY > lastItemRect.top + lastItemRect.height / 2) {
+              placeholderIndex.value = processedItems.value.length
+              isExternalDragOverContainer.value = true
+            }
+          }
+          else if (event.clientY > containerRect.top + containerRect.height / 2) {
+            // Fallback if last item rect not available, consider if over bottom half of container
+            placeholderIndex.value = processedItems.value.length
+            isExternalDragOverContainer.value = true
+          }
+        }
+      }
     },
     onDragLeave: (dragEventData, event) => {
       userDropOptions.value.onDragLeave?.(dragEventData, event)
-      currentDropPayloadInternal.value = null
+      const trulyLeftContainer = !event.relatedTarget || (targetRef.value && !targetRef.value.contains(event.relatedTarget as Node))
+
+      if (trulyLeftContainer) {
+        placeholderIndex.value = null
+        isExternalDragOverContainer.value = false
+        if (dragEventData && (!dragEventData.payload || typeof (dragEventData.payload as SortableDragData<T>).id === 'undefined')) {
+          currentDropPayloadInternal.value = null
+        }
+      }
     },
   })
 
@@ -498,9 +565,6 @@ export function useDnD<T = unknown>(
       'draggable': true,
       'data-dndnr-item-id': itemId,
       'aria-grabbed': currentContext?.isDragging?.value ? 'true' : 'false',
-      'class': {
-        ...(ghostClassValue.value && currentContext?.isDropTarget?.value && { [ghostClassValue.value]: true }),
-      },
       'style': currentContext?.itemStyle?.value || {},
       'data-is-item-drop-target': currentContext?.isDropTarget?.value ?? false,
     }
@@ -508,10 +572,11 @@ export function useDnD<T = unknown>(
 
   const containerProps = computed(() => ({}))
 
-  const getPlaceholderProps = (_index: number) => {
+  const getPlaceholderProps = (index: number) => {
     return {
-      class: ghostClassValue.value,
-      style: { display: isDropTarget.value && currentDropPayloadInternal.value ? 'block' : 'none' },
+      key: `dndnr-ph-${index}`,
+      class: toValue(ghostClassValue),
+      style: { display: placeholderIndex.value === index ? 'block' : 'none' },
     }
   }
 
