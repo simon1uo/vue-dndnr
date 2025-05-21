@@ -1,29 +1,18 @@
-import type { AnimationConfig, DataItem, DragData, ProcessedDataItem, SortableDragData, UseDnDOptions, UseDnDReturn } from '@/types/dnd' // DragItemContext might be unused from here, added ProcessedDataItem
-import type { ComputedRef, Ref, ShallowRef } from 'vue'
+import type { DataItem, DragData, DragItemContext, ProcessedDataItem, SortableDragData, UseDnDOptions, UseDnDReturn } from '@/types/dnd' // DragItemContext might be unused from here, added ProcessedDataItem
+import type { MaybeRefOrGetter } from 'vue'
 import { tryOnUnmounted } from '@vueuse/core'
-import { computed, markRaw, shallowRef, toValue, watch } from 'vue' // Removed watchEffect
+import { computed, markRaw, shallowRef, toValue, watch } from 'vue'
 import { useDrag } from './useDrag'
 import { useDrop } from './useDrop'
 
-// Define internal context type
-interface ManagedDragItemContext<ItemType> {
-  itemRef: Ref<HTMLElement | null>
-  isDragging: Ref<boolean>
-  itemStyle: ComputedRef<any> // CSSProperties
-  isDropTarget: Ref<boolean>
-  itemDataRef: ShallowRef<(DataItem<ItemType> & { originalIndex: number, selected: boolean })>
-  flipTransform: ShallowRef<string | null>
-  flipTransition: ShallowRef<string | null>
-}
-
 /**
  * A hook for creating sortable lists and grids with drag and drop functionality.
- * @param targetRef - The ref to the container element
+ * @param containerTarget - The ref to the container element
  * @param options - Configuration options for the useDnD hook
  * @returns An object containing the state and methods for managing the sortable list/grid
  */
 export function useDnD<T = unknown>(
-  targetRef: Ref<HTMLElement | null>,
+  containerTarget: MaybeRefOrGetter<HTMLElement | null | undefined>,
   options: UseDnDOptions<T>,
 ): UseDnDReturn<T> {
   // --- Options ---
@@ -32,38 +21,48 @@ export function useDnD<T = unknown>(
   const userDropOptions = computed(() => toValue(options.dropOptions) || {})
   const ghostClassValue = computed(() => toValue(options.ghostClass))
 
-  const animationOptions = computed((): Required<AnimationConfig> => {
-    const userAnimationOpts = toValue(options.animation)
-    const defaults: Required<AnimationConfig> = {
+  const animationOptions = computed(() => {
+    const userAnimationOptions = toValue(options.animation)
+    const defaultAnimationOptions = {
       disabled: false,
       duration: 150,
       easing: 'cubic-bezier(0.33, 1, 0.68, 1)', // easeOutCubic
     }
 
-    if (typeof userAnimationOpts === 'boolean') {
-      return { ...defaults, disabled: !userAnimationOpts }
+    if (typeof userAnimationOptions === 'boolean') {
+      return { ...defaultAnimationOptions, disabled: !userAnimationOptions }
     }
-    if (typeof userAnimationOpts === 'object' && userAnimationOpts !== null) {
-      return { ...defaults, ...userAnimationOpts }
+    if (typeof userAnimationOptions === 'object' && userAnimationOptions !== null) {
+      return { ...defaultAnimationOptions, ...userAnimationOptions }
     }
-    return defaults // Default to enabled with default values if undefined or invalid
+    return defaultAnimationOptions
   })
 
   // --- State Management ---
-  const selectedItems = shallowRef<DataItem<T>[]>([]) as Ref<DataItem<T>[]>
-  const isDraggingGlobal = shallowRef(false)
-  const draggedItemInternal = shallowRef<(DataItem<T> & { originalIndex: number, selected: boolean }) | null>(null)
-  const currentDropPayloadInternal = shallowRef<SortableDragData<T> | null>(null)
-  const previousItemPositions = shallowRef(new Map<string | number, DOMRect>())
+  const isDragging = shallowRef(false)
+  const draggingItemData = shallowRef<(ProcessedDataItem<T>) | null>(null)
+  const draggingItem = computed(() => {
+    if (!draggingItemData.value)
+      return null
+    return {
+      id: draggingItemData.value.id,
+      data: draggingItemData.value.data,
+    } as DataItem<T>
+  })
+
+  const selectedItems = shallowRef<DataItem<T>[]>([])
+  const currentDropData = shallowRef<SortableDragData<T> | null>(null)
+
+  const itemPositionsMap = shallowRef(new Map<string | number, DOMRect>())
   const placeholderIndex = shallowRef<number | null>(null)
-  const isExternalDragOverContainer = shallowRef<boolean>(false) // To handle drags to container end
+  const isExternalDragOverContainer = shallowRef<boolean>(false)
 
   // --- Item-specific Drag and Drop Contexts ---
-  const itemContextsInternal = shallowRef<Map<string | number, ManagedDragItemContext<T>>>(new Map())
+  const itemContextsMap = shallowRef<Map<string | number, DragItemContext<T>>>(new Map())
 
   // Process items with internal state (defined before watchers that use it)
   const processedItems = computed(() => {
-    const currentItems = toValue(options.items)
+    const currentItems = toValue(options.initialItems)
     const currentSelectedIds = selectedItems.value.map(si => si.id)
     return currentItems.map((item, index) => ({
       ...item,
@@ -79,18 +78,18 @@ export function useDnD<T = unknown>(
     // Use processedItems here to ensure we are iterating over the most current list of items
     // that have corresponding contexts and DOM elements.
     processedItems.value.forEach((processedItem) => {
-      const context = itemContextsInternal.value.get(processedItem.id)
+      const context = itemContextsMap.value.get(processedItem.id)
       if (context?.itemRef.value) {
         newPositions.set(processedItem.id, context.itemRef.value.getBoundingClientRect())
       }
     })
-    previousItemPositions.value = newPositions
+    itemPositionsMap.value = newPositions
   }
 
-  const createInternalContextForItem = (itemWithMeta: DataItem<T> & { originalIndex: number, selected: boolean }): ManagedDragItemContext<T> => {
+  const createItemContext = (processedDataItem: ProcessedDataItem<T>): DragItemContext<T> => {
     const itemRef = shallowRef<HTMLElement | null>(null)
     const itemElement = computed(() => itemRef.value)
-    const itemDataRef = shallowRef(itemWithMeta)
+    const itemDataRef = shallowRef(processedDataItem)
     const flipTransform = shallowRef<string | null>(null)
     const flipTransition = shallowRef<string | null>(null)
 
@@ -109,13 +108,13 @@ export function useDnD<T = unknown>(
         payload: toValue(sortableItemPayload),
       })),
       onDragStart: (event) => {
-        isDraggingGlobal.value = true
-        draggedItemInternal.value = itemDataRef.value // Use the full item data from ref
+        isDragging.value = true
+        draggingItemData.value = itemDataRef.value // Use the full item data from ref
         userDragOptions.value.onDragStart?.(event)
       },
       onDragEnd: (event) => {
-        isDraggingGlobal.value = false
-        draggedItemInternal.value = null
+        isDragging.value = false
+        draggingItemData.value = null
         placeholderIndex.value = null
         isExternalDragOverContainer.value = false
         userDragOptions.value.onDragEnd?.(event)
@@ -170,7 +169,7 @@ export function useDnD<T = unknown>(
           return
         }
 
-        const currentItems = toValue(options.items) // Use original options.items for findIndex
+        const currentItems = toValue(options.initialItems) // Use original options.initialItems for findIndex
         const fromIndex = currentItems.findIndex(i => i.id === droppedPayload.id)
 
         if (fromIndex === -1) {
@@ -234,10 +233,10 @@ export function useDnD<T = unknown>(
       },
     })
 
-    return markRaw({ // markRaw for the context object itself
+    return markRaw({
       itemRef,
       isDragging: dragHook.isDragging,
-      itemStyle, // Use the new computed itemStyle
+      itemStyle,
       isDropTarget: dropHook.isDragOver,
       itemDataRef,
       flipTransform,
@@ -247,24 +246,23 @@ export function useDnD<T = unknown>(
 
   watch(processedItems, (newProcessedItems, oldProcessedItems) => {
     const newItemsMap = new Map(newProcessedItems.map(item => [item.id, item]))
-    const currentContextMap = itemContextsInternal.value
+    const currentContextMap = itemContextsMap.value
 
     // Add/Update contexts
     for (const newItem of newProcessedItems) {
       let context = currentContextMap.get(newItem.id)
       if (!context) {
-        context = createInternalContextForItem(newItem)
+        context = createItemContext(newItem)
         currentContextMap.set(newItem.id, context)
       }
       else {
-        // Update existing context's item data
         context.itemDataRef.value = newItem
       }
     }
 
     // Remove contexts for items no longer present
     const idsToRemove: (string | number)[] = []
-    if (oldProcessedItems) { // Compare with old items if available
+    if (oldProcessedItems) {
       for (const oldItem of oldProcessedItems) {
         if (!newItemsMap.has(oldItem.id)) {
           idsToRemove.push(oldItem.id)
@@ -281,20 +279,17 @@ export function useDnD<T = unknown>(
       idsToRemove.forEach((id) => {
         const contextToClean = currentContextMap.get(id)
         if (contextToClean) {
-          // contextToClean.cleanupDragDrop?.(); // If specific cleanup was needed
           currentContextMap.delete(id)
         }
       })
     }
 
-    // If the map instance itself needs to be replaced for reactivity (usually not for .set/.delete)
-    // itemContextsInternal.value = new Map(currentContextMap);
+    //
   }, { immediate: true })
 
-  watch(processedItems, (newItems, _oldItems) => {
-    if (animationOptions.value.disabled || previousItemPositions.value.size === 0) {
-      previousItemPositions.value.clear() // Clear if animations disabled or no prev positions
-      // Also clear placeholder if animations are off and list changes
+  watch([processedItems, animationOptions], ([newItems]) => {
+    if (animationOptions.value.disabled || itemPositionsMap.value.size === 0) {
+      itemPositionsMap.value.clear()
       if (animationOptions.value.disabled) {
         placeholderIndex.value = null
         isExternalDragOverContainer.value = false
@@ -304,15 +299,15 @@ export function useDnD<T = unknown>(
 
     const newPositionsMap = new Map<string | number, DOMRect>()
     newItems.forEach((item) => {
-      const context = itemContextsInternal.value.get(item.id)
+      const context = itemContextsMap.value.get(item.id)
       if (context?.itemRef.value) {
         newPositionsMap.set(item.id, context.itemRef.value.getBoundingClientRect())
       }
     })
 
     newItems.forEach((item) => {
-      const context = itemContextsInternal.value.get(item.id)
-      const oldRect = previousItemPositions.value.get(item.id)
+      const context = itemContextsMap.value.get(item.id)
+      const oldRect = itemPositionsMap.value.get(item.id)
       const newRect = newPositionsMap.get(item.id)
 
       if (context && oldRect && newRect) {
@@ -324,7 +319,8 @@ export function useDnD<T = unknown>(
           context.flipTransition.value = 'none'
 
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => { // Double requestAnimationFrame for robustness in Vue
+            requestAnimationFrame(() => {
+              // Double requestAnimationFrame for robustness in Vue
               context.flipTransform.value = null // Animate to natural position
               context.flipTransition.value = `transform ${animationOptions.value.duration}ms ${animationOptions.value.easing}`
               // Optional: Clear transition after animation to prevent re-triggering on other style changes
@@ -338,16 +334,11 @@ export function useDnD<T = unknown>(
         }
       }
     })
-    previousItemPositions.value.clear() // Clear after use
+    itemPositionsMap.value.clear()
   }, { flush: 'post' })
 
-  tryOnUnmounted(() => {
-    itemContextsInternal.value.clear()
-    previousItemPositions.value.clear()
-  })
-
   // --- Drop Zone Logic (for the container) ---
-  const { isDragOver: isDropTarget, data: dropZoneEventDataRef } = useDrop<SortableDragData<T>>(targetRef, {
+  const { isDragOver: isDropTarget, data: dropZoneEventDataRef } = useDrop<SortableDragData<T>>(containerTarget, {
     ...userDropOptions.value,
     accept: computed(() => {
       const baseAccept = toValue(userDropOptions.value.accept)
@@ -369,16 +360,16 @@ export function useDnD<T = unknown>(
       const sortablePayload = dragEventData.payload as SortableDragData<T> | undefined
 
       if (!sortablePayload || typeof sortablePayload.id === 'undefined' || typeof sortablePayload.index === 'undefined') {
-        currentDropPayloadInternal.value = null
+        currentDropData.value = null
         return
       }
 
-      const currentItems = toValue(options.items)
+      const currentItems = toValue(options.initialItems)
       const draggedItemId = sortablePayload.id
       const fromIndex = currentItems.findIndex(i => i.id === draggedItemId)
 
       if (fromIndex === -1) {
-        currentDropPayloadInternal.value = null
+        currentDropData.value = null
         return
       }
 
@@ -386,10 +377,12 @@ export function useDnD<T = unknown>(
       const newItemsState = [...currentItems]
       newItemsState.splice(fromIndex, 1) // Remove item from its original position
 
-      let finalNewIndex: number // This will be the index in newItemsState where itemToMove is inserted
+      // This will be the index in newItemsState where itemToMove is inserted
+      let finalNewIndex: number
 
       if (newItemsState.length === 0) {
-        finalNewIndex = 0 // If list becomes empty after removing dragged item, insert at start
+        // If list becomes empty after removing dragged item, insert at start
+        finalNewIndex = 0
       }
       else {
         let dropClientY: number | undefined
@@ -404,7 +397,7 @@ export function useDnD<T = unknown>(
 
           for (let i = 0; i < newItemsState.length; i++) {
             const currentItemToCompare = newItemsState[i]
-            const itemContext = itemContextsInternal.value.get(currentItemToCompare.id)
+            const itemContext = itemContextsMap.value.get(currentItemToCompare.id)
             const itemElement = itemContext?.itemRef?.value
 
             if (itemElement) {
@@ -435,29 +428,30 @@ export function useDnD<T = unknown>(
       })
       options.onChange?.(newItemsState, 'sort')
 
-      currentDropPayloadInternal.value = null
+      currentDropData.value = null
     },
     onDragEnter: (dragEventData, event) => {
       userDropOptions.value.onDragEnter?.(dragEventData, event)
-      currentDropPayloadInternal.value = dragEventData ? dragEventData.payload : null
+      currentDropData.value = dragEventData ? dragEventData.payload : null
       // Potentially set placeholder for drag entering the main container if empty or to the end
-      if (!itemContextsInternal.value.size) { // If list is empty
+      if (!itemContextsMap.value.size) {
         placeholderIndex.value = 0
         isExternalDragOverContainer.value = true
       }
     },
     onDragOver: (dragEventData, event) => {
       userDropOptions.value.onDragOver?.(dragEventData, event)
-      const anyItemIsDropTarget = Array.from(itemContextsInternal.value.values()).some(ctx => ctx.isDropTarget.value)
-      if (!anyItemIsDropTarget && targetRef.value && event) {
-        const containerRect = targetRef.value.getBoundingClientRect()
+      const containerTargetValue = toValue(containerTarget)
+      const anyItemIsDropTarget = Array.from(itemContextsMap.value.values()).some(ctx => ctx.isDropTarget.value)
+      if (!anyItemIsDropTarget && containerTargetValue && event) {
+        const containerRect = containerTargetValue.getBoundingClientRect()
         if (processedItems.value.length === 0) {
           placeholderIndex.value = 0
           isExternalDragOverContainer.value = true
         }
         else {
           // Check if cursor is below the midpoint of the last item or near container bottom
-          const lastItemContext = itemContextsInternal.value.get(processedItems.value[processedItems.value.length - 1].id)
+          const lastItemContext = itemContextsMap.value.get(processedItems.value[processedItems.value.length - 1].id)
           if (lastItemContext?.itemRef?.value) {
             const lastItemRect = lastItemContext.itemRef.value.getBoundingClientRect()
             if (event.clientY > lastItemRect.top + lastItemRect.height / 2) {
@@ -475,13 +469,14 @@ export function useDnD<T = unknown>(
     },
     onDragLeave: (dragEventData, event) => {
       userDropOptions.value.onDragLeave?.(dragEventData, event)
-      const trulyLeftContainer = !event.relatedTarget || (targetRef.value && !targetRef.value.contains(event.relatedTarget as Node))
+      const containerTargetValue = toValue(containerTarget)
+      const trulyLeftContainer = !event.relatedTarget || (containerTargetValue && !containerTargetValue.contains(event.relatedTarget as Node))
 
       if (trulyLeftContainer) {
         placeholderIndex.value = null
         isExternalDragOverContainer.value = false
         if (dragEventData && (!dragEventData.payload || typeof (dragEventData.payload as SortableDragData<T>).id === 'undefined')) {
-          currentDropPayloadInternal.value = null
+          currentDropData.value = null
         }
       }
     },
@@ -489,10 +484,10 @@ export function useDnD<T = unknown>(
 
   watch(dropZoneEventDataRef, (newFullDragData) => {
     if (isDropTarget.value && newFullDragData?.payload) {
-      currentDropPayloadInternal.value = newFullDragData.payload
+      currentDropData.value = newFullDragData.payload
     }
     else {
-      currentDropPayloadInternal.value = null
+      currentDropData.value = null
     }
   })
 
@@ -528,7 +523,7 @@ export function useDnD<T = unknown>(
   }
 
   const selectAll = () => {
-    const allItems = toValue(options.items) // use options.items to get raw DataItem<T>
+    const allItems = toValue(options.initialItems) // use options.initialItems to get raw DataItem<T>
     selectedItems.value = allItems.map(item => markRaw(item) as DataItem<T>)
     options.onSelectionChange?.(selectedItems.value)
   }
@@ -539,24 +534,21 @@ export function useDnD<T = unknown>(
   }
 
   // --- Item Props (Drag Logic per item) ---
-  const getItemProps = (
-    item: ProcessedDataItem<T>,
-    _index: number,
-  ): Record<string, any> => {
-    const itemWithMeta = item as (DataItem<T> & { originalIndex: number, selected: boolean })
+  const getItemProps = (item: ProcessedDataItem<T>): Record<string, any> => {
+    const itemWithMeta = item
     const itemId = itemWithMeta.id
 
-    const currentContext = itemContextsInternal.value.get(itemId)
+    const currentContext = itemContextsMap.value.get(itemId)
 
     const setElementRef = (el: HTMLElement | SVGElement | Element | null) => {
-      const contextAtRefTime = itemContextsInternal.value.get(itemId)
+      const contextAtRefTime = itemContextsMap.value.get(itemId)
       if (contextAtRefTime && contextAtRefTime.itemRef) {
         contextAtRefTime.itemRef.value = el as HTMLElement | null
       }
       else if (el) {
         console.warn(
           `[useDnD] setElementRef called for item '${itemId}', but its DragItemContext or itemRef was not found. Drag/drop may not work.`,
-          { allContextIds: Array.from(itemContextsInternal.value.keys()) },
+          { allContextIds: Array.from(itemContextsMap.value.keys()) },
         )
       }
     }
@@ -582,18 +574,16 @@ export function useDnD<T = unknown>(
     }
   }
 
+  tryOnUnmounted(() => {
+    itemContextsMap.value.clear()
+    itemPositionsMap.value.clear()
+  })
+
   return {
     processedItems,
     selectedItems,
-    isDragging: isDraggingGlobal,
-    draggedItem: computed(() => {
-      if (!draggedItemInternal.value)
-        return null
-      return {
-        id: draggedItemInternal.value.id,
-        data: draggedItemInternal.value.data,
-      } as DataItem<T>
-    }),
+    isDragging,
+    draggingItem,
     isDropTarget,
     selectItem,
     deselectItem,
@@ -601,7 +591,7 @@ export function useDnD<T = unknown>(
     selectAll,
     deselectAll,
     containerProps,
-    getItemProps: getItemProps as (item: DataItem<T>, index: number) => Record<string, any>,
+    getItemProps,
     getPlaceholderProps,
   }
 }

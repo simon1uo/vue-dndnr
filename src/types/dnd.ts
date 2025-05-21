@@ -1,4 +1,4 @@
-import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue'
+import type { ComputedRef, MaybeRefOrGetter, Ref, ShallowRef } from 'vue'
 
 /**
  * Drag data with source information
@@ -240,31 +240,6 @@ export interface ProcessedDataItem<T> extends DataItem<T> {
 }
 
 /**
- * Represents the source and target information for a sort operation
- */
-export interface SortInfo {
-  /**
-   * The index of the item being dragged
-   */
-  sourceIndex: number
-
-  /**
-   * The index where the item will be dropped
-   */
-  targetIndex: number
-
-  /**
-   * The container ID where the drag started
-   */
-  sourceContainerId?: string
-
-  /**
-   * The container ID where the item will be dropped
-   */
-  targetContainerId?: string
-}
-
-/**
  * Extended drag data for sortable lists
  */
 export interface SortableDragData<T> extends DragData<T> {
@@ -348,33 +323,16 @@ export interface SortableDropOptions<T> extends DropOptions<SortableDragData<T>>
 }
 
 /**
- * Helper type for item-specific drag and drop context
+ * Represents the internal context for a draggable item
  */
-export interface DragItemContext {
-  /**
-   * The ref to the item element
-   */
+export interface DragItemContext<T> {
   itemRef: Ref<HTMLElement | null>
-
-  /**
-   * Whether the item is currently being dragged
-   */
+  itemStyle: ComputedRef<any>
   isDragging: Ref<boolean>
-
-  /**
-   * The style of the item
-   */
-  itemStyle: ComputedRef<Record<string, string>>
-
-  /**
-   * Whether the item is currently a drop target
-   */
   isDropTarget: Ref<boolean>
-
-  /**
-   * The cleanup function for the item
-   */
-  cleanup: () => void
+  itemDataRef: ShallowRef<ProcessedDataItem<T>>
+  flipTransform: ShallowRef<string | null>
+  flipTransition: ShallowRef<string | null>
 }
 
 /**
@@ -410,7 +368,7 @@ export interface UseDnDOptions<T> {
   /**
    * The list of items to be made sortable
    */
-  items: MaybeRefOrGetter<DataItem<T>[]>
+  initialItems: MaybeRefOrGetter<DataItem<T>[]>
 
   /**
    * Function to get a unique key for Vue transitions
@@ -505,7 +463,7 @@ export interface UseDnDOptions<T> {
    * Set to `true` to enable animations with default settings.
    * Provide an `AnimationConfig` object for custom animation behavior.
    */
-  animation?: MaybeRefOrGetter<boolean | AnimationConfig>
+  animation?: MaybeRefOrGetter<AnimationConfig | boolean>
 
   /**
    * Configuration for virtual scrolling
@@ -571,7 +529,7 @@ export interface UseDnDReturn<T> {
   /**
    * The item currently being dragged, or null if no drag is in progress
    */
-  draggedItem: Ref<DataItem<T> | null>
+  draggingItem: Ref<DataItem<T> | null>
 
   /**
    * Whether the container is currently a valid drop target
@@ -615,10 +573,9 @@ export interface UseDnDReturn<T> {
   /**
    * Function to get props for a specific item
    * @param item The item to get props for
-   * @param index The index of the item in the list
    * @returns Object containing props to be spread on the item element
    */
-  getItemProps: (item: ProcessedDataItem<T>, index: number) => Record<string, any>
+  getItemProps: (item: ProcessedDataItem<T>) => Record<string, any>
 
   /**
    * Function to get props for the placeholder element
