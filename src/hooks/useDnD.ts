@@ -1,6 +1,7 @@
 import type { AnimationConfig, DataItem, DragData, ProcessedDataItem, SortableDragData, UseDnDOptions, UseDnDReturn } from '@/types/dnd' // DragItemContext might be unused from here, added ProcessedDataItem
 import type { ComputedRef, Ref, ShallowRef } from 'vue'
-import { computed, markRaw, onUnmounted, shallowRef, toValue, watch } from 'vue' // Removed watchEffect
+import { tryOnUnmounted } from '@vueuse/core'
+import { computed, markRaw, shallowRef, toValue, watch } from 'vue' // Removed watchEffect
 import { useDrag } from './useDrag'
 import { useDrop } from './useDrop'
 
@@ -340,8 +341,9 @@ export function useDnD<T = unknown>(
     previousItemPositions.value.clear() // Clear after use
   }, { flush: 'post' })
 
-  onUnmounted(() => {
+  tryOnUnmounted(() => {
     itemContextsInternal.value.clear()
+    previousItemPositions.value.clear()
   })
 
   // --- Drop Zone Logic (for the container) ---
