@@ -26,9 +26,9 @@ const {
   getItemProps,
   getPlaceholderProps,
   isDragging,
-  draggedItem,
+  draggingItem,
 } = useDnD(listContainerRef, {
-  items: initialItems,
+  initialItems,
   getKey: item => item.id,
   animation: {
     duration: 100, // milliseconds
@@ -36,6 +36,7 @@ const {
   },
   ghostClass: 'ghost-item-class',
   dragOptions: {
+    forceFallback: true,
     stateStyles: {
       dragging: {
         opacity: '0.5',
@@ -52,7 +53,7 @@ const {
 })
 
 const getRawData = (item) => JSON.stringify(item.data)
-const getRawDragged = () => draggedItem.value ? JSON.stringify({id: draggedItem.value.id, data: draggedItem.value.data }) : 'null'
+const getRawDragged = () => draggingItem.value ? JSON.stringify({id: draggingItem.value.id, data: draggingItem.value.data }) : 'null'
 
 </script>
 
