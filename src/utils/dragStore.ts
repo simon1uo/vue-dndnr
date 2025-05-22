@@ -1,15 +1,4 @@
-import type { DragData } from '@/types'
-
-/**
- * Global drag store for sharing drag data between components
- * This helps overcome limitations with dataTransfer in dragenter/dragover events
- */
-export interface ActiveDragContext<T = unknown> {
-  id: string
-  data: DragData<T>
-  isFallback: boolean
-  // sourceElement?: HTMLElement | SVGElement | null; // Future consideration
-}
+import type { ActiveDragContext } from '../types'
 
 let currentDragContextInternal: ActiveDragContext | null = null
 
@@ -23,19 +12,29 @@ const dragStore = {
   /**
    * Sets the currently active drag operation.
    * @param id The unique ID of the drag operation.
-   * @param data The data associated with the drag.
+   * @param dragId The ID of the dragged item.
+   * @param index The index of the dragged item.
+   * @param type The type of the dragged item.
    * @param isFallback True if the drag is using fallback mode (pointer events).
+   * @param sourceDropId Optional ID of the source drop zone.
    */
-  setActiveDrag: <T>(id: string, data: DragData<T>, isFallback: boolean): void => {
-    currentDragContextInternal = { id, data, isFallback }
+  setActiveDrag: (
+    id: string,
+    dragId: string,
+    index: number,
+    type: string,
+    isFallback: boolean,
+    sourceDropId?: string,
+  ): void => {
+    currentDragContextInternal = { id, dragId, index, type, isFallback, sourceDropId }
   },
 
   /**
    * Gets the currently active drag operation context.
    * @returns The active drag context or null if no drag is active.
    */
-  getActiveDrag: <T = unknown>(): ActiveDragContext<T> | null => {
-    return currentDragContextInternal as ActiveDragContext<T> | null
+  getActiveDrag: (): ActiveDragContext | null => {
+    return currentDragContextInternal
   },
 
   /**
@@ -49,18 +48,6 @@ const dragStore = {
         currentDragContextInternal = null
       }
     }
-  },
-
-  /**
-   * Retrieves drag data by its ID.
-   * @param id The ID of the drag data to retrieve.
-   * @returns The drag data or null if not found.
-   */
-  getDataById: <T>(id: string): DragData<T> | null => {
-    if (currentDragContextInternal && currentDragContextInternal.id === id) {
-      return currentDragContextInternal.data as DragData<T>
-    }
-    return null
   },
 
   /**
