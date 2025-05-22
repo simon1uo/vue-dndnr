@@ -1,6 +1,6 @@
 # useDrag
 
-The `useDrag` hook provides drag functionality for elements using the HTML5 Drag and Drop API. It allows you to make any element draggable with customizable drag preview, constraints, and effects. The hook uses an optimized data transfer mechanism that works reliably across different browsers and components.
+The `useDrag` hook provides drag functionality for elements using the HTML5 Drag and Drop API. It allows you to make any element draggable with customizable drag preview, constraints, and effects. The hook now uses a simple, type-safe ID-based mechanism for drag data transfer, requiring only `dragId`, `index`, and (optionally) `type`.
 
 ## Demo
 
@@ -12,11 +12,10 @@ const elementRef = ref(null)
 const customDragRef = ref(null)
 const handleRef = ref(null)
 
-const { isDragging, dragData, style } = useDrag(elementRef, {
-  data: {
-    type: 'demo',
-    payload: { message: 'Hello from drag item!' }
-  },
+const { isDragging, style } = useDrag(elementRef, {
+  dragId: 'demo-card',
+  index: 0,
+  type: 'demo',
   // Use a specific element as the drag handle
   handle: handleRef,
   // Custom drag preview
@@ -78,20 +77,22 @@ import { useDrag } from 'vue-dndnr'
 const elementRef = ref<HTMLElement | null>(null)
 const handleRef = ref<HTMLElement | null>(null)
 
-const { isDragging, dragData, style } = useDrag(elementRef, {
-  data: () => ({
-    type: 'text',
-    payload: 'Hello World'
-  }),
+const { isDragging, style } = useDrag(elementRef, {
+  dragId: 'item-1',
+  index: 0,
+  type: 'text',
   // Use a specific element as the drag handle
   handle: handleRef,
-  // Attach pointer events to the document when using fallback mode
-  draggingElement: document,
-  // Enable fallback mode for better touch device support
+  // Use fallback mode for better touch device support
   forceFallback: true,
   // Add a delay before drag starts (only on touch devices)
   delay: 150,
   delayOnTouchOnly: true,
+  stateStyles: {
+    dragging: {
+      opacity: '0.7',
+    }
+  },
   onDragStart: (event) => {
     console.log('Drag started')
   },
@@ -109,12 +110,9 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
     <div class="content">
       This entire card is draggable, but you can also use the handle
     </div>
-
-    <!-- Dedicated drag handle -->
     <div ref="handleRef" class="drag-handle">
       <span class="handle-icon">⋮⋮</span> Drag using this handle
     </div>
-
     <div v-if="isDragging" class="text-sm mt-1">
       Dragging...
     </div>
@@ -131,14 +129,13 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `target` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | Reference to the element to make draggable |
-| `options` | `Partial<DragOptions<T>>` | Configuration options for drag behavior |
+| `options` | `Partial<DragOptions>` | Configuration options for drag behavior |
 
 ### Return Values
 
 | Name | Type | Description |
 |------|------|-------------|
 | `isDragging` | `Ref<boolean>` | Whether the element is currently being dragged |
-| `dragData` | `Ref<DragData \| null>` | Current drag data |
 | `style` | `Ref<Record<string, string>>` | Computed style object based on drag state, intended to be applied to the draggable element. |
 
 ### Options
@@ -147,13 +144,14 @@ The `DragOptions` interface provides a comprehensive set of configuration option
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `data` | `MaybeRefOrGetter<DragData<T>>` | `{ type: 'default', payload: null }` | The data to be dragged |
+| `dragId` | `string` | **required** | Unique identifier for the dragged item |
+| `index` | `number` | **required** | Index of the item in its container |
+| `type` | `string` | `'default'` | Type identifier for the dragged item |
 | `dragPreview` | `{ element?: MaybeRefOrGetter<HTMLElement \| null>, offset?: { x: number, y: number }, scale?: number }` | `undefined` | Custom drag preview configuration |
 | `handle` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | `undefined` | Element that triggers dragging (drag handle). Defaults to the target element itself. |
 | `draggingElement` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| Window \| Document \| null \| undefined>` | `window` | Element to attach pointer event listeners to when `forceFallback` is true. |
 | `forceFallback` | `boolean` | `false` | If `true`, forces the use of pointer events for dragging, bypassing native HTML5 drag and drop. Useful for touch devices or specific interaction needs. |
 | `fallbackClass` | `string` | `'dndnr-fallback'` | CSS class applied to the fallback drag preview element when `forceFallback` is `true` or when native drag fails. |
-| `fallbackOnBody` | `boolean` | `true` | If `true` (and using fallback mode), the fallback drag preview is appended to `document.body`. If `false`, it's appended to the draggable element's parent. |
 | `fallbackTolerance` | `number` | `0` | In fallback mode, the distance in pixels the pointer must move before a drag operation is initiated. |
 | `delay` | `number` | `0` | Delay before drag starts in milliseconds. Applies to both native and fallback modes. |
 | `delayOnTouchOnly` | `boolean` | `false` | Whether to only apply delay on touch devices. |
@@ -173,68 +171,11 @@ interface DragStateStyles {
 }
 ```
 
-### DragData
-
-The `DragData` interface defines the structure of the data being dragged:
-
-```typescript
-interface DragData<T = unknown> {
-  /**
-   * Type identifier for the dragged item
-   */
-  type: string
-
-  /**
-   * The actual data being dragged
-   */
-  payload: T
-
-  /**
-   * Source information about where the drag started
-   */
-  source?: {
-    /**
-     * Unique identifier of the source element
-     */
-    id: string | number
-
-    /**
-     * Index of the item in its container
-     */
-    index: number
-
-    /**
-     * Optional container identifier
-     */
-    containerId?: string
-  }
-}
-```
-
-### Position and DragEffect
-
-The hook uses these types for position and effect:
-
-```typescript
-/**
- * Position type for drag and drop operations
- */
-export interface Position {
-  x: number
-  y: number
-}
-
-/**
- * Drag effect type
- */
-export type DragEffect = 'none' | 'copy' | 'link' | 'move'
-```
-
 ## Features
 
 - HTML5 Drag and Drop API integration
 - Reliable data transfer across components and browsers
-- Multiple data format support (JSON, text, URL, HTML, Files)
+- Simple, type-safe ID-based drag data transfer
 - Global drag state management via an internal store
 - Customizable drag preview (native and fallback)
 - Support for dedicated drag handles via the `handle` option

@@ -12,19 +12,17 @@ const dropZoneRef = ref(null)
 const dropData = ref(null)
 
 const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
-  accept: ['demo', 'text', 'files'],
-  onDrop: (data, event) => {
-    console.log('Dropped data:', data)
-    dropData.value = data
+  dropId: 'demo-drop-zone',
+  accept: ['demo-item'],
+  onDrop: (params, event) => {
+    console.log('Dropped data:', params)
+    dropData.value = params
   },
 })
 </script>
 
 <DemoContainer>
-  <Drag forceFallback :data="{
-    type: 'demo',
-    payload: { message: 'Hello from drag item!' }
-  }">
+  <Drag v-bind="{ dragId: 'item-1', index: 0, type: 'demo-item', forceFallback: true }">
     <div
       class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs select-none mb-10"
     ><span class="mr-2">⋮⋮👋</span> Drag me and drop below!
@@ -46,10 +44,8 @@ const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
       <div class="text-sm">State: {{ isDragOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
       <div v-if="dropData" class="drop-data">
         <div>Type: {{ dropData.type }}</div>
-        <div>Payload: {{ JSON.stringify(dropData.payload) }}</div>
-        <div v-if="dropData.source">
-          Source: {{ JSON.stringify(dropData.source) }}
-        </div>
+        <div>Drag ID: {{ dropData.dragId }}</div>
+        <div>Index: {{ dropData.index }}</div>
       </div>
     </div>
   </div>
@@ -65,29 +61,22 @@ import { useDrop } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
 const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
-  accept: ['item', 'text', 'files'],
+  dropId: 'my-drop-zone',
+  accept: ['item-type-A', 'item-type-B'],
   dropEffect: 'move',
-  scroll: {
-    enabled: true,
-    speed: 1,
-    sensitivity: 20
+  onDragEnter: (params, event) => {
+    console.log('Drag entered:', params, event)
   },
-  onDragEnter: (data, event) => {
-    console.log('Drag entered:', event)
+  onDragOver: (params, event) => {
+    console.log('Drag over:', params, event)
   },
-  onDragOver: (data, event) => {
-    console.log('Drag over:', event)
+  onDragLeave: (params, event) => {
+    console.log('Drag left:', params, event)
   },
-  onDragLeave: (data, event) => {
-    console.log('Drag left:', event)
-  },
-  onDrop: (data, event) => {
-    console.log('Item dropped:', data)
-    // Handle the dropped data
-    if (data.type === 'item') {
-      // Process item data
-      const item = data.payload
-      // Update your application state
+  onDrop: (params, event) => {
+    console.log('Item dropped:', params)
+    if (params.type === 'item-type-A') {
+      console.log(`Item ${params.dragId} of type ${params.type} at index ${params.index} dropped.`)
     }
   }
 })
@@ -102,14 +91,8 @@ const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
     <div>State: {{ isDragOver ? (isValidDrop ? 'Valid Drop' : 'Invalid Drop') : 'Idle' }}</div>
     <div v-if="data" class="drop-data">
       <div>Type: {{ data.type }}</div>
-      <div>Payload: {{ JSON.stringify(data.payload) }}</div>
-      <div v-if="data.source">
-        Source ID: {{ data.source.id }}
-        Index: {{ data.source.index }}
-        <span v-if="data.source.containerId">
-          Container: {{ data.source.containerId }}
-        </span>
-      </div>
+      <div>Drag ID: {{ data.dragId }}</div>
+      <div>Index: {{ data.index }}</div>
     </div>
   </div>
 </template>
@@ -124,7 +107,7 @@ const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `target` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | Reference to the element to make a drop zone |
-| `options` | `Partial<DropOptions<T>>` | Configuration options for drop behavior |
+| `options` | `DropOptions` | Configuration options for drop behavior |
 
 ### Return Values
 
@@ -132,7 +115,7 @@ const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
 |----------|------|-------------|
 | `isDragOver` | `Ref<boolean>` | Whether an item is currently over the drop zone |
 | `isValidDrop` | `Ref<boolean>` | Whether the current drop would be valid |
-| `data` | `Ref<DragData<T> \| null>` | The data of the item being dragged over the drop zone |
+| `data` | `Ref<{ dragId: string, index: number, type: string } \| null>` | Information about the item being dragged over the drop zone ({ dragId, index, type }) or null. |
 
 ### Options
 
@@ -140,58 +123,36 @@ The `DropOptions` interface provides a comprehensive set of configuration option
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `accept` | `MaybeRefOrGetter<readonly string[] \| ((types: readonly string[]) => boolean) \| undefined>` | `undefined` | Acceptance criteria for dropped items |
-| `dropEffect` | `MaybeRefOrGetter<'copy' \| 'move' \| 'link' \| 'none'>` | `'move'` | Visual effect for drop operation |
+| `dropId` | `string` | **Required** | Unique identifier for the drop zone. |
+| `accept` | `MaybeRefOrGetter<string \| string[] \| ((type: string) => boolean) \| undefined>` | `undefined` | Acceptance criteria for dropped item's `type`. Can be a single string, an array of strings, or a function that receives the drag item's `type` and returns a boolean. |
+| `dropEffect` | `MaybeRefOrGetter<'copy' \| 'move' \| 'link' \| 'none'>` | `'move'` | Visual effect for drop operation. |
 | `allowFallbackDrags` | `MaybeRefOrGetter<boolean>` | `true` | Enables fallback drag handling using Pointer Events for drags not initiated via native HTML5 drag API (e.g., from `useDrag` with pointer fallback). |
-| `onDragEnter` | `(data: DragData<T> \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable enters the drop zone. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
-| `onDragOver` | `(data: DragData<T> \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable is over the drop zone. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
-| `onDragLeave` | `(data: DragData<T> \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable leaves the drop zone. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
-| `onDrop` | `(data: DragData<T>, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when an item is dropped and accepted. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
+| `onDragEnter` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable enters the drop zone. `params` contains `{ dragId, index, type }` of the dragged item, or `null` if data cannot be determined yet. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
+| `onDragOver` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable is over the drop zone. `params` contains `{ dragId, index, type }` of the dragged item, or `null`. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
+| `onDragLeave` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable leaves the drop zone. `params` is usually `null` on leave. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
+| `onDrop` | `(params: { dragId: string, index: number, type: string }, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when an item is dropped and accepted. `params` contains `{ dragId, index, type }` of the dropped item. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
 
 ### DragData
 
 The `DragData` interface defines the structure of the data being dragged and dropped:
 
 ```typescript
-interface DragData<T = unknown> {
-  /**
-   * Type identifier for the dragged item
-   */
+interface ActiveDragContext {
+  id: string
+  dragId: string
+  index: number
   type: string
-
-  /**
-   * The actual data being dragged
-   */
-  payload: T
-
-  /**
-   * Source information about where the drag started
-   */
-  source?: {
-    /**
-     * Unique identifier of the source element
-     */
-    id: string | number
-
-    /**
-     * Index of the item in its container
-     */
-    index: number
-
-    /**
-     * Optional container identifier
-     */
-    containerId?: string
-  }
+  sourceDropId?: string
+  isFallback: boolean
 }
 ```
 
 ## Features
 
 - HTML5 Drag and Drop API integration
-- Reliable data handling across browsers, including robust data extraction from `DataTransfer` objects by attempting various formats (custom MIME types, structured text, JSON, and common web types like text, URL, HTML, and files).
+- Reliable data handling for drag item identity (`dragId`, `index`, `type`) across browsers, including robust extraction from `DataTransfer` objects using custom MIME types and a formatted `text/plain` fallback.
 - Optimized drag-enter/drag-over/drag-leave event handling.
-- Global drag state management via an internal store (shared with `useDrag`), enabling communication for complex drag-and-drop scenarios.
+- Global drag state management via an internal store (shared with `useDrag`), enabling communication of active drag item's `dragId`, `index`, and `type`.
 - Fallback drag and drop mechanism using Pointer Events, controlled by the `allowFallbackDrags` option, for drags not initiated via the native HTML5 API (e.g., initiated by `useDrag` with pointer fallback).
 - Type-based (`string[]`) and validator-function-based acceptance criteria for dropped items.
 - Accessibility support with the `aria-droptarget="true"` attribute automatically set on the drop zone element.
