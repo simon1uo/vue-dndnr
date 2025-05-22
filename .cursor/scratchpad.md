@@ -36,11 +36,11 @@
 - 删除`DragData`接口定义
 - 修改`DragOptions`接口：
   - 移除`data`属性
-  - 添加必填的`draggableId: string`属性
+  - 添加必填的`dragId: string`属性
   - 添加必填的`index: number`属性
   - 添加`type: string = 'default'`属性，提供默认值
 - 修改`DropOptions`接口：
-  - 添加必填的`droppableId: string`属性
+  - 添加必填的`dropId: string`属性
   - 更新`accept`属性类型为`string | string[] | ((type: string) => boolean)`
   - 更新回调函数签名，移除`DragData`相关参数
 
@@ -49,11 +49,12 @@
 - 修改`ActiveDragContext`接口：
   - 删除`data: DragData<T>`
   - 添加新属性：
-    - `draggableId: string`
+    - `dragId: string`
     - `index: number`
     - `type: string`
-    - `sourceDroppableId?: string`
+    - `sourceDropId?: string`
 - 更新`dragStore`的方法签名和实现：
+  - 提取类型到 `src/types/dnd.ts` 中导出
   - 修改`setActiveDrag`方法
   - 修改`getActiveDrag`方法
   - 更新`getDataById`和`hasDataById`方法
@@ -62,18 +63,17 @@
 ### 3. 重构useDrag (src/hooks/useDrag.ts)
 
 - 更新参数和返回值：
-  - 添加对必填参数的验证 (`draggableId`, `index`)
+  - 添加对必填参数的验证 (`dragId`, `index`)
   - 移除`data`相关处理逻辑
 - 更新拖拽事件处理：
   - 修改`handleDragStart`，使用新属性
   - 简化数据传输逻辑，只传递必要的ID和类型信息
-  - 保持对HTML5 DnD和fallback模式的支持
 - 更新返回值和清理逻辑
 
 ### 4. 重构useDrop (src/hooks/useDrop.ts)
 
 - 更新参数和返回值：
-  - 添加对必填参数的验证 (`droppableId`)
+  - 添加对必填参数的验证 (`dropId`)
   - 更新`accept`属性处理逻辑
 - 更新放置事件处理：
   - 修改数据提取逻辑，基于新的ID和类型系统
@@ -81,18 +81,31 @@
   - 修改事件回调，提供新的参数格式
 - 更新返回值和清理逻辑
 
+### 5. 更新文档和示例
+
+- 更新`useDrag.md` 和 `useDrop.md` 文档中的API描述和示例
+- 确保Playground示例与新的API一致
+
 ## 项目状态看板
 
-- [ ] 分析当前代码实现
-- [ ] 修改类型定义 (src/types/dnd.ts)
-- [ ] 更新全局存储机制 (src/utils/dragStore.ts)
-- [ ] 重构useDrag (src/hooks/useDrag.ts)
-- [ ] 重构useDrop (src/hooks/useDrop.ts)
-- [ ] 记录API变更和使用方式
+- [x] 分析当前代码实现
+- [x] 修改类型定义 (src/types/dnd.ts)
+- [x] 更新全局存储机制 (src/utils/dragStore.ts)
+- [x] 重构useDrag (src/hooks/useDrag.ts)
+- [x] 重构useDrop (src/hooks/useDrop.ts)
+- [x] 更新 Drop.vue 组件 (src/components/Drop.vue)
+- [ ] 更新 Drag.vue 组件 (src/components/Drag.vue)
+- [ ] 更新文档和示例
 
 ## 执行者反馈或请求帮助
 
-下一步可以进行测试用例编写，确保重构后的功能正常工作。
+- 已完成类型定义重构，DragData 已移除，DragOptions/DropOptions 已按新方案调整。
+- 已完成全局存储机制 (src/utils/dragStore.ts) 的更新。ActiveDragContext 接口已移至 dnd.ts 并更新了其结构。dragStore 中的 setActiveDrag, getActiveDrag 等方法已相应修改。getDataById 已被移除 。
+- 已完成 useDrag (src/hooks/useDrag.ts) 的重构，已完全移除 DragData 和 payload 相关逻辑，参数和全局存储均已切换为 dragId/index/type 方案。
+- 已完成 useDrop (src/hooks/useDrop.ts) 的重构，已完全移除 DragData 和 payload 相关逻辑，参数和全局存储均已切换为 dragId/index/type 方案。
+- 已完成 Drop.vue 组件 (src/components/Drop.vue) 的 API 适配和类型更新，所有 emits、props、事件处理均已切换为 { dragId, index, type } 结构，等待用户验收。
+
+请规划者确认项目是否完成。
 
 ## 经验教训
 
@@ -100,5 +113,6 @@
 - 修改前后进行完整测试，确保功能不受影响
 - 保留核心功能，同时减少不必要的复杂性
 - 使用强类型和必填参数验证可以显著提高API的可靠性和易用性
-- 命名规范化（如 `draggableId`/`droppableId`）可以提高代码的一致性和可读性
+- 命名规范化（如 `dragId`/`dropId`）可以提高代码的一致性和可读性
 - 基于ID的系统比复杂的数据传输系统更易于维护和扩展
+- 注意重设计API时避免修改原有的逻辑，重写之前请询问用户
