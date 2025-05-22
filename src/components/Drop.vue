@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import type { DragData, DropOptions } from '@/types/dnd'
+import type { DropOptions } from '@/types/dnd'
 import { useDrop } from '@/hooks'
 import { computed, ref, watch } from 'vue'
 
-interface DropProps<T = unknown> extends Partial<DropOptions<T>> {
+/**
+ * Info about the current drag item for drop events
+ */
+export interface DropItemInfo {
+  dragId: string
+  index: number
+  type: string
+}
+
+interface DropProps extends Partial<DropOptions> {
   /**
    * CSS class name for the component
    */
@@ -40,22 +49,22 @@ const emit = defineEmits<{
   /**
    * Emitted when a draggable enters the drop zone
    */
-  (e: 'dragEnter', data: DragData | null, event: DragEvent): void
+  (e: 'dragEnter', data: DropItemInfo | null, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when a draggable is over the drop zone
    */
-  (e: 'dragOver', data: DragData | null, event: DragEvent): void
+  (e: 'dragOver', data: DropItemInfo | null, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when a draggable leaves the drop zone
    */
-  (e: 'dragLeave', data: DragData | null, event: DragEvent): void
+  (e: 'dragLeave', data: DropItemInfo | null, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when a draggable is dropped on the drop zone
    */
-  (e: 'drop', data: DragData, event: DragEvent): void
+  (e: 'drop', data: DropItemInfo, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when drop state changes
@@ -70,7 +79,7 @@ const emit = defineEmits<{
   /**
    * Emitted when drop data changes
    */
-  (e: 'update:data', data: DragData | null): void
+  (e: 'update:data', data: DropItemInfo | null): void
 }>()
 
 // Element reference
@@ -83,25 +92,25 @@ const {
   data,
 } = useDrop(targetRef, {
   ...props,
-  onDragEnter: (data: DragData | null, event: DragEvent) => {
+  onDragEnter: (data: any, event: any) => {
     emit('dragEnter', data, event)
     if (props.onDragEnter) {
       props.onDragEnter(data, event)
     }
   },
-  onDragOver: (data: DragData | null, event: DragEvent) => {
+  onDragOver: (data: any, event: any) => {
     emit('dragOver', data, event)
     if (props.onDragOver) {
       props.onDragOver(data, event)
     }
   },
-  onDragLeave: (data: DragData | null, event: DragEvent) => {
+  onDragLeave: (data: any, event: any) => {
     emit('dragLeave', data, event)
     if (props.onDragLeave) {
       props.onDragLeave(data, event)
     }
   },
-  onDrop: (data: DragData, event: DragEvent) => {
+  onDrop: (data: any, event: any) => {
     emit('drop', data, event)
     if (props.onDrop) {
       props.onDrop(data, event)

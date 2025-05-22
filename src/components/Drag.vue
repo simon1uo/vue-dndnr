@@ -46,6 +46,15 @@ const previewRef = ref<HTMLElement | null>(null)
 const slots = useSlots()
 const hasDragPreviewSlot = computed(() => !!slots.dragPreview)
 
+// Resolve the drag type, prioritizing props.type, then props.data.type, then 'default'
+const resolvedType = computed(() => {
+  if (props.type)
+    return props.type
+  if (props.data && typeof props.data === 'object' && 'type' in props.data && typeof props.data.type === 'string')
+    return props.data.type
+  return 'default'
+})
+
 // Create dragPreview configuration based on slot or props
 const dragPreview = computed(() => {
   // If dragPreview slot is provided, use the previewRef as the element
@@ -65,6 +74,7 @@ const {
   isDragging,
 } = useDrag(targetRef, {
   ...props,
+  type: resolvedType.value,
   dragPreview,
   onDragStart: (event: DragEvent | PointerEvent) => {
     emit('dragStart', event)
