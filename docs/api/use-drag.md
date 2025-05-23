@@ -1,22 +1,21 @@
 # useDrag
 
-The `useDrag` hook provides drag functionality for elements using the HTML5 Drag and Drop API. It allows you to make any element draggable with customizable drag preview, constraints, and effects. The hook uses an optimized data transfer mechanism that works reliably across different browsers and components.
+The `useDrag` hook provides drag functionality for elements using the HTML5 Drag and Drop API or a custom pointer-based implementation. It allows you to make any element draggable with customizable drag preview, constraints, and effects. The hook uses a simple, type-safe ID-based mechanism for drag data transfer, requiring only `dragId`, `index`, and (optionally) `type`.
 
 ## Demo
 
 <script setup>
 import { ref } from 'vue'
-import { useDrag } from 'vue-dndnr'
+import { useDrag, DragMode } from 'vue-dndnr'
 
 const elementRef = ref(null)
 const customDragRef = ref(null)
 const handleRef = ref(null)
 
-const { isDragging, dragData, style } = useDrag(elementRef, {
-  data: {
-    type: 'demo',
-    payload: { message: 'Hello from drag item!' }
-  },
+const { isDragging, style } = useDrag(elementRef, {
+  dragId: 'demo-card',
+  index: 0,
+  type: 'demo',
   // Use a specific element as the drag handle
   handle: handleRef,
   // Custom drag preview
@@ -24,8 +23,8 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
     element: customDragRef,
     offset: { x: 10, y: 10 }
   },
-  // Use fallback mode for better touch device support
-  forceFallback: true,
+  // Use pointer-based drag mode for better touch device support
+  dragMode: DragMode.Pointer,
   // Add a small delay for touch devices
   delay: 100,
   delayOnTouchOnly: true,
@@ -73,25 +72,27 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useDrag } from 'vue-dndnr'
+import { DragMode, useDrag } from 'vue-dndnr'
 
 const elementRef = ref<HTMLElement | null>(null)
 const handleRef = ref<HTMLElement | null>(null)
 
-const { isDragging, dragData, style } = useDrag(elementRef, {
-  data: () => ({
-    type: 'text',
-    payload: 'Hello World'
-  }),
+const { isDragging, style } = useDrag(elementRef, {
+  dragId: 'item-1',
+  index: 0,
+  type: 'text',
   // Use a specific element as the drag handle
   handle: handleRef,
-  // Attach pointer events to the document when using fallback mode
-  draggingElement: document,
-  // Enable fallback mode for better touch device support
-  forceFallback: true,
+  // Use pointer-based drag mode for better touch device support
+  dragMode: DragMode.Pointer,
   // Add a delay before drag starts (only on touch devices)
   delay: 150,
   delayOnTouchOnly: true,
+  stateStyles: {
+    dragging: {
+      opacity: '0.7',
+    }
+  },
   onDragStart: (event) => {
     console.log('Drag started')
   },
@@ -109,12 +110,9 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
     <div class="content">
       This entire card is draggable, but you can also use the handle
     </div>
-
-    <!-- Dedicated drag handle -->
     <div ref="handleRef" class="drag-handle">
       <span class="handle-icon">⋮⋮</span> Drag using this handle
     </div>
-
     <div v-if="isDragging" class="text-sm mt-1">
       Dragging...
     </div>
@@ -131,14 +129,13 @@ const { isDragging, dragData, style } = useDrag(elementRef, {
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `target` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | Reference to the element to make draggable |
-| `options` | `Partial<DragOptions<T>>` | Configuration options for drag behavior |
+| `options` | `Partial<DragOptions>` | Configuration options for drag behavior |
 
 ### Return Values
 
 | Name | Type | Description |
 |------|------|-------------|
 | `isDragging` | `Ref<boolean>` | Whether the element is currently being dragged |
-| `dragData` | `Ref<DragData \| null>` | Current drag data |
 | `style` | `Ref<Record<string, string>>` | Computed style object based on drag state, intended to be applied to the draggable element. |
 
 ### Options
@@ -147,20 +144,19 @@ The `DragOptions` interface provides a comprehensive set of configuration option
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `data` | `MaybeRefOrGetter<DragData<T>>` | `{ type: 'default', payload: null }` | The data to be dragged |
+| `dragId` | `string` | **required** | Unique identifier for the dragged item |
+| `index` | `number` | **required** | Index of the item in its container |
+| `type` | `string` | `'default'` | Type identifier for the dragged item |
 | `dragPreview` | `{ element?: MaybeRefOrGetter<HTMLElement \| null>, offset?: { x: number, y: number }, scale?: number }` | `undefined` | Custom drag preview configuration |
 | `handle` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| null \| undefined>` | `undefined` | Element that triggers dragging (drag handle). Defaults to the target element itself. |
-| `draggingElement` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| Window \| Document \| null \| undefined>` | `window` | Element to attach pointer event listeners to when `forceFallback` is true. |
-| `forceFallback` | `boolean` | `false` | If `true`, forces the use of pointer events for dragging, bypassing native HTML5 drag and drop. Useful for touch devices or specific interaction needs. |
-| `fallbackClass` | `string` | `'dndnr-fallback'` | CSS class applied to the fallback drag preview element when `forceFallback` is `true` or when native drag fails. |
-| `fallbackOnBody` | `boolean` | `true` | If `true` (and using fallback mode), the fallback drag preview is appended to `document.body`. If `false`, it's appended to the draggable element's parent. |
-| `fallbackTolerance` | `number` | `0` | In fallback mode, the distance in pixels the pointer must move before a drag operation is initiated. |
-| `delay` | `number` | `0` | Delay before drag starts in milliseconds. Applies to both native and fallback modes. |
+| `draggingElement` | `MaybeRefOrGetter<HTMLElement \| SVGElement \| Window \| Document \| null \| undefined>` | `window` | Element to attach pointer event listeners to when using pointer-based drag mode. |
+| `dragMode` | `DragMode` | `DragMode.Native` | Specifies the drag mode to use: 'native' for HTML5 Drag and Drop API, or 'pointer' for custom pointer-based implementation. |
+| `delay` | `number` | `0` | Delay before drag starts in milliseconds. Applies to both native and pointer modes. |
 | `delayOnTouchOnly` | `boolean` | `false` | Whether to only apply delay on touch devices. |
-| `onDragStart` | `(event: DragEvent \| PointerEvent) => void` | `undefined` | Called when drag starts. Receives `PointerEvent` if fallback mode is active. |
-| `onDrag` | `(event: DragEvent \| PointerEvent) => void` | `undefined` | Called during drag. Receives `PointerEvent` if fallback mode is active. |
-| `onDragEnd` | `(event: DragEvent \| PointerEvent) => void` | `undefined` | Called when drag ends. Receives `PointerEvent` if fallback mode is active. |
 | `stateStyles` | `DragStateStyles` | `{ normal: { cursor: 'grab' }, dragging: { opacity: '0.5', cursor: 'grabbing' } }` | An object to define custom styles for the draggable element in different states (e.g., `normal`, `dragging`). |
+| `onDragStart` | `(dragData: { dragId: string, index: number, type: string }, event: DragEvent \| PointerEvent) => void` | `undefined` | Called when drag starts. Receives `PointerEvent` if using pointer mode. |
+| `onDrag` | `(dragData: { dragId: string, index: number, type: string }, event: DragEvent \| PointerEvent) => void` | `undefined` | Called during drag. Receives `PointerEvent` if using pointer mode. |
+| `onDragEnd` | `(dragData: { dragId: string, index: number, type: string }, event: DragEvent \| PointerEvent) => void` | `undefined` | Called when drag ends. Receives `PointerEvent` if using pointer mode. |
 
 ### DragStateStyles
 
@@ -173,76 +169,19 @@ interface DragStateStyles {
 }
 ```
 
-### DragData
-
-The `DragData` interface defines the structure of the data being dragged:
-
-```typescript
-interface DragData<T = unknown> {
-  /**
-   * Type identifier for the dragged item
-   */
-  type: string
-
-  /**
-   * The actual data being dragged
-   */
-  payload: T
-
-  /**
-   * Source information about where the drag started
-   */
-  source?: {
-    /**
-     * Unique identifier of the source element
-     */
-    id: string | number
-
-    /**
-     * Index of the item in its container
-     */
-    index: number
-
-    /**
-     * Optional container identifier
-     */
-    containerId?: string
-  }
-}
-```
-
-### Position and DragEffect
-
-The hook uses these types for position and effect:
-
-```typescript
-/**
- * Position type for drag and drop operations
- */
-export interface Position {
-  x: number
-  y: number
-}
-
-/**
- * Drag effect type
- */
-export type DragEffect = 'none' | 'copy' | 'link' | 'move'
-```
-
 ## Features
 
-- HTML5 Drag and Drop API integration
+- HTML5 Drag and Drop API integration with optional pointer-based fallback
 - Reliable data transfer across components and browsers
-- Multiple data format support (JSON, text, URL, HTML, Files)
+- Simple, type-safe ID-based drag data transfer
 - Global drag state management via an internal store
-- Customizable drag preview (native and fallback)
+- Customizable drag preview (native and pointer modes)
 - Support for dedicated drag handles via the `handle` option
 - Configurable event target for pointer events via `draggingElement` option
-- Pointer Events fallback mode for wider compatibility (e.g., touch devices or when native HTML5 D&D is not desired)
+- Two drag modes: native HTML5 D&D and pointer-based implementation
 - Customizable element styling for different drag states (`normal`, `dragging`)
 - Sets `effectAllowed` on `DataTransfer` for native drags
-- Improved touch device support via Pointer Events fallback mode
+- Improved touch device support via pointer-based drag mode
 - Touch-specific delay configuration with `delayOnTouchOnly` option
 - Accessibility support (e.g., `aria-grabbed` attribute management)
 - Performance optimizations
