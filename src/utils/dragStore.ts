@@ -1,4 +1,4 @@
-import type { ActiveDragContext } from '../types'
+import type { ActiveDragContext, DragMode } from '../types'
 
 let currentDragContextInternal: ActiveDragContext | null = null
 
@@ -15,7 +15,7 @@ const dragStore = {
    * @param dragId The ID of the dragged item.
    * @param index The index of the dragged item.
    * @param type The type of the dragged item.
-   * @param isFallback True if the drag is using fallback mode (pointer events).
+   * @param dragMode The drag mode being used (native or pointer).
    * @param sourceDropId Optional ID of the source drop zone.
    */
   setActiveDrag: (
@@ -23,10 +23,10 @@ const dragStore = {
     dragId: string,
     index: number,
     type: string,
-    isFallback: boolean,
+    dragMode: DragMode,
     sourceDropId?: string,
   ): void => {
-    currentDragContextInternal = { id, dragId, index, type, isFallback, sourceDropId }
+    currentDragContextInternal = { id, dragId, index, type, dragMode, sourceDropId }
   },
 
   /**

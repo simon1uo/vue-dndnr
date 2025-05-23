@@ -1,5 +1,6 @@
 import type { DragOptions, DragStateStyles } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
+import { DragMode } from '@/types'
 import { defaultWindow, isClient } from '@/utils'
 import dragStore, { generateDragId } from '@/utils/dragStore'
 import { tryOnUnmounted, useEventListener } from '@vueuse/core'
@@ -22,10 +23,7 @@ export function useDrag(
     dragPreview,
     handle: draggingHandle = target,
     draggingElement = defaultWindow,
-    forceFallback = false,
-    fallbackClass = 'dndnr-fallback',
-    fallbackOnBody = true,
-    fallbackTolerance = 0,
+    dragMode = DragMode.Native,
     delay = 0,
     stateStyles = {},
     onDragStart,
@@ -40,15 +38,17 @@ export function useDrag(
   // State
   const isDragging = shallowRef(false)
   const dragPreviewElement = shallowRef<HTMLElement | null>(null)
-  const fallbackElement = shallowRef<HTMLElement | null>(null)
   const dragTimeout = shallowRef<number | null>(null)
   const delayTimeout = shallowRef<number | null>(null)
   const initialPointerPosition = shallowRef<{ x: number, y: number } | null>(null)
   const activeDragId = shallowRef<string | null>(null)
   const activeDragImageOffset = shallowRef({ x: 0, y: 0 })
+  const pointerElement = shallowRef<HTMLElement | null>(null)
+
   // Computed values
   const dragPreviewValue = computed(() => toValue(dragPreview))
   const stateStylesValue = computed(() => toValue(stateStyles))
+  const dragModeValue = computed(() => toValue(dragMode))
 
   // Default state styles for dragging
   const DEFAULT_DRAG_STATE_STYLES: DragStateStyles = {
@@ -109,7 +109,7 @@ export function useDrag(
   /**
    * Create a custom drag image for the native drag operation
    */
-  const createNativeDragImage = (event: DragEvent) => {
+  const createNativeModeDragImage = (event: DragEvent) => {
     if (!event.dataTransfer)
       return
     const previewOptions = toValue(dragPreviewValue)
@@ -163,36 +163,36 @@ export function useDrag(
       }
     }
   }
-  const removeFallbackDragImage = () => {
-    if (fallbackElement.value) {
-      if (fallbackElement.value.parentElement) {
-        fallbackElement.value.remove()
+  const removePointerModeDragImage = () => {
+    if (pointerElement.value) {
+      if (pointerElement.value.parentElement) {
+        pointerElement.value.remove()
       }
-      fallbackElement.value = null
+      pointerElement.value = null
     }
   }
 
-  const createFallbackDragImage = (originalTargetElement: HTMLElement, event: PointerEvent) => {
-    removeFallbackDragImage()
+  const createPointerModeDragImage = (originalTargetElement: HTMLElement, event: PointerEvent) => {
+    removePointerModeDragImage()
 
-    const previewOpts = toValue(dragPreviewValue)
+    const dragPreviewOptions = toValue(dragPreviewValue)
     let elementToClone: HTMLElement
     let offsetX: number
     let offsetY: number
 
-    if (previewOpts?.element) {
-      const previewSourceEl = toValue(previewOpts.element)
+    if (dragPreviewOptions?.element) {
+      const previewSourceEl = toValue(dragPreviewOptions.element)
       if (previewSourceEl) {
         elementToClone = previewSourceEl.cloneNode(true) as HTMLElement
         const previewSourceRect = previewSourceEl.getBoundingClientRect()
         elementToClone.style.width = `${previewSourceRect.width}px`
         elementToClone.style.height = `${previewSourceRect.height}px`
 
-        const offsetFromPreviewOpts = previewOpts.offset || { x: 0, y: 0 }
+        const offsetFromPreviewOpts = dragPreviewOptions.offset || { x: 0, y: 0 }
         offsetX = offsetFromPreviewOpts.x
         offsetY = offsetFromPreviewOpts.y
 
-        const scale = previewOpts.scale || 1
+        const scale = dragPreviewOptions.scale || 1
         if (scale !== 1) {
           elementToClone.style.transform = `scale(${scale})`
           elementToClone.style.transformOrigin = '0 0'
@@ -235,37 +235,28 @@ export function useDrag(
 
     activeDragImageOffset.value = { x: offsetX, y: offsetY }
 
-    elementToClone.classList.add(fallbackClass)
     elementToClone.style.position = 'fixed'
     elementToClone.style.left = `${event.clientX - activeDragImageOffset.value.x}px`
     elementToClone.style.top = `${event.clientY - activeDragImageOffset.value.y}px`
     elementToClone.style.pointerEvents = 'none'
     elementToClone.style.zIndex = '9999'
 
-    if (fallbackOnBody) {
-      document.body.appendChild(elementToClone)
-    }
-    else {
-      originalTargetElement.parentElement?.appendChild(elementToClone)
-    }
-    fallbackElement.value = elementToClone
-    // Initial position is set, no need to call updateFallbackPosition(event) here
+    originalTargetElement.parentElement?.appendChild(elementToClone)
+    pointerElement.value = elementToClone
   }
 
   /**
-   * Update the fallback element's position so that the point (activeDragImageOffset.x, activeDragImageOffset.y)
-   * on the fallback element stays under the cursor.
+   * Update the pointer element's position so that the point (activeDragImageOffset.x, activeDragImageOffset.y)
+   * on the pointer element stays under the cursor.
    */
-  const updateFallbackPosition = (event: PointerEvent) => {
-    if (!fallbackElement.value)
+  const updatePointerElementPosition = (event: PointerEvent) => {
+    if (!pointerElement.value)
       return
 
-    // Position the fallback element so that the point (activeDragImageOffset.x, activeDragImageOffset.y)
-    // on the fallback element stays under the cursor.
-    fallbackElement.value.style.left = `${event.clientX - activeDragImageOffset.value.x}px`
-    fallbackElement.value.style.top = `${event.clientY - activeDragImageOffset.value.y}px`
+    pointerElement.value.style.left = `${event.clientX - activeDragImageOffset.value.x}px`
+    pointerElement.value.style.top = `${event.clientY - activeDragImageOffset.value.y}px`
   }
-  // --- Drag Event Handlers ---
+
   const handleDragStart = (event: DragEvent) => {
     const el = toValue(target)
     if (!el || !event.dataTransfer)
@@ -273,13 +264,17 @@ export function useDrag(
     event.dataTransfer.effectAllowed = 'all'
     const dragOpId = generateDragId()
     activeDragId.value = dragOpId
-    dragStore.setActiveDrag(dragOpId, dragId, index, type, false)
+    dragStore.setActiveDrag(dragOpId, dragId, index, type, dragModeValue.value)
     // Set drag data (ID, index, type) in various formats
     event.dataTransfer.setData('application/x-vue-dndnr-id', dragId)
     event.dataTransfer.setData('application/x-vue-dndnr-index', String(index))
     event.dataTransfer.setData('application/x-vue-dndnr-type', type)
     event.dataTransfer.setData('text/plain', `${type}:${dragId}:${index}`)
-    createNativeDragImage(event)
+
+    if (dragModeValue.value === DragMode.Native) {
+      createNativeModeDragImage(event)
+    }
+
     isDragging.value = true
     applyDragStyles()
     onDragStart?.({ dragId, index, type }, event)
@@ -311,13 +306,10 @@ export function useDrag(
           dragPreviewElement.value = null
         }
       }
-      else if (event.type === 'pointerup') {
-        removeFallbackDragImage()
+      else if (event.type === 'pointerup' && pointerElement.value) {
+        removePointerModeDragImage()
       }
       dragStore.clearActiveDrag(activeDragId.value)
-    }
-    else if (event.type === 'pointerup' && fallbackElement.value) {
-      removeFallbackDragImage()
     }
     onDragEnd?.({ dragId, index, type }, event)
     isDragging.value = false
@@ -325,49 +317,32 @@ export function useDrag(
     applyDragStyles()
   }
 
-  // --- Fallback Mode Event Handlers ---
-  let isPointerDown = false
-  let hasMovedEnoughForFallbackDrag = false
-
   const handlePointerMove = (event: PointerEvent) => {
-    if (!isPointerDown)
-      return
     if (!isDragging.value) {
-      if (initialPointerPosition.value && fallbackTolerance > 0) {
-        const dx = event.clientX - initialPointerPosition.value.x
-        const dy = event.clientY - initialPointerPosition.value.y
-        if (Math.sqrt(dx * dx + dy * dy) >= fallbackTolerance) {
-          hasMovedEnoughForFallbackDrag = true
-          if (delayTimeout.value) {
-            window.clearTimeout(delayTimeout.value)
-            delayTimeout.value = null
-          }
-          const el = toValue(target)
-          if (!el)
-            return
-          isDragging.value = true
-          const dragOpId = generateDragId()
-          activeDragId.value = dragOpId
-          dragStore.setActiveDrag(dragOpId, dragId, index, type, true)
-          createFallbackDragImage(el as HTMLElement, event)
-          applyDragStyles()
-          onDragStart?.({ dragId, index, type }, event)
+      if (initialPointerPosition.value) {
+        if (delayTimeout.value) {
+          window.clearTimeout(delayTimeout.value)
+          delayTimeout.value = null
         }
+        const el = toValue(target)
+        if (!el)
+          return
+        isDragging.value = true
+        const dragOpId = generateDragId()
+        activeDragId.value = dragOpId
+        dragStore.setActiveDrag(dragOpId, dragId, index, type, dragModeValue.value)
+        createPointerModeDragImage(el as HTMLElement, event)
+        applyDragStyles()
+        onDragStart?.({ dragId, index, type }, event)
       }
-      if (!hasMovedEnoughForFallbackDrag)
-        return
     }
     if (isDragging.value) {
-      updateFallbackPosition(event)
+      updatePointerElementPosition(event)
       onDrag?.({ dragId, index, type }, event)
     }
   }
 
   const handlePointerUp = (event: PointerEvent) => {
-    if (!isPointerDown)
-      return
-    isPointerDown = false
-    hasMovedEnoughForFallbackDrag = false
     handleDragEnd(event)
     initialPointerPosition.value = null
   }
@@ -387,18 +362,14 @@ export function useDrag(
     }
     if (!isTargetInHandle)
       return
-    isPointerDown = true
     initialPointerPosition.value = { x: event.clientX, y: event.clientY }
-    hasMovedEnoughForFallbackDrag = fallbackTolerance === 0
     event.preventDefault()
     const startDrag = () => {
-      if (!isPointerDown)
-        return
       isDragging.value = true
       const dragOpId = generateDragId()
       activeDragId.value = dragOpId
-      dragStore.setActiveDrag(dragOpId, dragId, index, type, true)
-      createFallbackDragImage(el as HTMLElement, event)
+      dragStore.setActiveDrag(dragOpId, dragId, index, type, dragModeValue.value)
+      createPointerModeDragImage(el as HTMLElement, event)
       applyDragStyles()
       onDragStart?.({ dragId, index, type }, event)
     }
@@ -407,19 +378,12 @@ export function useDrag(
       delayTimeout.value = window.setTimeout(() => {
         delayTimeout.value = null
         if (initialPointerPosition.value) {
-          const dx = event.clientX - initialPointerPosition.value.x
-          const dy = event.clientY - initialPointerPosition.value.y
-          if (Math.sqrt(dx * dx + dy * dy) >= fallbackTolerance)
-            startDrag()
-          else
-            initialPointerPosition.value = null
+          startDrag()
         }
       }, delay)
     }
     else {
-      if (hasMovedEnoughForFallbackDrag) {
-        startDrag()
-      }
+      startDrag()
     }
   }
 
@@ -428,7 +392,7 @@ export function useDrag(
     const el = toValue(draggingHandle)
     if (!el)
       return
-    if (!forceFallback) {
+    if (dragModeValue.value === DragMode.Native) {
       el.setAttribute('draggable', 'true')
     }
     else {
@@ -455,7 +419,7 @@ export function useDrag(
   }, { immediate: true, deep: true })
 
   if (isClient) {
-    if (forceFallback) {
+    if (dragModeValue.value === DragMode.Pointer) {
       useEventListener(draggingElement, 'pointerdown', handlePointerDown)
       useEventListener(draggingElement, 'pointermove', handlePointerMove)
       useEventListener(draggingElement, 'pointerup', handlePointerUp)
@@ -485,7 +449,9 @@ export function useDrag(
           dragPreviewElement.value = null
         }
       }
-      removeFallbackDragImage()
+      if (pointerElement.value) {
+        removePointerModeDragImage()
+      }
       const el = toValue(draggingHandle)
       if (el && mergedStateStyles.value.dragging) {
         Object.keys(mergedStateStyles.value.dragging).forEach((key) => {

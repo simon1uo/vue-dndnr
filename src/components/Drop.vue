@@ -12,7 +12,12 @@ export interface DropItemInfo {
   type: string
 }
 
-interface DropProps extends Partial<DropOptions> {
+interface DropProps extends Partial<Omit<DropOptions, 'dropId'>> {
+  /**
+   * Unique identifier for the drop zone
+   */
+  dropId: string
+
   /**
    * CSS class name for the component
    */
@@ -42,7 +47,6 @@ const props = withDefaults(defineProps<DropProps>(), {
   overClassName: 'over',
   validClassName: 'valid',
   invalidClassName: 'invalid',
-  allowFallbackDrags: true,
 })
 
 const emit = defineEmits<{

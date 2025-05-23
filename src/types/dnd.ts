@@ -1,6 +1,25 @@
 import type { MaybeRefOrGetter } from 'vue'
 
 /**
+ * Defines the drag mode for the draggable item.
+ * Controls how the drag and drop operation is handled.
+ *
+ */
+export enum DragMode {
+  /**
+   * Uses the native HTML5 Drag and Drop API.
+   * This is the default mode and provides the best performance and browser compatibility.
+   */
+  Native = 'native',
+
+  /**
+   * Uses a custom implementation based on pointer events.
+   * This mode provides more control over the drag behavior but may have performance implications.
+   */
+  Pointer = 'pointer',
+}
+
+/**
  * Defines the configuration for a custom drag preview element.
  * This allows for a visual representation of the item being dragged,
  * different from the original element.
@@ -110,31 +129,13 @@ export interface DragOptions {
   delayOnTouchOnly?: boolean
 
   /**
-   * If true, forces the use of a fallback mechanism (based on pointer events) for dragging,
-   * instead of the native HTML5 Drag and Drop API.
-   * @default false
+   * Specifies the drag mode to use for this draggable item.
+   * - 'native': Uses the native HTML5 Drag and Drop API (default)
+   * - 'pointer': Uses a custom pointer events based implementation
+   * @default DragMode.Native
    */
-  forceFallback?: boolean
+  dragMode?: MaybeRefOrGetter<DragMode>
 
-  /**
-   * CSS class name to apply to the fallback drag image element when `forceFallback` is true.
-   * @default 'dndnr-fallback'
-   */
-  fallbackClass?: string
-
-  /**
-   * If true and `forceFallback` is true, the fallback drag image is appended to the document body.
-   * Otherwise, it's appended to the parent of the original `target` element.
-   * @default true
-   */
-  fallbackOnBody?: boolean
-
-  /**
-   * The distance in pixels the pointer must move after a mousedown/pointerdown event
-   * before a drag operation starts in fallback mode (`forceFallback: true`).
-   * @default 0
-   */
-  fallbackTolerance?: number
   /**
    * Custom state-based styles to apply to the draggable `target` element.
    * These styles are merged with internal defaults.
@@ -145,21 +146,21 @@ export interface DragOptions {
   /**
    * Callback function fired when a drag operation starts.
    * @param dragData - Object containing `dragId`, `index`, and `type` of the dragged item.
-   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (fallback mode) that initiated the drag.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) that initiated the drag.
    */
   onDragStart?: (dragData: { dragId: string, index: number, type: string }, event: DragEvent | PointerEvent) => void
 
   /**
    * Callback function fired continuously while an item is being dragged.
    * @param dragData - Object containing `dragId`, `index`, and `type` of the dragged item.
-   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (fallback mode) during dragging.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) during dragging.
    */
   onDrag?: (dragData: { dragId: string, index: number, type: string }, event: DragEvent | PointerEvent) => void
 
   /**
    * Callback function fired when a drag operation ends (e.g., on drop or cancel).
    * @param dragData - Object containing `dragId`, `index`, and `type` of the dragged item.
-   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (fallback mode) that ended the drag.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) that ended the drag.
    */
   onDragEnd?: (dragData: { dragId: string, index: number, type: string }, event: DragEvent | PointerEvent) => void
 }
@@ -190,37 +191,30 @@ export interface DropOptions {
   dropEffect?: 'none' | 'copy' | 'link' | 'move'
 
   /**
-   * If true, this drop zone will also react to drags initiated in fallback mode
-   * (i.e., when `forceFallback: true` is used in `useDrag`).
-   * @default true
-   */
-  allowFallbackDrags?: MaybeRefOrGetter<boolean>
-
-  /**
    * Callback function fired when an accepted draggable item is dropped onto this drop zone.
    * @param params - Object containing `dragId`, `index`, and `type` of the dropped item.
-   * @param event - The `DragEvent` (native DnD or fallback mode via PointerEvent cast) of the drop.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the drop.
    */
   onDrop?: (params: { dragId: string, index: number, type: string }, event: DragEvent) => void
 
   /**
    * Callback function fired when a draggable item first enters the boundaries of this drop zone.
    * @param params - Object containing `dragId`, `index`, and `type` of the dragged item if recognized, otherwise `null`.
-   * @param event - The `DragEvent` (native DnD or fallback mode via PointerEvent cast) of the dragenter.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the dragenter.
    */
   onDragEnter?: (params: { dragId: string, index: number, type: string } | null, event: DragEvent) => void
 
   /**
    * Callback function fired continuously while a draggable item is being dragged over this drop zone.
    * @param params - Object containing `dragId`, `index`, and `type` of the dragged item if recognized, otherwise `null`.
-   * @param event - The `DragEvent` (native DnD or fallback mode via PointerEvent cast) of the dragover.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the dragover.
    */
   onDragOver?: (params: { dragId: string, index: number, type: string } | null, event: DragEvent) => void
 
   /**
    * Callback function fired when a draggable item leaves the boundaries of this drop zone.
    * @param params - Object containing `dragId`, `index`, and `type` of the dragged item if recognized (often null on leave), otherwise `null`.
-   * @param event - The `DragEvent` (native DnD or fallback mode via PointerEvent cast) of the dragleave.
+   * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the dragleave.
    */
   onDragLeave?: (params: { dragId: string, index: number, type: string } | null, event: DragEvent) => void
 }
@@ -253,14 +247,12 @@ export interface ActiveDragContext {
   /**
    * The `dropId` of the drop zone from which the item was originally dragged, if applicable.
    * This is typically set if an item is dragged out of one drop zone and into another.
-   * (Currently not explicitly set by `useDrag` or `useDrop` in a way that populates this for inter-dropzone source tracking).
    */
   sourceDropId?: string
 
   /**
-   * Indicates if the current drag operation is using the fallback mechanism
-   * (pointer events) instead of the native HTML5 Drag and Drop API.
-   * `true` if `forceFallback` was enabled for the `useDrag` instance, `false` otherwise.
+   * The current drag mode being used for this drag operation.
+   * Matches the `dragMode` option from the originating `useDrag` instance.
    */
-  isFallback: boolean
+  dragMode: DragMode
 }

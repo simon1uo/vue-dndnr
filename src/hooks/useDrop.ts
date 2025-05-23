@@ -1,5 +1,6 @@
 import type { DropOptions } from '@/types/dnd'
 import type { MaybeRefOrGetter } from 'vue'
+import { DragMode } from '@/types'
 import { isClient } from '@/utils'
 import dragStore from '@/utils/dragStore'
 import { tryOnUnmounted, useEventListener } from '@vueuse/core'
@@ -19,7 +20,6 @@ export function useDrop(
     dropId,
     accept,
     dropEffect = 'move',
-    allowFallbackDrags = true,
     onDragEnter,
     onDragOver,
     onDragLeave,
@@ -38,7 +38,6 @@ export function useDrop(
   // Computed values
   const acceptValue = computed(() => toValue(accept))
   const dropEffectValue = computed(() => toValue(dropEffect))
-  const allowFallbackDragsValue = computed(() => toValue(allowFallbackDrags))
 
   // Helper: validate type
   const validateDrop = (type: string): boolean => {
@@ -104,12 +103,7 @@ export function useDrop(
     let valid = false
     let dragInfoForCallback: { dragId: string, index: number, type: string } | null = null
 
-    if (activeDrag && !activeDrag.isFallback) {
-      valid = validateDrop(activeDrag.type)
-      currentDrag.value = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
-      dragInfoForCallback = currentDrag.value
-    }
-    else if (activeDrag && activeDrag.isFallback) {
+    if (activeDrag) {
       valid = validateDrop(activeDrag.type)
       currentDrag.value = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
       dragInfoForCallback = currentDrag.value
@@ -164,12 +158,9 @@ export function useDrop(
     currentDrag.value = null
   }
 
-  // --- Fallback Pointer Event Handlers ---
   const handlePointerEnterForDrop = (event: PointerEvent) => {
-    if (!allowFallbackDragsValue.value)
-      return
     const activeDrag = dragStore.getActiveDrag()
-    if (activeDrag && activeDrag.isFallback) {
+    if (activeDrag && activeDrag.dragMode === DragMode.Pointer) {
       const info = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
       isDragOver.value = true
       currentDrag.value = info
@@ -179,13 +170,13 @@ export function useDrop(
   }
 
   const handlePointerMoveForDrop = (event: PointerEvent) => {
-    if (!allowFallbackDragsValue.value || !isDragOver.value)
+    if (!isDragOver.value)
       return
     onDragOver?.(currentDrag.value, event as any)
   }
 
   const handlePointerLeaveForDrop = (event: PointerEvent) => {
-    if (!allowFallbackDragsValue.value || !isDragOver.value)
+    if (!isDragOver.value)
       return
     isDragOver.value = false
     isValidDrop.value = false
@@ -194,7 +185,7 @@ export function useDrop(
   }
 
   const handlePointerUpForDrop = (event: PointerEvent) => {
-    if (!allowFallbackDragsValue.value || !isDragOver.value)
+    if (!isDragOver.value)
       return
     if (isValidDrop.value && currentDrag.value) {
       onDrop?.(currentDrag.value, event as any)

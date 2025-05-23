@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DragOptions } from '@/types/dnd'
 import { useDrag } from '@/hooks'
+import { DragMode } from '@/types/dnd'
 import { computed, ref, toValue, useSlots } from 'vue'
 
 interface DragProps extends DragOptions {
@@ -8,6 +9,7 @@ interface DragProps extends DragOptions {
    * CSS class name for the component
    */
   className?: string
+
   /**
    * CSS class name applied when dragging
    * @default 'dragging'
@@ -19,6 +21,7 @@ interface DragProps extends DragOptions {
 const props = withDefaults(defineProps<DragProps>(), {
   type: 'default',
   draggingClassName: 'dragging',
+  dragMode: DragMode.Native,
 })
 
 const emit = defineEmits<{
@@ -73,11 +76,9 @@ const {
   dragPreview: dragPreview.value,
   handle: props.handle,
   draggingElement: props.draggingElement,
-  forceFallback: props.forceFallback,
-  fallbackClass: props.fallbackClass,
-  fallbackOnBody: props.fallbackOnBody,
-  fallbackTolerance: props.fallbackTolerance,
+  dragMode: props.dragMode,
   delay: props.delay,
+  delayOnTouchOnly: props.delayOnTouchOnly,
   stateStyles: props.stateStyles,
 
   onDragStart: (dragData, event) => {
