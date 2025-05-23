@@ -166,6 +166,15 @@ export interface DragOptions {
 }
 
 /**
+ * Data associated with a drop event, representing the item that was dropped or is interacting with the drop zone.
+ */
+export interface DropItemData {
+  dragId: string
+  index: number
+  type: string
+}
+
+/**
  * Configuration options for the `useDrop` hook, controlling the behavior of a drop zone.
  */
 export interface DropOptions {
@@ -192,31 +201,31 @@ export interface DropOptions {
 
   /**
    * Callback function fired when an accepted draggable item is dropped onto this drop zone.
-   * @param params - Object containing `dragId`, `index`, and `type` of the dropped item.
+   * @param data - Object containing `dragId`, `index`, and `type` of the dropped item.
    * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the drop.
    */
-  onDrop?: (params: { dragId: string, index: number, type: string }, event: DragEvent) => void
+  onDrop?: (data: DropItemData, event: DragEvent | PointerEvent) => void
 
   /**
    * Callback function fired when a draggable item first enters the boundaries of this drop zone.
-   * @param params - Object containing `dragId`, `index`, and `type` of the dragged item if recognized, otherwise `null`.
+   * @param data - Object containing `dragId`, `index`, and `type` of the dragged item if recognized, otherwise `null`.
    * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the dragenter.
    */
-  onDragEnter?: (params: { dragId: string, index: number, type: string } | null, event: DragEvent) => void
+  onDragEnter?: (data: DropItemData | null, event: DragEvent | PointerEvent) => void
 
   /**
    * Callback function fired continuously while a draggable item is being dragged over this drop zone.
-   * @param params - Object containing `dragId`, `index`, and `type` of the dragged item if recognized, otherwise `null`.
+   * @param data - Object containing `dragId`, `index`, and `type` of the dragged item if recognized, otherwise `null`.
    * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the dragover.
    */
-  onDragOver?: (params: { dragId: string, index: number, type: string } | null, event: DragEvent) => void
+  onDragOver?: (data: DropItemData | null, event: DragEvent | PointerEvent) => void
 
   /**
    * Callback function fired when a draggable item leaves the boundaries of this drop zone.
-   * @param params - Object containing `dragId`, `index`, and `type` of the dragged item if recognized (often null on leave), otherwise `null`.
+   * @param data - Object containing `dragId`, `index`, and `type` of the dragged item if recognized (often null on leave), otherwise `null`.
    * @param event - The `DragEvent` (native DnD) or `PointerEvent` (pointer mode) of the dragleave.
    */
-  onDragLeave?: (params: { dragId: string, index: number, type: string } | null, event: DragEvent) => void
+  onDragLeave?: (data: DropItemData | null, event: DragEvent | PointerEvent) => void
 }
 
 /**

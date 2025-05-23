@@ -1,4 +1,4 @@
-import type { DropOptions } from '@/types/dnd'
+import type { DropItemData, DropOptions } from '@/types/dnd'
 import type { MaybeRefOrGetter } from 'vue'
 import { DragMode } from '@/types'
 import { isClient } from '@/utils'
@@ -33,7 +33,7 @@ export function useDrop(
   // State
   const isDragOver = shallowRef(false)
   const isValidDrop = shallowRef(false)
-  const currentDrag = shallowRef<{ dragId: string, index: number, type: string } | null>(null)
+  const data = shallowRef<DropItemData | null>(null)
 
   // Computed values
   const acceptValue = computed(() => toValue(accept))
@@ -52,7 +52,7 @@ export function useDrop(
   }
 
   // Extract drag info from DataTransfer
-  const extractDragInfo = (event: DragEvent): { dragId: string, index: number, type: string } | null => {
+  const extractDragInfo = (event: DragEvent): DropItemData | null => {
     if (!event.dataTransfer) {
       return null
     }
@@ -101,16 +101,16 @@ export function useDrop(
 
     const activeDrag = dragStore.getActiveDrag()
     let valid = false
-    let dragInfoForCallback: { dragId: string, index: number, type: string } | null = null
+    let dragInfoForCallback: DropItemData | null = null
 
     if (activeDrag) {
       valid = validateDrop(activeDrag.type)
-      currentDrag.value = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
-      dragInfoForCallback = currentDrag.value
+      data.value = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
+      dragInfoForCallback = data.value
     }
     else {
       valid = false
-      currentDrag.value = null
+      data.value = null
     }
 
     isDragOver.value = true
@@ -124,7 +124,7 @@ export function useDrop(
       return
     event.preventDefault()
     event.dataTransfer.dropEffect = isValidDrop.value ? dropEffectValue.value : 'none'
-    onDragOver?.(currentDrag.value, event)
+    onDragOver?.(data.value, event)
   }
 
   const handleNativeDragLeave = (event: DragEvent) => {
@@ -134,7 +134,7 @@ export function useDrop(
       return
     isDragOver.value = false
     isValidDrop.value = false
-    currentDrag.value = null
+    data.value = null
     onDragLeave?.(null, event)
   }
 
@@ -147,7 +147,7 @@ export function useDrop(
     let valid = false
     if (info) {
       valid = validateDrop(info.type)
-      currentDrag.value = info
+      data.value = info
       isValidDrop.value = valid
       event.dataTransfer.dropEffect = valid ? dropEffectValue.value : 'none'
       if (valid && onDrop)
@@ -155,24 +155,24 @@ export function useDrop(
     }
     isDragOver.value = false
     isValidDrop.value = false
-    currentDrag.value = null
+    data.value = null
   }
 
   const handlePointerEnterForDrop = (event: PointerEvent) => {
     const activeDrag = dragStore.getActiveDrag()
     if (activeDrag && activeDrag.dragMode === DragMode.Pointer) {
-      const info = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
+      const info: DropItemData = { dragId: activeDrag.dragId, index: activeDrag.index, type: activeDrag.type }
       isDragOver.value = true
-      currentDrag.value = info
+      data.value = info
       isValidDrop.value = validateDrop(info.type)
-      onDragEnter?.(info, event as any)
+      onDragEnter?.(info, event)
     }
   }
 
   const handlePointerMoveForDrop = (event: PointerEvent) => {
     if (!isDragOver.value)
       return
-    onDragOver?.(currentDrag.value, event as any)
+    onDragOver?.(data.value, event)
   }
 
   const handlePointerLeaveForDrop = (event: PointerEvent) => {
@@ -180,19 +180,19 @@ export function useDrop(
       return
     isDragOver.value = false
     isValidDrop.value = false
-    currentDrag.value = null
-    onDragLeave?.(null, event as any)
+    data.value = null
+    onDragLeave?.(null, event)
   }
 
   const handlePointerUpForDrop = (event: PointerEvent) => {
     if (!isDragOver.value)
       return
-    if (isValidDrop.value && currentDrag.value) {
-      onDrop?.(currentDrag.value, event as any)
+    if (isValidDrop.value && data.value) {
+      onDrop?.(data.value, event)
     }
     isDragOver.value = false
     isValidDrop.value = false
-    currentDrag.value = null
+    data.value = null
   }
 
   // Setup drop zone attributes
@@ -224,13 +224,13 @@ export function useDrop(
   tryOnUnmounted(() => {
     isDragOver.value = false
     isValidDrop.value = false
-    currentDrag.value = null
+    data.value = null
   })
 
   return {
     isDragOver,
     isValidDrop,
-    data: currentDrag,
+    data,
   }
 }
 

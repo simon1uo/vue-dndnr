@@ -1,16 +1,7 @@
 <script setup lang="ts">
-import type { DropOptions } from '@/types/dnd'
+import type { DropItemData, DropOptions } from '@/types/dnd'
 import { useDrop } from '@/hooks'
-import { computed, ref, watch } from 'vue'
-
-/**
- * Info about the current drag item for drop events
- */
-export interface DropItemInfo {
-  dragId: string
-  index: number
-  type: string
-}
+import { computed, ref } from 'vue'
 
 interface DropProps extends Partial<Omit<DropOptions, 'dropId'>> {
   /**
@@ -53,37 +44,23 @@ const emit = defineEmits<{
   /**
    * Emitted when a draggable enters the drop zone
    */
-  (e: 'dragEnter', data: DropItemInfo | null, event: DragEvent | PointerEvent): void
+  (e: 'dragEnter', data: DropItemData | null, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when a draggable is over the drop zone
    */
-  (e: 'dragOver', data: DropItemInfo | null, event: DragEvent | PointerEvent): void
+  (e: 'dragOver', data: DropItemData | null, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when a draggable leaves the drop zone
    */
-  (e: 'dragLeave', data: DropItemInfo | null, event: DragEvent | PointerEvent): void
+  (e: 'dragLeave', data: DropItemData | null, event: DragEvent | PointerEvent): void
 
   /**
    * Emitted when a draggable is dropped on the drop zone
    */
-  (e: 'drop', data: DropItemInfo, event: DragEvent | PointerEvent): void
+  (e: 'drop', data: DropItemData, event: DragEvent | PointerEvent): void
 
-  /**
-   * Emitted when drop state changes
-   */
-  (e: 'update:isOver', isOver: boolean): void
-
-  /**
-   * Emitted when drop validity changes
-   */
-  (e: 'update:isValidDrop', isValidDrop: boolean): void
-
-  /**
-   * Emitted when drop data changes
-   */
-  (e: 'update:data', data: DropItemInfo | null): void
 }>()
 
 // Element reference
@@ -93,57 +70,33 @@ const targetRef = ref<HTMLElement | null>(null)
 const {
   isDragOver,
   isValidDrop,
-  data,
 } = useDrop(targetRef, {
   ...props,
-  onDragEnter: (data: any, event: any) => {
+  onDragEnter: (data, event) => {
     emit('dragEnter', data, event)
     if (props.onDragEnter) {
       props.onDragEnter(data, event)
     }
   },
-  onDragOver: (data: any, event: any) => {
+  onDragOver: (data, event) => {
     emit('dragOver', data, event)
     if (props.onDragOver) {
       props.onDragOver(data, event)
     }
   },
-  onDragLeave: (data: any, event: any) => {
+  onDragLeave: (data, event) => {
     emit('dragLeave', data, event)
     if (props.onDragLeave) {
       props.onDragLeave(data, event)
     }
   },
-  onDrop: (data: any, event: any) => {
+  onDrop: (data, event) => {
     emit('drop', data, event)
     if (props.onDrop) {
       props.onDrop(data, event)
     }
   },
 })
-
-// Watch for changes and emit events
-watch(
-  isDragOver,
-  (newIsOver) => {
-    emit('update:isOver', newIsOver)
-  },
-)
-
-watch(
-  isValidDrop,
-  (newIsValidDrop) => {
-    emit('update:isValidDrop', newIsValidDrop)
-  },
-)
-
-watch(
-  data,
-  (newData) => {
-    emit('update:data', newData)
-  },
-  { deep: true },
-)
 
 // Combine CSS classes
 const combinedClass = computed(() => {
