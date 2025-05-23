@@ -282,13 +282,13 @@ export function useDrag(
     createNativeDragImage(event)
     isDragging.value = true
     applyDragStyles()
-    onDragStart?.(event)
+    onDragStart?.({ dragId, index, type }, event)
   }
 
   const handleDrag = (event: DragEvent) => {
     if (!isDragging.value)
       return
-    onDrag?.(event)
+    onDrag?.({ dragId, index, type }, event)
   }
 
   const handleDragEnd = (event: DragEvent | PointerEvent) => {
@@ -319,7 +319,7 @@ export function useDrag(
     else if (event.type === 'pointerup' && fallbackElement.value) {
       removeFallbackDragImage()
     }
-    onDragEnd?.(event)
+    onDragEnd?.({ dragId, index, type }, event)
     isDragging.value = false
     activeDragId.value = null
     applyDragStyles()
@@ -351,7 +351,7 @@ export function useDrag(
           dragStore.setActiveDrag(dragOpId, dragId, index, type, true)
           createFallbackDragImage(el as HTMLElement, event)
           applyDragStyles()
-          onDragStart?.(event)
+          onDragStart?.({ dragId, index, type }, event)
         }
       }
       if (!hasMovedEnoughForFallbackDrag)
@@ -359,7 +359,7 @@ export function useDrag(
     }
     if (isDragging.value) {
       updateFallbackPosition(event)
-      onDrag?.(event)
+      onDrag?.({ dragId, index, type }, event)
     }
   }
 
@@ -400,7 +400,7 @@ export function useDrag(
       dragStore.setActiveDrag(dragOpId, dragId, index, type, true)
       createFallbackDragImage(el as HTMLElement, event)
       applyDragStyles()
-      onDragStart?.(event)
+      onDragStart?.({ dragId, index, type }, event)
     }
     if (delay > 0) {
       isDragging.value = false

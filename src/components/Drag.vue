@@ -3,21 +3,21 @@ import type { DragOptions } from '@/types/dnd'
 import { useDrag } from '@/hooks'
 import { computed, ref, toValue, useSlots } from 'vue'
 
-interface DragProps<T = unknown> extends Partial<DragOptions<T>> {
+interface DragProps extends DragOptions {
   /**
    * CSS class name for the component
    */
   className?: string
-
   /**
    * CSS class name applied when dragging
    * @default 'dragging'
    */
   draggingClassName?: string
+
 }
 
 const props = withDefaults(defineProps<DragProps>(), {
-  data: () => ({ type: 'default', payload: null as unknown }),
+  type: 'default',
   draggingClassName: 'dragging',
 })
 
@@ -46,14 +46,8 @@ const previewRef = ref<HTMLElement | null>(null)
 const slots = useSlots()
 const hasDragPreviewSlot = computed(() => !!slots.dragPreview)
 
-// Resolve the drag type, prioritizing props.type, then props.data.type, then 'default'
-const resolvedType = computed(() => {
-  if (props.type)
-    return props.type
-  if (props.data && typeof props.data === 'object' && 'type' in props.data && typeof props.data.type === 'string')
-    return props.data.type
-  return 'default'
-})
+// Resolve the drag type from props
+const resolvedType = computed(() => props.type)
 
 // Create dragPreview configuration based on slot or props
 const dragPreview = computed(() => {
@@ -73,25 +67,35 @@ const dragPreview = computed(() => {
 const {
   isDragging,
 } = useDrag(targetRef, {
-  ...props,
+  dragId: props.dragId,
+  index: props.index,
   type: resolvedType.value,
-  dragPreview,
-  onDragStart: (event: DragEvent | PointerEvent) => {
+  dragPreview: dragPreview.value,
+  handle: props.handle,
+  draggingElement: props.draggingElement,
+  forceFallback: props.forceFallback,
+  fallbackClass: props.fallbackClass,
+  fallbackOnBody: props.fallbackOnBody,
+  fallbackTolerance: props.fallbackTolerance,
+  delay: props.delay,
+  stateStyles: props.stateStyles,
+
+  onDragStart: (dragData, event) => {
     emit('dragStart', event)
     if (props.onDragStart) {
-      props.onDragStart(event)
+      props.onDragStart(dragData, event)
     }
   },
-  onDrag: (event: DragEvent | PointerEvent) => {
+  onDrag: (dragData, event) => {
     emit('drag', event)
     if (props.onDrag) {
-      props.onDrag(event)
+      props.onDrag(dragData, event)
     }
   },
-  onDragEnd: (event: DragEvent | PointerEvent) => {
+  onDragEnd: (dragData, event) => {
     emit('dragEnd', event)
     if (props.onDragEnd) {
-      props.onDragEnd(event)
+      props.onDragEnd(dragData, event)
     }
   },
 })
@@ -117,7 +121,6 @@ const combinedClass = computed(() => {
     <slot />
   </div>
 
-  <!-- Hidden container for drag preview slot -->
   <div
     v-if="hasDragPreviewSlot" ref="previewRef"
     style="position: absolute; left: -9999px; top: -9999px; pointer-events: none;"
