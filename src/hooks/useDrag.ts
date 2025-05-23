@@ -430,42 +430,59 @@ export function useDrag(
       useEventListener(draggingElementValue, 'drag', handleDrag)
       useEventListener(draggingElementValue, 'dragend', handleDragEnd)
     }
-    tryOnUnmounted(() => {
+
+    const clearDragTimeout = () => {
       if (dragTimeout.value) {
         window.clearTimeout(dragTimeout.value)
         dragTimeout.value = null
       }
-      if (delayTimeout.value) {
-        window.clearTimeout(delayTimeout.value)
-        delayTimeout.value = null
-      }
-      if (dragPreviewElement.value && dragPreviewElement.value.parentElement) {
+    }
+
+    const clearDragPreview = () => {
+      if (dragPreviewElement.value?.parentElement) {
         try {
           document.body.removeChild(dragPreviewElement.value)
         }
-        catch {
+        catch (error) {
+          console.warn('Failed to remove drag preview element:', error)
         }
         finally {
           dragPreviewElement.value = null
         }
       }
-      if (pointerElement.value) {
-        removePointerModeDragImage()
-      }
-      const el = toValue(draggingHandle)
-      if (el && mergedStateStyles.value.dragging) {
-        Object.keys(mergedStateStyles.value.dragging).forEach((key) => {
-          try {
-            (el as HTMLElement).style[key as any] = ''
-          }
-          catch { }
-        })
-      }
+    }
+
+    const clearDraggingStyles = (el: HTMLElement | null) => {
+      if (!el || !mergedStateStyles.value.dragging)
+        return
+
+      Object.keys(mergedStateStyles.value.dragging).forEach((key) => {
+        try {
+          el.style[key as any] = ''
+        }
+        catch (error) {
+          console.warn(`Failed to clear style ${key}:`, error)
+        }
+      })
+    }
+
+    const clearActiveDragState = () => {
       const currentActiveDrag = dragStore.getActiveDrag()
-      if (activeDragId.value && currentActiveDrag && activeDragId.value === currentActiveDrag.id) {
+      if (activeDragId.value && currentActiveDrag?.id === activeDragId.value) {
         dragStore.clearActiveDrag(activeDragId.value)
       }
       activeDragId.value = null
+    }
+
+    tryOnUnmounted(() => {
+      clearDragTimeout()
+      clearDragPreview()
+      if (pointerElement.value) {
+        removePointerModeDragImage()
+      }
+
+      clearDraggingStyles(toValue(draggingHandle) as HTMLElement | null)
+      clearActiveDragState()
     })
   }
 
