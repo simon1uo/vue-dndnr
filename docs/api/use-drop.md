@@ -1,12 +1,12 @@
 # useDrop
 
-The `useDrop` hook provides drop zone functionality using the HTML5 Drag and Drop API. It allows you to create areas that can receive dragged items with customizable acceptance criteria, visual feedback, and auto-scrolling. The hook uses an optimized approach to handle drag data that works reliably across different browsers and components.
+The `useDrop` hook provides drop zone functionality using the HTML5 Drag and Drop API and pointer events. It allows you to create areas that can receive dragged items with customizable acceptance criteria, visual feedback, and auto-scrolling. The hook uses an optimized approach to handle drag data that works reliably across different browsers, components, and drag modes.
 
 ## Demo
 
 <script setup>
 import { ref } from 'vue'
-import { useDrop, Drag } from 'vue-dndnr'
+import { useDrop, Drag, DragMode } from 'vue-dndnr'
 
 const dropZoneRef = ref(null)
 const dropData = ref(null)
@@ -22,7 +22,7 @@ const { isDragOver, isValidDrop, data } = useDrop(dropZoneRef, {
 </script>
 
 <DemoContainer>
-  <Drag v-bind="{ dragId: 'item-1', index: 0, type: 'demo-item', forceFallback: true }">
+  <Drag v-bind="{ dragId: 'item-1', index: 0, type: 'demo-item', dragMode: DragMode.Pointer }">
     <div
       class="bg-slate dark:bg-slate-700 text-sm text-white p-4 rounded-xl shadow-xl w-xs select-none mb-10"
     ><span class="mr-2">⋮⋮👋</span> Drag me and drop below!
@@ -126,11 +126,10 @@ The `DropOptions` interface provides a comprehensive set of configuration option
 | `dropId` | `string` | **Required** | Unique identifier for the drop zone. |
 | `accept` | `MaybeRefOrGetter<string \| string[] \| ((type: string) => boolean) \| undefined>` | `undefined` | Acceptance criteria for dropped item's `type`. Can be a single string, an array of strings, or a function that receives the drag item's `type` and returns a boolean. |
 | `dropEffect` | `MaybeRefOrGetter<'copy' \| 'move' \| 'link' \| 'none'>` | `'move'` | Visual effect for drop operation. |
-| `allowFallbackDrags` | `MaybeRefOrGetter<boolean>` | `true` | Enables fallback drag handling using Pointer Events for drags not initiated via native HTML5 drag API (e.g., from `useDrag` with pointer fallback). |
-| `onDragEnter` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable enters the drop zone. `params` contains `{ dragId, index, type }` of the dragged item, or `null` if data cannot be determined yet. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
-| `onDragOver` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable is over the drop zone. `params` contains `{ dragId, index, type }` of the dragged item, or `null`. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
-| `onDragLeave` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable leaves the drop zone. `params` is usually `null` on leave. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
-| `onDrop` | `(params: { dragId: string, index: number, type: string }, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when an item is dropped and accepted. `params` contains `{ dragId, index, type }` of the dropped item. `event` can be `PointerEvent` if `allowFallbackDrags` is true and a fallback drag occurs. |
+| `onDragEnter` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable enters the drop zone. `params` contains `{ dragId, index, type }` of the dragged item, or `null` if data cannot be determined yet. `event` can be `PointerEvent` if the drag uses pointer mode. |
+| `onDragOver` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable is over the drop zone. `params` contains `{ dragId, index, type }` of the dragged item, or `null`. `event` can be `PointerEvent` if the drag uses pointer mode. |
+| `onDragLeave` | `(params: { dragId: string, index: number, type: string } \| null, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when a draggable leaves the drop zone. `params` is usually `null` on leave. `event` can be `PointerEvent` if the drag uses pointer mode. |
+| `onDrop` | `(params: { dragId: string, index: number, type: string }, event: DragEvent \| PointerEvent) => void` | `undefined` | Callback fired when an item is dropped and accepted. `params` contains `{ dragId, index, type }` of the dropped item. `event` can be `PointerEvent` if the drag uses pointer mode. |
 
 ### DragData
 
@@ -149,11 +148,11 @@ interface ActiveDragContext {
 
 ## Features
 
-- HTML5 Drag and Drop API integration
+- HTML5 Drag and Drop API integration with pointer event support
 - Reliable data handling for drag item identity (`dragId`, `index`, `type`) across browsers, including robust extraction from `DataTransfer` objects using custom MIME types and a formatted `text/plain` fallback.
 - Optimized drag-enter/drag-over/drag-leave event handling.
 - Global drag state management via an internal store (shared with `useDrag`), enabling communication of active drag item's `dragId`, `index`, and `type`.
-- Fallback drag and drop mechanism using Pointer Events, controlled by the `allowFallbackDrags` option, for drags not initiated via the native HTML5 API (e.g., initiated by `useDrag` with pointer fallback).
+- Automatic support for both native and pointer-based drag modes
 - Type-based (`string[]`) and validator-function-based acceptance criteria for dropped items.
 - Accessibility support with the `aria-droptarget="true"` attribute automatically set on the drop zone element.
 - Comprehensive event lifecycle callbacks: `onDragEnter`, `onDragOver`, `onDragLeave`, and `onDrop`.
