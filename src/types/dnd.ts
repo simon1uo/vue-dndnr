@@ -1,4 +1,5 @@
 import type { MaybeRefOrGetter } from 'vue'
+import type { Position } from './common'
 
 /**
  * Defines the drag mode for the draggable item.
@@ -264,4 +265,69 @@ export interface ActiveDragContext {
    * Matches the `dragMode` option from the originating `useDrag` instance.
    */
   dragMode: DragMode
+
+  /**
+   * The HTML element from which the drag originated.
+   * This is used to calculate the initial offset of the pointer within the element for `DragMode.Pointer`.
+   * @optional
+   */
+  sourceNode?: HTMLElement
+
+  /**
+   * The initial position of the pointer (e.g., mouse cursor or touch point) when the drag operation started.
+   * This is used in conjunction with `sourceNode` to determine the offset for `DragMode.Pointer` previews.
+   * @optional
+   */
+  initialPointerPosition?: Position
+
+  /**
+   * The current position of the pointer during the drag operation.
+   * This is particularly useful for custom drag preview implementations.
+   */
+  currentPosition?: Position
+}
+
+/**
+ * Options for the drag preview layer, controlling its behavior and appearance.
+ */
+export interface DragPreviewOptions {
+  /**
+   * Target container where the preview element will be rendered.
+   * If not provided, document.body will be used by default.
+   * @default document.body
+   */
+  container?: MaybeRefOrGetter<HTMLElement | null | undefined>
+
+  /**
+   * Z-index style value for the preview layer, controlling the stacking order.
+   * @default 1000
+   */
+  zIndex?: MaybeRefOrGetter<number | undefined>
+
+  /**
+   * Custom element to use as preview.
+   */
+  element?: MaybeRefOrGetter<HTMLElement | null | undefined>
+
+  /**
+   * Offset configuration for the preview element.
+   */
+  offset?: MaybeRefOrGetter<Position | undefined>
+
+  /**
+   * Animation effect configuration for the preview element.
+   */
+  animation?: MaybeRefOrGetter<{
+    duration?: number
+    easing?: string
+    initial?: Record<string, string>
+    active?: Record<string, string>
+  } | undefined>
+
+  /**
+   * The drag mode to use for this preview.
+   * Only 'pointer' mode will show the custom preview element.
+   * @default undefined (will use the dragMode from the active drag context)
+   */
+  dragMode?: MaybeRefOrGetter<DragMode | undefined>
 }
