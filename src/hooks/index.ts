@@ -1,6 +1,4 @@
 export * from './useDnR'
-export * from './useDrag'
 export * from './useDraggable'
-export * from './useDrop'
 export * from './useResizable'
 export * from './useResizeHandles'
