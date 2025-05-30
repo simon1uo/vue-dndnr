@@ -97,3 +97,107 @@ export function calculatePosition(event: PointerEvent, scale = 1): Position {
     y: clientY / scale,
   }
 }
+
+/**
+ * Get the client rectangle of an element
+ * @param element - The target HTML or SVG element
+ * @returns The element's client rectangle coordinates
+ */
+export function getClientRect(element: HTMLElement | SVGElement): DOMRect {
+  return element.getBoundingClientRect()
+}
+
+/**
+ * Calculate the center point of a rectangle
+ * @param rect - The rectangle object
+ * @param rect.width - The width of the rectangle
+ * @param rect.height - The height of the rectangle
+ * @param rect.left - The left position of the rectangle
+ * @param rect.top - The top position of the rectangle
+ * @returns The center position coordinates
+ */
+export function getCenter(rect: { width: number, height: number, left: number, top: number }): Position {
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  }
+}
+
+/**
+ * Get the center point of an element
+ * @param element - The target HTML or SVG element
+ * @returns The center position coordinates of the element
+ */
+export function getElementCenter(element: HTMLElement | SVGElement): Position {
+  const rect = getClientRect(element)
+  return getCenter(rect)
+}
+
+/**
+ * Get the four corners of a rectangle
+ * @param rect - The rectangle object
+ * @param rect.width - The width of the rectangle
+ * @param rect.height - The height of the rectangle
+ * @param rect.left - The left position of the rectangle
+ * @param rect.top - The top position of the rectangle
+ * @returns An object containing the positions of the top-left, top-right, bottom-left, and bottom-right corners
+ */
+export function getCorners(rect: { width: number, height: number, left: number, top: number }): {
+  topLeft: Position
+  topRight: Position
+  bottomLeft: Position
+  bottomRight: Position
+} {
+  return {
+    topLeft: {
+      x: rect.left,
+      y: rect.top,
+    },
+    topRight: {
+      x: rect.left + rect.width,
+      y: rect.top,
+    },
+    bottomLeft: {
+      x: rect.left,
+      y: rect.top + rect.height,
+    },
+    bottomRight: {
+      x: rect.left + rect.width,
+      y: rect.top + rect.height,
+    },
+  }
+}
+
+/**
+ * Calculate the distance between two positions
+ * @param pos1 - The first position
+ * @param pos2 - The second position
+ * @returns The Euclidean distance between the two positions
+ */
+export function getDistance(pos1: Position, pos2: Position): number {
+  const dx = pos2.x - pos1.x
+  const dy = pos2.y - pos1.y
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * Check if a position is within a rectangle
+ * @param position - The position to check
+ * @param rect - The rectangle to check against
+ * @param rect.left - The left position of the rectangle
+ * @param rect.top - The top position of the rectangle
+ * @param rect.right - The right position of the rectangle
+ * @param rect.bottom - The bottom position of the rectangle
+ * @returns True if the position is within the rectangle, false otherwise
+ */
+export function isPositionInRect(
+  position: Position,
+  rect: { left: number, top: number, right: number, bottom: number },
+): boolean {
+  return (
+    position.x >= rect.left
+    && position.x <= rect.right
+    && position.y >= rect.top
+    && position.y <= rect.bottom
+  )
+}
