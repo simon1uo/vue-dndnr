@@ -1,3 +1,5 @@
 export * from './common'
-export * from './dnd'
+export * from './core'
 export * from './dnr'
+export * from './drag-lock'
+export * from './sensors'

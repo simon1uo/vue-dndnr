@@ -1,11 +1,22 @@
-/**
- * Represents a 2D position with x and y coordinates
- */
 export interface Position {
   /** The horizontal coordinate */
   x: number
   /** The vertical coordinate */
   y: number
+}
+
+/**
+ * Extended position interface with client and page coordinates
+ */
+export interface FullPosition extends Position {
+  /** X coordinate relative to the viewport */
+  clientX: number
+  /** Y coordinate relative to the viewport */
+  clientY: number
+  /** X coordinate relative to the document */
+  pageX: number
+  /** Y coordinate relative to the document */
+  pageY: number
 }
 
 /**

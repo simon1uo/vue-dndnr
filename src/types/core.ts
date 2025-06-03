@@ -1,3 +1,5 @@
+import type { Position } from './common'
+
 /**
  * Represents a location in a droppable container
  * Used to track the position of draggable items within droppable containers
@@ -29,22 +31,25 @@ export interface DragRubric {
 export enum DragState {
   /** No drag operation is in progress */
   IDLE = 'IDLE',
+  /** A pre-drag operation is in progress */
+  PRE_DRAG = 'PRE_DRAG',
   /** An item is currently being dragged */
   DRAGGING = 'DRAGGING',
   /** An item is being dropped */
   DROPPING = 'DROPPING',
+  /** Drag operation has completed */
+  COMPLETED = 'COMPLETED',
 }
 
 /**
- * Represents a 2D position in the coordinate system
- * Used for tracking positions of elements
+ * Unique identifier for draggable items
  */
-export interface Position {
-  /** The horizontal coordinate */
-  x: number
-  /** The vertical coordinate */
-  y: number
-}
+export type DragId = string
+
+/**
+ * Unique identifier for droppable containers
+ */
+export type DropId = string
 
 /**
  * Represents the direction of movement or layout
@@ -58,7 +63,7 @@ export type Direction = 'horizontal' | 'vertical'
  */
 export interface DragDimension {
   /** The unique identifier of the draggable element */
-  dragId: string
+  dragId: DragId
   /** The width of the element in pixels */
   width: number
   /** The height of the element in pixels */
@@ -75,7 +80,7 @@ export interface DragDimension {
  */
 export interface DropDimension {
   /** The unique identifier of the droppable container */
-  dropId: string
+  dropId: DropId
   /** The width of the container in pixels */
   width: number
   /** The height of the container in pixels */
@@ -95,7 +100,7 @@ export interface DropDimension {
  */
 export interface DragStart {
   /** The ID of the item being dragged */
-  dragId: string
+  dragId: DragId
   /** The source location of the drag */
   source: DragLocation
   /** The mode of dragging (e.g., FLUID or SNAP) */
@@ -157,43 +162,4 @@ export interface DragDropContextProps {
    * @default false
    */
   enableDropExternal?: boolean
-}
-
-/**
- * API interface for input sensors (mouse, touch, keyboard, etc.)
- * Used to abstract different input methods for drag and drop operations
- */
-export interface SensorAPI {
-  /**
-   * Called when the sensor detects a drag start event
-   * @param event - The original input event
-   */
-  onDragStart: (event: Event) => void
-
-  /**
-   * Called when the sensor detects movement during drag
-   * @param event - The original input event
-   */
-  onDragMove: (event: Event) => void
-
-  /**
-   * Called when the sensor detects a drag end event
-   * @param event - The original input event
-   */
-  onDragEnd: (event: Event) => void
-
-  /**
-   * Called when the sensor needs to be cleaned up
-   */
-  onCleanup: () => void
-
-  /**
-   * Whether the sensor is currently active
-   */
-  isActive: boolean
-
-  /**
-   * The type of input this sensor handles
-   */
-  type: 'mouse' | 'touch' | 'keyboard'
 }
