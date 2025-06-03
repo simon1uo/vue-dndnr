@@ -1,5 +1,6 @@
 export * from './common'
 export * from './core'
+export * from './dimension'
 export * from './dnr'
 export * from './drag-lock'
 export * from './sensors'

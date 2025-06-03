@@ -1,5 +1,3 @@
-import type { Position } from './common'
-
 /**
  * Represents a location in a droppable container
  * Used to track the position of draggable items within droppable containers
@@ -56,44 +54,6 @@ export type DropId = string
  * Used to specify the orientation of containers and movement constraints
  */
 export type Direction = 'horizontal' | 'vertical'
-
-/**
- * Represents the dimensions and position of a draggable element
- * Used to track the size and location of draggable items
- */
-export interface DragDimension {
-  /** The unique identifier of the draggable element */
-  dragId: DragId
-  /** The width of the element in pixels */
-  width: number
-  /** The height of the element in pixels */
-  height: number
-  /** The current position of the element */
-  position: Position
-  /** The center point of the element */
-  center: Position
-}
-
-/**
- * Represents the dimensions and characteristics of a droppable container
- * Used to define the drop zone boundaries and behavior
- */
-export interface DropDimension {
-  /** The unique identifier of the droppable container */
-  dropId: DropId
-  /** The width of the container in pixels */
-  width: number
-  /** The height of the container in pixels */
-  height: number
-  /** The position of the container */
-  position: Position
-  /** The direction of item flow within the container */
-  direction: Direction
-  /** Whether the container is currently enabled for dropping */
-  isEnabled: boolean
-  /** Whether the container can be scrolled */
-  isScrollable: boolean
-}
 
 /**
  * Event data when a drag operation starts
