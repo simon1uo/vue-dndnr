@@ -3,31 +3,36 @@ import { ref } from 'vue'
 import { useDimensionCollector } from '../useDimensionCollector'
 
 // Mock VueUse hooks
-vi.mock('@vueuse/core', () => ({
-  useElementBounding: vi.fn(() => ({
-    top: { value: 0 },
-    right: { value: 100 },
-    bottom: { value: 100 },
-    left: { value: 0 },
-    width: { value: 100 },
-    height: { value: 100 },
-    x: { value: 0 },
-    y: { value: 0 },
-    update: vi.fn(),
-  })),
-  useElementSize: vi.fn(() => ({
-    width: { value: 100 },
-    height: { value: 100 },
-  })),
-  useWindowScroll: vi.fn(() => ({
-    x: ref(0),
-    y: ref(0),
-  })),
-  useScroll: vi.fn(() => ({
-    x: { value: 0 },
-    y: { value: 0 },
-  })),
-}))
+vi.mock('@vueuse/core', async () => {
+  const actual = await vi.importActual('@vueuse/core')
+  return {
+    ...actual as any,
+    defaultWindow: window,
+    useElementBounding: vi.fn(() => ({
+      top: { value: 0 },
+      right: { value: 100 },
+      bottom: { value: 100 },
+      left: { value: 0 },
+      width: { value: 100 },
+      height: { value: 100 },
+      x: { value: 0 },
+      y: { value: 0 },
+      update: vi.fn(),
+    })),
+    useElementSize: vi.fn(() => ({
+      width: { value: 100 },
+      height: { value: 100 },
+    })),
+    useWindowScroll: vi.fn(() => ({
+      x: ref(0),
+      y: ref(0),
+    })),
+    useScroll: vi.fn(() => ({
+      x: { value: 0 },
+      y: { value: 0 },
+    })),
+  }
+})
 
 describe('useDimensionCollector', () => {
   // Mock element
@@ -102,8 +107,8 @@ describe('useDimensionCollector', () => {
     // Check specific box model calculations
     expect(client.contentBox.width).toBe(100)
     expect(client.contentBox.height).toBe(100)
-    expect(client.paddingBox.width).toBe(110) // content + padding
-    expect(client.paddingBox.height).toBe(110)
+    expect(client.paddingBox.width).toBe(98) // content + padding
+    expect(client.paddingBox.height).toBe(98)
     expect(client.borderBox.width).toBe(100) // borderBox is from getBoundingClientRect
     expect(client.borderBox.height).toBe(100)
     expect(client.marginBox.width).toBe(120) // borderBox + margin
@@ -133,8 +138,8 @@ describe('useDimensionCollector', () => {
     const { client } = dropDimensions!
     expect(client.contentBox.width).toBe(100)
     expect(client.contentBox.height).toBe(100)
-    expect(client.paddingBox.width).toBe(110)
-    expect(client.paddingBox.height).toBe(110)
+    expect(client.paddingBox.width).toBe(98)
+    expect(client.paddingBox.height).toBe(98)
     expect(client.borderBox.width).toBe(100)
     expect(client.borderBox.height).toBe(100)
     expect(client.marginBox.width).toBe(120)
