@@ -1,6 +1,6 @@
 export * from './config'
+export * from './constraints'
 export * from './cursor'
-export * from './dimensions'
 export * from './dom'
 export * from './id'
 export * from './position'
