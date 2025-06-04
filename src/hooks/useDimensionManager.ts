@@ -1,172 +1,117 @@
 import type { DragId, DropId } from '@/types/core'
 import type { DragDimension, DropDimension } from '@/types/dimension'
-import type { MaybeRefOrGetter } from 'vue'
 import type { DimensionObserverOptions } from './useDimensionObserver'
 import { tryOnUnmounted } from '@vueuse/core'
-import { computed, shallowRef, toValue } from 'vue'
-import { useDimensionCollector } from './useDimensionCollector'
-import { useDimensionObserver } from './useDimensionObserver'
+import { computed, shallowRef } from 'vue'
+import useDimensionCollector from './useDimensionCollector'
+import useDimensionObserver from './useDimensionObserver'
 
 /**
  * Options for the dimension manager
  */
-export interface DimensionManagerOptions {
+export interface DimensionManagerOptions extends DimensionObserverOptions {
   /**
-   * Options for the dimension observer
+   * Whether to enable automatic dimension updates
+   * @default true
    */
-  observerOptions?: DimensionObserverOptions
+  enableAutoUpdate?: boolean
 }
 
 /**
  * Composable function for managing dimensions of draggable and droppable elements
+ * Acts as a high-level manager for dimension collection and observation
  * @param options - Configuration options
  * @returns Object containing dimension management methods and data
  */
 export function useDimensionManager(options: DimensionManagerOptions = {}) {
-  // Registry of elements
-  const dragElements = new Map<DragId, {
-    element: HTMLElement | SVGElement
-    dropId: DropId
-  }>()
+  // Default options
+  const {
+    enableAutoUpdate = true,
+    ...observerOptions
+  } = options
 
-  const dropElements = new Map<DropId, HTMLElement | SVGElement>()
+  // Store registered elements
+  const registeredDraggables = shallowRef<Map<DragId, HTMLElement>>(new Map())
+  const registeredDroppables = shallowRef<Map<DropId, HTMLElement>>(new Map())
 
-  // Store for dimensions
-  const dragDimensions = shallowRef<Map<DragId, DragDimension>>(new Map())
-  const dropDimensions = shallowRef<Map<DropId, DropDimension>>(new Map())
-
-  // Current active element for observer
-  const currentElement = shallowRef<HTMLElement | SVGElement | null>(null)
+  // Current active element references
+  const currentElement = shallowRef<HTMLElement | null>(null)
+  const currentDragId = shallowRef<DragId | null>(null)
+  const currentDropId = shallowRef<DropId | null>(null)
 
   // Create dimension collector
   const dimensionCollector = useDimensionCollector(currentElement)
 
   // Handle dimension updates
   const handleDimensionUpdate = (type: 'drag' | 'drop', id: DragId | DropId) => {
-    if (type === 'drag') {
-      const dragId = id as DragId
-      const dragInfo = dragElements.get(dragId)
-
-      if (dragInfo) {
-        currentElement.value = dragInfo.element
-        const dimension = dimensionCollector.collectDragDimensions(dragId, dragInfo.dropId)
-
-        if (dimension) {
-          const newDragDimensions = new Map(dragDimensions.value)
-          newDragDimensions.set(dragId, dimension)
-          dragDimensions.value = newDragDimensions
-
-          // Update the activities array in the parent droppable
-          updateDroppableActivities(dragInfo.dropId)
-        }
-      }
+    if (type === 'drag' && currentDragId.value === id) {
+      const dropId = findDropIdForDrag(id)
+      if (dropId)
+        dimensionCollector.collectDragDimensions(id, dropId)
     }
-    else {
-      const dropId = id as DropId
-      const element = dropElements.get(dropId)
-
-      if (element) {
-        currentElement.value = element
-        const dimension = dimensionCollector.collectDropDimensions(dropId)
-
-        if (dimension) {
-          const newDropDimensions = new Map(dropDimensions.value)
-          newDropDimensions.set(dropId, dimension)
-          dropDimensions.value = newDropDimensions
-        }
-      }
+    else if (type === 'drop' && currentDropId.value === id) {
+      dimensionCollector.collectDropDimensions(id)
     }
   }
 
   // Create dimension observer
-  const dimensionObserver = useDimensionObserver(currentElement, handleDimensionUpdate, options.observerOptions)
+  const dimensionObserver = useDimensionObserver(
+    currentElement,
+    handleDimensionUpdate,
+    observerOptions,
+  )
 
   /**
-   * Update the activities array in a droppable's dimensions
-   * @param dropId - ID of the droppable to update
+   * Find the drop ID for a given drag ID
+   * @param dragId - ID of the draggable element
+   * @returns The associated drop ID or null if not found
    */
-  function updateDroppableActivities(dropId: DropId) {
-    const dropDimension = dropDimensions.value.get(dropId)
-    if (!dropDimension)
-      return
-
-    // Collect all draggables that belong to this droppable
-    const activities: DragDimension[] = []
-    dragDimensions.value.forEach((dragDimension) => {
-      if (dragDimension.dropId === dropId) {
-        activities.push(dragDimension)
-      }
-    })
-
-    // Create a new drop dimension with updated activities
-    const updatedDropDimension: DropDimension = {
-      ...dropDimension,
-      subject: {
-        ...dropDimension.subject,
-        activities,
-      },
-    }
-
-    // Update the drop dimensions map
-    const newDropDimensions = new Map(dropDimensions.value)
-    newDropDimensions.set(dropId, updatedDropDimension)
-    dropDimensions.value = newDropDimensions
+  function findDropIdForDrag(dragId: DragId): DropId | null {
+    const dragDimension = dimensionCollector.getDragDimensions(dragId)
+    return dragDimension?.dropId || null
   }
 
   /**
    * Register a draggable element
    * @param dragId - ID of the draggable element
-   * @param element - The draggable element
    * @param dropId - ID of the parent droppable container
+   * @param element - The draggable HTML element
    */
-  function registerDraggable(dragId: DragId, element: MaybeRefOrGetter<HTMLElement | SVGElement>, dropId: DropId) {
-    const el = toValue(element)
-    if (!el)
-      return
+  function registerDraggable(dragId: DragId, dropId: DropId, element: HTMLElement) {
+    registeredDraggables.value.set(dragId, element)
 
-    // Store the element in the registry
-    dragElements.set(dragId, { element: el, dropId })
+    if (enableAutoUpdate) {
+      // Set current element and collect dimensions
+      currentElement.value = element
+      currentDragId.value = dragId
+      currentDropId.value = null
 
-    // Set as current element and collect dimensions
-    currentElement.value = el
-    const dimension = dimensionCollector.collectDragDimensions(dragId, dropId)
+      // Collect initial dimensions
+      dimensionCollector.collectDragDimensions(dragId, dropId)
 
-    if (dimension) {
-      const newDragDimensions = new Map(dragDimensions.value)
-      newDragDimensions.set(dragId, dimension)
-      dragDimensions.value = newDragDimensions
-
-      // Start observing
+      // Start observing dimension changes
       dimensionObserver.observe('drag', dragId)
-
-      // Update the activities array in the parent droppable
-      updateDroppableActivities(dropId)
     }
   }
 
   /**
    * Register a droppable element
    * @param dropId - ID of the droppable container
-   * @param element - The droppable element
+   * @param element - The droppable HTML element
    */
-  function registerDroppable(dropId: DropId, element: MaybeRefOrGetter<HTMLElement | SVGElement>) {
-    const el = toValue(element)
-    if (!el)
-      return
+  function registerDroppable(dropId: DropId, element: HTMLElement) {
+    registeredDroppables.value.set(dropId, element)
 
-    // Store the element in the registry
-    dropElements.set(dropId, el)
+    if (enableAutoUpdate) {
+      // Set current element and collect dimensions
+      currentElement.value = element
+      currentDragId.value = null
+      currentDropId.value = dropId
 
-    // Set as current element and collect dimensions
-    currentElement.value = el
-    const dimension = dimensionCollector.collectDropDimensions(dropId)
+      // Collect initial dimensions
+      dimensionCollector.collectDropDimensions(dropId)
 
-    if (dimension) {
-      const newDropDimensions = new Map(dropDimensions.value)
-      newDropDimensions.set(dropId, dimension)
-      dropDimensions.value = newDropDimensions
-
-      // Start observing
+      // Start observing dimension changes
       dimensionObserver.observe('drop', dropId)
     }
   }
@@ -176,149 +121,116 @@ export function useDimensionManager(options: DimensionManagerOptions = {}) {
    * @param dragId - ID of the draggable element to unregister
    */
   function unregisterDraggable(dragId: DragId) {
-    const dragInfo = dragElements.get(dragId)
-
-    if (dragInfo) {
-      // Stop observing
+    if (currentDragId.value === dragId) {
       dimensionObserver.disconnect()
-
-      // Remove from registry
-      dragElements.delete(dragId)
-
-      // Remove from dimensions
-      const newDragDimensions = new Map(dragDimensions.value)
-      newDragDimensions.delete(dragId)
-      dragDimensions.value = newDragDimensions
-
-      // Update the activities array in the parent droppable
-      updateDroppableActivities(dragInfo.dropId)
+      currentDragId.value = null
     }
+
+    registeredDraggables.value.delete(dragId)
   }
 
   /**
    * Unregister a droppable element
-   * @param dropId - ID of the droppable container to unregister
+   * @param dropId - ID of the droppable element to unregister
    */
   function unregisterDroppable(dropId: DropId) {
-    if (dropElements.has(dropId)) {
-      // Stop observing
+    if (currentDropId.value === dropId) {
       dimensionObserver.disconnect()
-
-      // Remove from registry
-      dropElements.delete(dropId)
-
-      // Remove from dimensions
-      const newDropDimensions = new Map(dropDimensions.value)
-      newDropDimensions.delete(dropId)
-      dropDimensions.value = newDropDimensions
-
-      // Remove all draggables that belong to this droppable
-      const dragsToRemove: DragId[] = []
-      dragElements.forEach((info, dragId) => {
-        if (info.dropId === dropId) {
-          dragsToRemove.push(dragId)
-        }
-      })
-
-      dragsToRemove.forEach(unregisterDraggable)
+      currentDropId.value = null
     }
+
+    registeredDroppables.value.delete(dropId)
   }
 
   /**
-   * Force refresh dimensions for all elements or a specific element
-   * @param type - Type of element to refresh ('drag', 'drop', or undefined for all)
-   * @param id - ID of the element to refresh (or undefined for all of the specified type)
-   */
-  function refreshDimensions(type?: 'drag' | 'drop', id?: DragId | DropId) {
-    if (!type) {
-      // Refresh all elements
-      dragElements.forEach((info, dragId) => {
-        currentElement.value = info.element
-        const dimension = dimensionCollector.collectDragDimensions(dragId, info.dropId)
-        if (dimension) {
-          const newDragDimensions = new Map(dragDimensions.value)
-          newDragDimensions.set(dragId, dimension)
-          dragDimensions.value = newDragDimensions
-        }
-      })
-
-      dropElements.forEach((element, dropId) => {
-        currentElement.value = element
-        const dimension = dimensionCollector.collectDropDimensions(dropId)
-        if (dimension) {
-          const newDropDimensions = new Map(dropDimensions.value)
-          newDropDimensions.set(dropId, dimension)
-          dropDimensions.value = newDropDimensions
-        }
-      })
-
-      // Update all droppable activities
-      dropElements.forEach((_, dropId) => {
-        updateDroppableActivities(dropId)
-      })
-    }
-    else if (type === 'drag' && id) {
-      const dragId = id as DragId
-      const dragInfo = dragElements.get(dragId)
-
-      if (dragInfo) {
-        currentElement.value = dragInfo.element
-        const dimension = dimensionCollector.collectDragDimensions(dragId, dragInfo.dropId)
-        if (dimension) {
-          const newDragDimensions = new Map(dragDimensions.value)
-          newDragDimensions.set(dragId, dimension)
-          dragDimensions.value = newDragDimensions
-          updateDroppableActivities(dragInfo.dropId)
-        }
-      }
-    }
-    else if (type === 'drop' && id) {
-      const dropId = id as DropId
-      const element = dropElements.get(dropId)
-
-      if (element) {
-        currentElement.value = element
-        const dimension = dimensionCollector.collectDropDimensions(dropId)
-        if (dimension) {
-          const newDropDimensions = new Map(dropDimensions.value)
-          newDropDimensions.set(dropId, dimension)
-          dropDimensions.value = newDropDimensions
-          updateDroppableActivities(dropId)
-        }
-      }
-    }
-  }
-
-  /**
-   * Get a draggable element's dimensions
+   * Get dimensions for a draggable element
    * @param dragId - ID of the draggable element
-   * @returns The draggable element's dimensions or null if not found
+   * @param forceUpdate - Whether to force a fresh collection of dimensions
+   * @returns The dimensions of the draggable element or null if not found
    */
-  function getDraggableDimension(dragId: DragId): DragDimension | null {
-    return dragDimensions.value.get(dragId) || null
+  function getDragDimensions(dragId: DragId, forceUpdate = false): DragDimension | null {
+    if (forceUpdate) {
+      const element = registeredDraggables.value.get(dragId)
+      if (!element)
+        return null
+
+      const dropId = findDropIdForDrag(dragId)
+      if (!dropId)
+        return null
+
+      currentElement.value = element
+      return dimensionCollector.collectDragDimensions(dragId, dropId)
+    }
+
+    return dimensionCollector.getDragDimensions(dragId)
   }
 
   /**
-   * Get a droppable container's dimensions
-   * @param dropId - ID of the droppable container
-   * @returns The droppable container's dimensions or null if not found
+   * Get dimensions for a droppable element
+   * @param dropId - ID of the droppable element
+   * @param forceUpdate - Whether to force a fresh collection of dimensions
+   * @returns The dimensions of the droppable element or null if not found
    */
-  function getDroppableDimension(dropId: DropId): DropDimension | null {
-    return dropDimensions.value.get(dropId) || null
+  function getDropDimensions(dropId: DropId, forceUpdate = false): DropDimension | null {
+    if (forceUpdate) {
+      const element = registeredDroppables.value.get(dropId)
+      if (!element)
+        return null
+
+      currentElement.value = element
+      return dimensionCollector.collectDropDimensions(dropId)
+    }
+
+    return dimensionCollector.getDropDimensions(dropId)
   }
 
-  // Computed properties for reactive access
-  const allDragDimensions = computed(() => Array.from(dragDimensions.value.values()))
-  const allDropDimensions = computed(() => Array.from(dropDimensions.value.values()))
+  /**
+   * Update the dimensions of all registered elements
+   */
+  function updateAllDimensions() {
+    // Update droppable dimensions first
+    for (const [dropId, element] of registeredDroppables.value.entries()) {
+      currentElement.value = element
+      dimensionCollector.collectDropDimensions(dropId)
+    }
+
+    // Then update draggable dimensions
+    for (const [dragId, element] of registeredDraggables.value.entries()) {
+      const dropId = findDropIdForDrag(dragId)
+      if (!dropId)
+        continue
+
+      currentElement.value = element
+      dimensionCollector.collectDragDimensions(dragId, dropId)
+    }
+  }
+
+  /**
+   * Get all registered draggable IDs
+   */
+  const allDraggableIds = computed(() => Array.from(registeredDraggables.value.keys()))
+
+  /**
+   * Get all registered droppable IDs
+   */
+  const allDroppableIds = computed(() => Array.from(registeredDroppables.value.keys()))
+
+  /**
+   * Clear all dimension caches and registrations
+   */
+  function reset() {
+    dimensionObserver.disconnect()
+    dimensionCollector.clearCache()
+    registeredDraggables.value.clear()
+    registeredDroppables.value.clear()
+    currentElement.value = null
+    currentDragId.value = null
+    currentDropId.value = null
+  }
 
   // Clean up when component is unmounted
   tryOnUnmounted(() => {
-    dimensionObserver.disconnect()
-    dimensionCollector.clearCache()
-    dragElements.clear()
-    dropElements.clear()
-    dragDimensions.value.clear()
-    dropDimensions.value.clear()
+    reset()
   })
 
   return {
@@ -326,11 +238,12 @@ export function useDimensionManager(options: DimensionManagerOptions = {}) {
     registerDroppable,
     unregisterDraggable,
     unregisterDroppable,
-    refreshDimensions,
-    getDraggableDimension,
-    getDroppableDimension,
-    allDragDimensions,
-    allDropDimensions,
+    getDragDimensions,
+    getDropDimensions,
+    updateAllDimensions,
+    reset,
+    allDraggableIds,
+    allDroppableIds,
   }
 }
 

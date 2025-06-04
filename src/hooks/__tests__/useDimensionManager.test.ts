@@ -1,178 +1,79 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { useDimensionManager } from '../useDimensionManager'
-import { useDimensionObserver } from '../useDimensionObserver'
 
-// Store tryOnUnmounted callbacks for testing
-const tryOnUnmountedCallbacks: Array<() => void> = []
+const mockCollector = {
+  collectDragDimensions: vi.fn().mockImplementation((dragId, dropId) => ({
+    id: dragId,
+    dropId,
+    client: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+    page: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+    windowScroll: { x: 0, y: 0 },
+  })),
+  collectDropDimensions: vi.fn().mockImplementation(dropId => ({
+    id: dropId,
+    client: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+    page: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+    windowScroll: { x: 0, y: 0 },
+    subject: {
+      page: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+      withDroppableDisplacement: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+      activities: [],
+    },
+  })),
+  getDragDimensions: vi.fn().mockImplementation((dragId) => {
+    if (dragId === 'drag-1') {
+      return {
+        id: dragId,
+        dropId: 'drop-1',
+        client: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+        page: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+        windowScroll: { x: 0, y: 0 },
+      }
+    }
+    return null
+  }),
+  getDropDimensions: vi.fn().mockImplementation((dropId) => {
+    if (dropId === 'drop-1') {
+      return {
+        id: dropId,
+        client: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+        page: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+        windowScroll: { x: 0, y: 0 },
+        subject: {
+          page: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+          withDroppableDisplacement: { marginBox: {}, borderBox: {}, paddingBox: {}, contentBox: {} },
+          activities: [],
+        },
+      }
+    }
+    return null
+  }),
+  clearCache: vi.fn(),
+}
 
-// Mock useDimensionObserver and useDimensionCollector
-const mockObserve = vi.fn()
-const mockDisconnect = vi.fn()
-const mockUpdateElementId = vi.fn()
-const mockIsActive = ref(true)
+const mockObserver = {
+  observe: vi.fn(),
+  disconnect: vi.fn(),
+  updateElementId: vi.fn(),
+  isActive: ref(false),
+}
 
-const mockCollectDragDimensions = vi.fn((dragId, dropId) => ({
-  id: dragId,
-  dropId,
-  client: {
-    borderBox: {
-      top: 0,
-      right: 100,
-      bottom: 100,
-      left: 0,
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0,
-    },
-    contentBox: {
-      width: 100,
-      height: 100,
-    },
-  },
-  page: {
-    borderBox: {
-      top: 0,
-      right: 100,
-      bottom: 100,
-      left: 0,
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0,
-    },
-    contentBox: {
-      width: 100,
-      height: 100,
-    },
-  },
-  windowScroll: { x: 0, y: 0 },
+// Mock dependencies
+vi.mock('../useDimensionCollector', () => ({
+  default: () => mockCollector,
 }))
-
-const mockCollectDropDimensions = vi.fn(dropId => ({
-  id: dropId,
-  client: {
-    borderBox: {
-      top: 0,
-      right: 200,
-      bottom: 200,
-      left: 0,
-      width: 200,
-      height: 200,
-      x: 0,
-      y: 0,
-    },
-    contentBox: {
-      width: 200,
-      height: 200,
-    },
-  },
-  page: {
-    borderBox: {
-      top: 0,
-      right: 200,
-      bottom: 200,
-      left: 0,
-      width: 200,
-      height: 200,
-      x: 0,
-      y: 0,
-    },
-    contentBox: {
-      width: 200,
-      height: 200,
-    },
-  },
-  windowScroll: { x: 0, y: 0 },
-  subject: {
-    page: {},
-    withDroppableDisplacement: {},
-    activities: [],
-  },
-}))
-
-const mockClearCache = vi.fn()
 
 vi.mock('../useDimensionObserver', () => ({
-  useDimensionObserver: vi.fn(() => ({
-    observe: mockObserve,
-    disconnect: mockDisconnect,
-    updateElementId: mockUpdateElementId,
-    isActive: mockIsActive,
-  })),
+  default: () => mockObserver,
 }))
-
-vi.mock('../useDimensionCollector', () => ({
-  useDimensionCollector: vi.fn(() => ({
-    collectDragDimensions: mockCollectDragDimensions,
-    collectDropDimensions: mockCollectDropDimensions,
-    getDragDimensions: vi.fn(),
-    getDropDimensions: vi.fn(),
-    clearCache: mockClearCache,
-  })),
-}))
-
-// Mock VueUse hooks
-vi.mock('@vueuse/core', async () => {
-  const actual = await vi.importActual('@vueuse/core')
-  return {
-    ...actual as any,
-    useElementSize: vi.fn(() => ({
-      width: ref(100),
-      height: ref(100),
-    })),
-    useElementBounding: vi.fn(() => ({
-      width: ref(100),
-      height: ref(100),
-      top: ref(0),
-      right: ref(100),
-      bottom: ref(100),
-      left: ref(0),
-      x: ref(0),
-      y: ref(0),
-    })),
-    useScroll: vi.fn(() => ({
-      x: ref(0),
-      y: ref(0),
-    })),
-    useWindowScroll: vi.fn(() => ({
-      x: ref(0),
-      y: ref(0),
-    })),
-    useDebounceFn: vi.fn(fn => fn),
-    useThrottleFn: vi.fn(fn => fn),
-    tryOnUnmounted: vi.fn((fn) => {
-      // Store the callback for later execution
-      tryOnUnmountedCallbacks.push(fn)
-    }),
-  }
-})
 
 describe('useDimensionManager', () => {
-  let mockDragElement: HTMLDivElement
-  let mockDropElement: HTMLDivElement
+  let dimensionManager: ReturnType<typeof useDimensionManager>
 
   beforeEach(() => {
-    // Clear tryOnUnmounted callbacks
-    tryOnUnmountedCallbacks.length = 0
+    dimensionManager = useDimensionManager()
 
-    // Create mock elements
-    mockDragElement = document.createElement('div')
-    mockDropElement = document.createElement('div')
-
-    // Set up mock element properties
-    Object.defineProperty(mockDragElement, 'clientHeight', { value: 100 })
-    Object.defineProperty(mockDragElement, 'clientWidth', { value: 100 })
-    Object.defineProperty(mockDragElement, 'scrollHeight', { value: 100 })
-    Object.defineProperty(mockDragElement, 'scrollWidth', { value: 100 })
-
-    Object.defineProperty(mockDropElement, 'clientHeight', { value: 200 })
-    Object.defineProperty(mockDropElement, 'clientWidth', { value: 200 })
-    Object.defineProperty(mockDropElement, 'scrollHeight', { value: 400 })
-    Object.defineProperty(mockDropElement, 'scrollWidth', { value: 400 })
-
-    // Reset all mocks
     vi.clearAllMocks()
   })
 
@@ -180,158 +81,113 @@ describe('useDimensionManager', () => {
     vi.clearAllMocks()
   })
 
-  it('should initialize correctly', () => {
-    const manager = useDimensionManager()
-    expect(manager).toHaveProperty('registerDraggable')
-    expect(manager).toHaveProperty('registerDroppable')
-    expect(manager).toHaveProperty('unregisterDraggable')
-    expect(manager).toHaveProperty('unregisterDroppable')
-    expect(manager).toHaveProperty('refreshDimensions')
-    expect(manager).toHaveProperty('getDraggableDimension')
-    expect(manager).toHaveProperty('getDroppableDimension')
-    expect(manager).toHaveProperty('allDragDimensions')
-    expect(manager).toHaveProperty('allDropDimensions')
+  it('should register draggable elements', () => {
+    const element = document.createElement('div')
+    dimensionManager.registerDraggable('drag-1', 'drop-1', element)
+
+    expect(dimensionManager.allDraggableIds.value).toContain('drag-1')
   })
 
-  it('should register and unregister draggable elements', () => {
-    const manager = useDimensionManager()
+  it('should register droppable elements', () => {
+    const element = document.createElement('div')
+    dimensionManager.registerDroppable('drop-1', element)
 
-    // Register a draggable
-    manager.registerDraggable('drag-1', mockDragElement, 'drop-1')
-
-    // Check if dimensions were collected
-    const dragDimension = manager.getDraggableDimension('drag-1')
-    expect(dragDimension).toBeTruthy()
-    expect(dragDimension?.id).toBe('drag-1')
-    expect(dragDimension?.dropId).toBe('drop-1')
-
-    // Unregister the draggable
-    manager.unregisterDraggable('drag-1')
-
-    // Check if dimensions were removed
-    expect(manager.getDraggableDimension('drag-1')).toBeNull()
+    expect(dimensionManager.allDroppableIds.value).toContain('drop-1')
   })
 
-  it('should register and unregister droppable elements', () => {
-    const manager = useDimensionManager()
+  it('should unregister draggable elements', () => {
+    const element = document.createElement('div')
+    dimensionManager.registerDraggable('drag-1', 'drop-1', element)
+    dimensionManager.unregisterDraggable('drag-1')
 
-    // Register a droppable
-    manager.registerDroppable('drop-1', mockDropElement)
-
-    // Check if dimensions were collected
-    const dropDimension = manager.getDroppableDimension('drop-1')
-    expect(dropDimension).toBeTruthy()
-    expect(dropDimension?.id).toBe('drop-1')
-
-    // Unregister the droppable
-    manager.unregisterDroppable('drop-1')
-
-    // Check if dimensions were removed
-    expect(manager.getDroppableDimension('drop-1')).toBeNull()
+    expect(dimensionManager.allDraggableIds.value).not.toContain('drag-1')
   })
 
-  it('should update droppable activities when draggables change', () => {
-    const manager = useDimensionManager()
+  it('should unregister droppable elements', () => {
+    const element = document.createElement('div')
+    dimensionManager.registerDroppable('drop-1', element)
+    dimensionManager.unregisterDroppable('drop-1')
 
-    // Register a droppable first
-    manager.registerDroppable('drop-1', mockDropElement)
-
-    // Register a draggable in that droppable
-    manager.registerDraggable('drag-1', mockDragElement, 'drop-1')
-
-    // Check if the droppable's activities array was updated
-    const dropDimension = manager.getDroppableDimension('drop-1')
-    expect(dropDimension?.subject.activities).toHaveLength(1)
-    expect(dropDimension?.subject.activities[0].id).toBe('drag-1')
-
-    // Unregister the draggable
-    manager.unregisterDraggable('drag-1')
-
-    // Check if the activities array was updated
-    const updatedDropDimension = manager.getDroppableDimension('drop-1')
-    expect(updatedDropDimension?.subject.activities).toHaveLength(0)
+    expect(dimensionManager.allDroppableIds.value).not.toContain('drop-1')
   })
 
-  it('should refresh dimensions correctly', () => {
-    const manager = useDimensionManager()
-
-    // Register elements
-    manager.registerDroppable('drop-1', mockDropElement)
-    manager.registerDraggable('drag-1', mockDragElement, 'drop-1')
-
-    // Clear the mocks to track new calls
-    mockCollectDragDimensions.mockClear()
-    mockCollectDropDimensions.mockClear()
-
-    // Refresh all dimensions
-    manager.refreshDimensions()
-
-    // Check if dimensions were recollected
-    expect(mockCollectDragDimensions).toHaveBeenCalled()
-    expect(mockCollectDropDimensions).toHaveBeenCalled()
-
-    // Refresh specific draggable
-    mockCollectDragDimensions.mockClear()
-    mockCollectDropDimensions.mockClear()
-    manager.refreshDimensions('drag', 'drag-1')
-    expect(mockCollectDragDimensions).toHaveBeenCalled()
-    expect(mockCollectDropDimensions).not.toHaveBeenCalled()
-
-    // Refresh specific droppable
-    mockCollectDragDimensions.mockClear()
-    mockCollectDropDimensions.mockClear()
-    manager.refreshDimensions('drop', 'drop-1')
-    expect(mockCollectDragDimensions).not.toHaveBeenCalled()
-    expect(mockCollectDropDimensions).toHaveBeenCalled()
+  it('should get drag dimensions', () => {
+    const result = dimensionManager.getDragDimensions('drag-1')
+    expect(result).not.toBeNull()
+    expect(result?.id).toBe('drag-1')
+    expect(result?.dropId).toBe('drop-1')
   })
 
-  it('should clean up when unmounted', () => {
-    const manager = useDimensionManager()
-
-    // Register some elements
-    manager.registerDroppable('drop-1', mockDropElement)
-    manager.registerDraggable('drag-1', mockDragElement, 'drop-1')
-
-    // Verify dimensions exist
-    expect(manager.getDraggableDimension('drag-1')).not.toBeNull()
-    expect(manager.getDroppableDimension('drop-1')).not.toBeNull()
-
-    // Execute the unmount callback
-    expect(tryOnUnmountedCallbacks.length).toBeGreaterThan(0)
-    tryOnUnmountedCallbacks.forEach(callback => callback())
-
-    // Verify cleanup functions were called
-    expect(mockDisconnect).toHaveBeenCalled()
-    expect(mockClearCache).toHaveBeenCalled()
-
-    // Verify dimensions were cleared
-    expect(manager.allDragDimensions.value).toHaveLength(0)
-    expect(manager.allDropDimensions.value).toHaveLength(0)
+  it('should get drop dimensions', () => {
+    const result = dimensionManager.getDropDimensions('drop-1')
+    expect(result).not.toBeNull()
+    expect(result?.id).toBe('drop-1')
   })
 
-  it('should handle observer options correctly', () => {
-    // Reset mock before creating manager with options
-    vi.mocked(useDimensionObserver).mockClear()
+  it('should return null for non-existent drag dimensions', () => {
+    const result = dimensionManager.getDragDimensions('non-existent')
+    expect(result).toBeNull()
+  })
 
-    const _manager = useDimensionManager({
-      observerOptions: {
-        windowResize: false,
-        windowScroll: false,
-        elementResize: false,
-        elementScroll: false,
-      },
-    })
+  it('should return null for non-existent drop dimensions', () => {
+    const result = dimensionManager.getDropDimensions('non-existent')
+    expect(result).toBeNull()
+  })
 
-    // Check if useDimensionObserver was called with the correct options
-    expect(useDimensionObserver).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      {
-        windowResize: false,
-        windowScroll: false,
-        elementResize: false,
-        elementScroll: false,
-      },
-    )
+  it('should force update drag dimensions', () => {
+    const element = document.createElement('div')
+    dimensionManager.registerDraggable('drag-1', 'drop-1', element)
+
+    const result = dimensionManager.getDragDimensions('drag-1', true)
+    expect(result).not.toBeNull()
+    expect(result?.id).toBe('drag-1')
+  })
+
+  it('should force update drop dimensions', () => {
+    const element = document.createElement('div')
+    dimensionManager.registerDroppable('drop-1', element)
+
+    const result = dimensionManager.getDropDimensions('drop-1', true)
+    expect(result).not.toBeNull()
+    expect(result?.id).toBe('drop-1')
+  })
+
+  it('should update all dimensions', () => {
+    const dragElement = document.createElement('div')
+    const dropElement = document.createElement('div')
+
+    dimensionManager.registerDraggable('drag-1', 'drop-1', dragElement)
+    dimensionManager.registerDroppable('drop-1', dropElement)
+
+    dimensionManager.updateAllDimensions()
+
+    // 验证为两个元素调用了 collectDimensions
+    expect(mockCollector.collectDropDimensions).toHaveBeenCalledWith('drop-1')
+    expect(mockCollector.collectDragDimensions).toHaveBeenCalledWith('drag-1', 'drop-1')
+  })
+
+  it('should reset all registrations and caches', () => {
+    const dragElement = document.createElement('div')
+    const dropElement = document.createElement('div')
+
+    dimensionManager.registerDraggable('drag-1', 'drop-1', dragElement)
+    dimensionManager.registerDroppable('drop-1', dropElement)
+
+    dimensionManager.reset()
+
+    expect(dimensionManager.allDraggableIds.value).toHaveLength(0)
+    expect(dimensionManager.allDroppableIds.value).toHaveLength(0)
+
+    expect(mockCollector.clearCache).toHaveBeenCalled()
+    expect(mockObserver.disconnect).toHaveBeenCalled()
+  })
+
+  it('should not auto-update when enableAutoUpdate is false', () => {
+    const localDimensionManager = useDimensionManager({ enableAutoUpdate: false })
+    const element = document.createElement('div')
+
+    localDimensionManager.registerDraggable('drag-1', 'drop-1', element)
+
+    expect(mockObserver.observe).not.toHaveBeenCalled()
   })
 })
