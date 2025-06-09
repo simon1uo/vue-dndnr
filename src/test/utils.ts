@@ -82,6 +82,44 @@ export function mockResizeObserver() {
 }
 
 /**
+ * Creates a test container element for sortable testing
+ */
+export function createTestContainer(): HTMLElement {
+  const container = document.createElement('div')
+  container.className = 'test-container'
+  container.style.cssText = 'position: relative; width: 200px; height: 300px;'
+  document.body.appendChild(container)
+  return container
+}
+
+/**
+ * Creates test items for sortable testing
+ * @param count - Number of items to create
+ */
+export function createTestItems(count: number): HTMLElement[] {
+  const items: HTMLElement[] = []
+  for (let i = 0; i < count; i++) {
+    const item = document.createElement('div')
+    item.className = 'draggable-item'
+    item.setAttribute('data-id', `item-${i}`)
+    item.textContent = `Item ${i}`
+    item.style.cssText = 'height: 50px; margin: 5px; background: #f0f0f0; cursor: move;'
+    items.push(item)
+  }
+  return items
+}
+
+/**
+ * Cleans up test container
+ * @param container - Container to clean up
+ */
+export function cleanupTestContainer(container: HTMLElement): void {
+  if (container.parentNode) {
+    container.parentNode.removeChild(container)
+  }
+}
+
+/**
  * Cleans up after tests
  */
 export function cleanup() {
