@@ -22,9 +22,9 @@ describe('useSortable', () => {
       const sortableItems = useSortable(container)
 
       expect(sortableItems.value).toHaveLength(3)
-      expect(sortableItems.value[0]).toBe(items[0])
-      expect(sortableItems.value[1]).toBe(items[1])
-      expect(sortableItems.value[2]).toBe(items[2])
+      expect(sortableItems.value?.[0]).toBe(items[0])
+      expect(sortableItems.value?.[1]).toBe(items[1])
+      expect(sortableItems.value?.[2]).toBe(items[2])
     })
 
     it('should initialize with controls option', () => {
@@ -113,7 +113,7 @@ describe('useSortable', () => {
 
       // Should only include draggable items
       expect(sortable.items.value).toHaveLength(3)
-      expect(sortable.items.value.every(item =>
+      expect(sortable.items.value?.every(item =>
         item.classList.contains('draggable-item'),
       )).toBe(true)
     })
@@ -249,7 +249,7 @@ describe('useSortable', () => {
 
       // Should be a ref with HTMLElement array
       expect(Array.isArray(items.value)).toBe(true)
-      expect(items.value.every(item => item instanceof HTMLElement)).toBe(true)
+      expect(items.value?.every(item => item instanceof HTMLElement)).toBe(true)
     })
 
     it('should return correct type for controls usage', () => {

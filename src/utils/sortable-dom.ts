@@ -298,7 +298,7 @@ function matchesSelector(el: HTMLElement, selector: string): boolean {
  */
 function getParentOrHost(el: HTMLElement): HTMLElement | null {
   const host = (el as any).host
-  return (host && el !== document && host.nodeType && host !== el)
+  return (host && (el as any) !== document && host.nodeType && host !== el)
     ? host
     : el.parentElement
 }

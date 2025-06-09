@@ -1,19 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { cleanup, createDragLocation, createPointerEvent, createPosition, mockResizeObserver, wait } from '..'
+import { cleanup, createPointerEvent, createPosition, mockResizeObserver, wait } from '..'
 
 describe('test utils', () => {
-  it('should create drag location with default values', () => {
-    const location = createDragLocation()
-    expect(location.dropId).toBe('test-drop')
-    expect(location.index).toBe(0)
-  })
-
-  it('should create drag location with custom values', () => {
-    const location = createDragLocation('custom-drop', 1)
-    expect(location.dropId).toBe('custom-drop')
-    expect(location.index).toBe(1)
-  })
-
   it('should create position with default values', () => {
     const position = createPosition()
     expect(position.x).toBe(0)

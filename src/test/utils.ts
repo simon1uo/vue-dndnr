@@ -1,19 +1,7 @@
+import type { Position } from '@/types'
 import type { RenderOptions } from '@testing-library/vue'
 import type { Component } from 'vue'
-import type { DragLocation, Position } from '../types/core'
 import { render } from '@testing-library/vue'
-
-/**
- * Creates a mock drag location
- * @param dropId - The ID of the droppable container
- * @param index - The index within the container
- */
-export function createDragLocation(dropId: string = 'test-drop', index: number = 0): DragLocation {
-  return {
-    dropId,
-    index,
-  }
-}
 
 /**
  * Creates a mock position
