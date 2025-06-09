@@ -1,10 +1,11 @@
-import type { SortableEvent, SortableEventCallbacks, SortableOptions } from '@/types'
+import type { SortableEvent, SortableEventCallbacks, SortableEventData, SortableEventType, SortableOptions } from '@/types'
 import {
   createGhostElement,
   findDraggableElement,
   getDraggableChildren,
   getElementIndex,
 } from '@/utils/sortable-dom'
+import { dispatchSortableEvent, getCallbackName, normalizeEventData } from '@/utils/sortable-event'
 
 /**
  * Custom drag instance class.
@@ -152,7 +153,7 @@ export class CustomDragInstance {
 
     if (typeof filter === 'string') {
       if (target.matches(filter)) {
-        this.dispatchEvent('filter', { item, target })
+        this.dispatchEvent('filter', { item, related: target })
         if (this.options.preventOnFilter) {
           evt.preventDefault()
         }
@@ -161,7 +162,7 @@ export class CustomDragInstance {
     }
     else if (typeof filter === 'function') {
       if (filter(evt, item, target)) {
-        this.dispatchEvent('filter', { item, target })
+        this.dispatchEvent('filter', { item, related: target })
         if (this.options.preventOnFilter) {
           evt.preventDefault()
         }
@@ -375,20 +376,39 @@ export class CustomDragInstance {
   /**
    * Dispatch a sortable event.
    */
-  private dispatchEvent(name: string, data: Partial<SortableEvent> = {}): void {
-    const event: SortableEvent = {
+  private dispatchEvent(eventType: SortableEventType, data: Partial<SortableEvent> = {}): void {
+    // Extract only the properties that are compatible with SortableEventData
+    const compatibleData: Partial<SortableEventData> = {
+      to: data.to,
+      from: data.from,
+      item: data.item,
+      clone: data.clone,
+      oldIndex: data.oldIndex,
+      newIndex: data.newIndex,
+      oldDraggableIndex: data.oldDraggableIndex,
+      newDraggableIndex: data.newDraggableIndex,
+      originalEvent: data.originalEvent,
+      pullMode: data.pullMode,
+      related: data.related,
+      willInsertAfter: data.willInsertAfter,
+    }
+
+    // Normalize event data with defaults
+    const eventData = normalizeEventData(eventType, {
       to: this.el,
       from: this.el,
       item: this.dragElement!,
       oldIndex: this.startIndex,
       newIndex: this.startIndex,
-      ...data,
-    } as SortableEvent
+      ...compatibleData,
+    })
 
-    // Call the appropriate callback
-    const callbackName = `on${name.charAt(0).toUpperCase()}${name.slice(1)}` as keyof SortableEventCallbacks
+    // Get callback function
+    const callbackName = getCallbackName(eventType) as keyof SortableEventCallbacks
     const callback = this.options[callbackName] as ((evt: SortableEvent) => void) | undefined
-    callback?.(event)
+
+    // Dispatch event using the utility function
+    dispatchSortableEvent(this.el, eventType, eventData, callback)
   }
 
   /**

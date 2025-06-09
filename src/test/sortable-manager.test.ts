@@ -406,4 +406,151 @@ describe('sortableManager', () => {
       expect(newOrder).not.toEqual(['1', '2', '3'])
     })
   })
+
+  describe('event system integration', () => {
+    beforeEach(async () => {
+      manager = new SortableManager(container, { draggable: '.item' })
+      await manager.initialize()
+    })
+
+    it('should register and trigger event listeners', async () => {
+      const startListener = vi.fn()
+      const endListener = vi.fn()
+
+      const cleanupStart = manager.on('start', startListener)
+      const cleanupEnd = manager.on('end', endListener)
+
+      expect(manager.hasListeners('start')).toBe(true)
+      expect(manager.hasListeners('end')).toBe(true)
+      expect(manager.getListenerCount('start')).toBe(1)
+      expect(manager.getListenerCount('end')).toBe(1)
+
+      // Simulate drag start
+      const firstItem = container.querySelector('.item') as HTMLElement
+      const startEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 100,
+      })
+      firstItem.dispatchEvent(startEvent)
+      await manager.waitForUpdate()
+
+      expect(startListener).toHaveBeenCalled()
+
+      // Simulate drag end
+      const endEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 200,
+      })
+      document.dispatchEvent(endEvent)
+      await manager.waitForUpdate()
+
+      expect(endListener).toHaveBeenCalled()
+
+      // Cleanup
+      cleanupStart()
+      cleanupEnd()
+
+      expect(manager.hasListeners('start')).toBe(false)
+      expect(manager.hasListeners('end')).toBe(false)
+    })
+
+    it('should support one-time event listeners', async () => {
+      const listener = vi.fn()
+      const cleanup = manager.once('start', listener)
+
+      expect(manager.hasListeners('start')).toBe(true)
+
+      // Trigger event twice
+      const firstItem = container.querySelector('.item') as HTMLElement
+      const startEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 100,
+      })
+
+      firstItem.dispatchEvent(startEvent)
+      await manager.waitForUpdate()
+
+      // End first drag
+      const endEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 200,
+      })
+      document.dispatchEvent(endEvent)
+      await manager.waitForUpdate()
+
+      // Start second drag
+      firstItem.dispatchEvent(startEvent)
+      await manager.waitForUpdate()
+
+      // Listener should only be called once
+      expect(listener).toHaveBeenCalledTimes(1)
+      expect(manager.hasListeners('start')).toBe(false)
+
+      cleanup() // Should be safe to call even after auto-removal
+    })
+
+    it('should remove specific event listeners', () => {
+      const listener1 = vi.fn()
+      const listener2 = vi.fn()
+
+      manager.on('start', listener1)
+      manager.on('start', listener2)
+
+      expect(manager.getListenerCount('start')).toBe(2)
+
+      manager.off('start', listener1)
+
+      expect(manager.getListenerCount('start')).toBe(1)
+    })
+
+    it('should clean up all event listeners on cleanup', () => {
+      const listener = vi.fn()
+
+      manager.on('start', listener)
+      manager.on('end', listener)
+      manager.once('update', listener)
+
+      expect(manager.hasListeners('start')).toBe(true)
+      expect(manager.hasListeners('end')).toBe(true)
+      expect(manager.hasListeners('update')).toBe(true)
+
+      manager.cleanup()
+
+      expect(manager.hasListeners('start')).toBe(false)
+      expect(manager.hasListeners('end')).toBe(false)
+      expect(manager.hasListeners('update')).toBe(false)
+    })
+
+    it('should handle event listener errors gracefully', async () => {
+      const errorListener = vi.fn().mockImplementation(() => {
+        throw new Error('Test error')
+      })
+      const normalListener = vi.fn()
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      manager.on('start', errorListener)
+      manager.on('start', normalListener)
+
+      // Trigger event
+      const firstItem = container.querySelector('.item') as HTMLElement
+      const startEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 100,
+      })
+      firstItem.dispatchEvent(startEvent)
+      await manager.waitForUpdate()
+
+      expect(errorListener).toHaveBeenCalled()
+      expect(normalListener).toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalled()
+
+      consoleSpy.mockRestore()
+    })
+  })
 })

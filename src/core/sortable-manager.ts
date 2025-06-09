@@ -1,8 +1,9 @@
-import type { SortableEvent, SortableEventCallbacks, SortableOptions } from '@/types'
+import type { SortableEvent, SortableEventCallbacks, SortableEventData, SortableEventListener, SortableEventType, SortableOptions } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import { getDraggableChildren } from '@/utils/sortable-dom'
 import { nextTick, ref, shallowRef, toValue, watch } from 'vue'
 import { CustomDragInstance } from './custom-drag-instance'
+import { EventDispatcher } from './event-dispatcher'
 
 /**
  * Core sortable manager class.
@@ -22,6 +23,7 @@ export class SortableManager {
 
   // Internal state
   private dragInstance: CustomDragInstance | null = null
+  private eventDispatcher: EventDispatcher = new EventDispatcher()
   private isInitialized = false
   private unwatchTarget?: () => void
   private unwatchOptions?: () => void
@@ -103,6 +105,9 @@ export class SortableManager {
    */
   cleanup(): void {
     this.destroy()
+
+    // Clean up event listeners
+    this.eventDispatcher.removeAllListeners()
 
     // Clean up watchers
     this.unwatchTarget?.()
@@ -248,6 +253,9 @@ export class SortableManager {
     this.currentIndex.value = evt.oldIndex ?? null
     this.dragElement.value = evt.item
 
+    // Dispatch event through event system
+    this.eventDispatcher.dispatch('start', this.convertEventToData('start', evt))
+
     // Call user callback
     const options = this.resolveOptions()
     options.onStart?.(evt)
@@ -264,6 +272,9 @@ export class SortableManager {
     // Update items after drag
     this.updateItems()
 
+    // Dispatch event through event system
+    this.eventDispatcher.dispatch('end', this.convertEventToData('end', evt))
+
     // Call user callback
     const options = this.resolveOptions()
     options.onEnd?.(evt)
@@ -274,6 +285,10 @@ export class SortableManager {
    */
   private handleAdd(evt: SortableEvent): void {
     this.updateItems()
+
+    // Dispatch event through event system
+    this.eventDispatcher.dispatch('add', this.convertEventToData('add', evt))
+
     const options = this.resolveOptions()
     options.onAdd?.(evt)
   }
@@ -283,6 +298,10 @@ export class SortableManager {
    */
   private handleRemove(evt: SortableEvent): void {
     this.updateItems()
+
+    // Dispatch event through event system
+    this.eventDispatcher.dispatch('remove', this.convertEventToData('remove', evt))
+
     const options = this.resolveOptions()
     options.onRemove?.(evt)
   }
@@ -292,6 +311,10 @@ export class SortableManager {
    */
   private handleUpdate(evt: SortableEvent): void {
     this.updateItems()
+
+    // Dispatch event through event system
+    this.eventDispatcher.dispatch('update', this.convertEventToData('update', evt))
+
     const options = this.resolveOptions()
     options.onUpdate?.(evt)
   }
@@ -301,6 +324,10 @@ export class SortableManager {
    */
   private handleSort(evt: SortableEvent): void {
     this.updateItems()
+
+    // Dispatch event through event system
+    this.eventDispatcher.dispatch('sort', this.convertEventToData('sort', evt))
+
     const options = this.resolveOptions()
     options.onSort?.(evt)
   }
@@ -314,5 +341,84 @@ export class SortableManager {
     this.ghostElement.value = null
     this.currentIndex.value = null
     this.items.value = []
+  }
+
+  /**
+   * Convert SortableEvent to SortableEventData for event dispatcher.
+   *
+   * @param eventType - The event type
+   * @param evt - The sortable event
+   * @returns Event data for dispatcher
+   */
+  private convertEventToData(eventType: SortableEventType, evt: SortableEvent): SortableEventData {
+    return {
+      type: eventType,
+      to: evt.to,
+      from: evt.from,
+      item: evt.item,
+      clone: evt.clone,
+      oldIndex: evt.oldIndex,
+      newIndex: evt.newIndex,
+      oldDraggableIndex: evt.oldDraggableIndex,
+      newDraggableIndex: evt.newDraggableIndex,
+      originalEvent: evt.originalEvent,
+      pullMode: evt.pullMode,
+      related: evt.related,
+      willInsertAfter: evt.willInsertAfter,
+    }
+  }
+
+  // Event system methods
+
+  /**
+   * Register an event listener.
+   *
+   * @param eventType - The type of event to listen for
+   * @param listener - The callback function to execute
+   * @returns Cleanup function to remove the listener
+   */
+  on(eventType: SortableEventType, listener: SortableEventListener): () => void {
+    return this.eventDispatcher.on(eventType, listener)
+  }
+
+  /**
+   * Register a one-time event listener.
+   *
+   * @param eventType - The type of event to listen for
+   * @param listener - The callback function to execute once
+   * @returns Cleanup function to remove the listener
+   */
+  once(eventType: SortableEventType, listener: SortableEventListener): () => void {
+    return this.eventDispatcher.once(eventType, listener)
+  }
+
+  /**
+   * Remove an event listener.
+   *
+   * @param eventType - The type of event to stop listening for
+   * @param listener - The callback function to remove
+   */
+  off(eventType: SortableEventType, listener: SortableEventListener): void {
+    this.eventDispatcher.off(eventType, listener)
+  }
+
+  /**
+   * Check if there are any listeners for a specific event type.
+   *
+   * @param eventType - The type of event to check
+   * @returns Whether there are any listeners for this event type
+   */
+  hasListeners(eventType: SortableEventType): boolean {
+    return this.eventDispatcher.hasListeners(eventType)
+  }
+
+  /**
+   * Get the number of listeners for a specific event type.
+   *
+   * @param eventType - The type of event to count listeners for
+   * @returns The total number of listeners (regular + once)
+   */
+  getListenerCount(eventType: SortableEventType): number {
+    return this.eventDispatcher.getListenerCount(eventType)
   }
 }

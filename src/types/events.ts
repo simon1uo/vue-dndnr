@@ -238,8 +238,18 @@ export interface SortableEventData {
   oldIndex?: number
   /** New index position */
   newIndex?: number
+  /** Original draggable index position */
+  oldDraggableIndex?: number
+  /** New draggable index position */
+  newDraggableIndex?: number
   /** Original DOM event that triggered this */
   originalEvent?: Event
+  /** Pull mode when cross-list dragging */
+  pullMode?: 'clone' | undefined
+  /** Related element for move events */
+  related?: HTMLElement
+  /** Whether the item will be inserted after the related element */
+  willInsertAfter?: boolean
   /**
    * Additional custom data properties
    * Allows for extending the event with custom data
