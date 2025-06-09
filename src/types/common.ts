@@ -35,3 +35,56 @@ export interface Size {
  * Valid position types for positioning elements
  */
 export type PositionType = 'absolute' | 'relative'
+
+/**
+ * Drag state enumeration
+ * Represents different states during drag operation
+ */
+export enum DragState {
+  /** Not dragging */
+  IDLE = 'idle',
+  /** Drag initiated but not started */
+  PENDING = 'pending',
+  /** Currently dragging */
+  DRAGGING = 'dragging',
+  /** Drag completed */
+  COMPLETED = 'completed',
+}
+
+/**
+ * Direction enumeration for sortable lists
+ */
+export enum SortDirection {
+  /** Horizontal sorting */
+  HORIZONTAL = 'horizontal',
+  /** Vertical sorting */
+  VERTICAL = 'vertical',
+  /** Auto-detect direction */
+  AUTO = 'auto',
+}
+
+/**
+ * Animation easing functions
+ * Standard CSS easing functions for animations
+ */
+export type EasingFunction =
+  | 'linear'
+  | 'ease'
+  | 'ease-in'
+  | 'ease-out'
+  | 'ease-in-out'
+  | 'cubic-bezier(n,n,n,n)'
+
+/**
+ * Represents a rectangular area with position and dimensions
+ */
+export interface Rect {
+  /** The horizontal coordinate */
+  x: number
+  /** The vertical coordinate */
+  y: number
+  /** The width of the rectangle */
+  width: number
+  /** The height of the rectangle */
+  height: number
+}
