@@ -81,16 +81,41 @@ export function createTestContainer(): HTMLElement {
 }
 
 /**
+ * Creates a test element for testing
+ * @param tagName - The tag name of the element
+ * @param textContent - The text content of the element
+ */
+export function createTestElement(tagName: string = 'div', textContent: string = ''): HTMLElement {
+  const element = document.createElement(tagName)
+  element.textContent = textContent
+  element.style.cssText = 'position: relative; width: 100px; height: 50px; background: #f0f0f0;'
+
+  // Mock getBoundingClientRect for testing
+  element.getBoundingClientRect = () => ({
+    top: 0,
+    left: 0,
+    width: 100,
+    height: 50,
+    right: 100,
+    bottom: 50,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  })
+
+  return element
+}
+
+/**
  * Creates test items for sortable testing
  * @param count - Number of items to create
  */
 export function createTestItems(count: number): HTMLElement[] {
   const items: HTMLElement[] = []
   for (let i = 0; i < count; i++) {
-    const item = document.createElement('div')
+    const item = createTestElement('div', `Item ${i}`)
     item.className = 'draggable-item'
     item.setAttribute('data-id', `item-${i}`)
-    item.textContent = `Item ${i}`
     item.style.cssText = 'height: 50px; margin: 5px; background: #f0f0f0; cursor: move;'
     items.push(item)
   }

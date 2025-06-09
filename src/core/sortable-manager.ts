@@ -1,7 +1,9 @@
 import type { SortableEvent, SortableEventCallbacks, SortableEventData, SortableEventListener, SortableEventType, SortableOptions } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
+import type { AnimationOptions } from './animation-manager'
 import { getDraggableChildren } from '@/utils/sortable-dom'
 import { nextTick, ref, shallowRef, toValue, watch } from 'vue'
+import { AnimationManager } from './animation-manager'
 import { CustomDragInstance } from './custom-drag-instance'
 import { EventDispatcher } from './event-dispatcher'
 
@@ -20,10 +22,13 @@ export class SortableManager {
   public readonly ghostElement = shallowRef<HTMLElement | null>(null)
   public readonly currentIndex = ref<number | null>(null)
   public readonly items = shallowRef<HTMLElement[]>([])
+  public readonly isAnimating = ref(false)
+  public readonly animatingElements = shallowRef<HTMLElement[]>([])
 
   // Internal state
   private dragInstance: CustomDragInstance | null = null
   private eventDispatcher: EventDispatcher = new EventDispatcher()
+  private animationManager: AnimationManager = new AnimationManager()
   private isInitialized = false
   private unwatchTarget?: () => void
   private unwatchOptions?: () => void
@@ -64,6 +69,10 @@ export class SortableManager {
       ...this.getEventHandlers(),
     })
 
+    // Initialize animation manager
+    this.animationManager.setContainer(el)
+    this.animationManager.updateOptions(this.getAnimationOptions(options))
+
     // Update items list
     this.updateItems()
     this.isInitialized = true
@@ -91,6 +100,9 @@ export class SortableManager {
       this.dragInstance.destroy()
       this.dragInstance = null
     }
+
+    // Clean up animation manager
+    this.animationManager.destroy()
 
     this.resetState()
     this.isInitialized = false
@@ -153,9 +165,9 @@ export class SortableManager {
       }
     })
 
-    // TODO: Implement animation capture if needed
-    if (useAnimation) {
-      // Animation will be implemented in later phases
+    // Capture animation state before DOM changes
+    if (useAnimation && options.animation) {
+      this.animationManager.captureAnimationState()
     }
 
     // Reorder elements according to the order array
@@ -169,9 +181,12 @@ export class SortableManager {
     // Update items after reordering
     this.updateItems()
 
-    // TODO: Trigger animation if needed
-    if (useAnimation) {
-      // Animation will be implemented in later phases
+    // Trigger animation after DOM changes
+    if (useAnimation && options.animation) {
+      this.animationManager.animateAll(() => {
+        // Animation completed callback
+        this.updateAnimationState()
+      })
     }
   }
 
@@ -224,6 +239,8 @@ export class SortableManager {
         if (this.dragInstance) {
           this.dragInstance.updateOptions(newOptions)
         }
+        // Update animation manager options
+        this.animationManager.updateOptions(this.getAnimationOptions(newOptions))
       },
       { deep: true },
     )
@@ -253,11 +270,16 @@ export class SortableManager {
     this.currentIndex.value = evt.oldIndex ?? null
     this.dragElement.value = evt.item
 
+    // Capture animation state before drag starts
+    const options = this.resolveOptions()
+    if (options.animation) {
+      this.animationManager.captureAnimationState()
+    }
+
     // Dispatch event through event system
     this.eventDispatcher.dispatch('start', this.convertEventToData('start', evt))
 
     // Call user callback
-    const options = this.resolveOptions()
     options.onStart?.(evt)
   }
 
@@ -312,10 +334,17 @@ export class SortableManager {
   private handleUpdate(evt: SortableEvent): void {
     this.updateItems()
 
+    // Trigger animation for position changes
+    const options = this.resolveOptions()
+    if (options.animation) {
+      this.animationManager.animateAll(() => {
+        this.updateAnimationState()
+      })
+    }
+
     // Dispatch event through event system
     this.eventDispatcher.dispatch('update', this.convertEventToData('update', evt))
 
-    const options = this.resolveOptions()
     options.onUpdate?.(evt)
   }
 
@@ -341,6 +370,30 @@ export class SortableManager {
     this.ghostElement.value = null
     this.currentIndex.value = null
     this.items.value = []
+    this.isAnimating.value = false
+    this.animatingElements.value = []
+  }
+
+  /**
+   * Extract animation options from sortable options.
+   *
+   * @param options - Sortable options
+   * @returns Animation options
+   */
+  private getAnimationOptions(options: SortableOptions & SortableEventCallbacks): AnimationOptions {
+    return {
+      animation: options.animation,
+      easing: options.easing,
+      disabled: options.disabled,
+    }
+  }
+
+  /**
+   * Update animation state from animation manager.
+   */
+  private updateAnimationState(): void {
+    this.isAnimating.value = this.animationManager.isAnimating.value
+    this.animatingElements.value = this.animationManager.animatingElements.value
   }
 
   /**

@@ -66,9 +66,9 @@ describe('common Types', () => {
   })
 
   it('should define Rect interface correctly', () => {
-    const rect: Rect = { x: 10, y: 20, width: 100, height: 200 }
-    expect(rect.x).toBe(10)
-    expect(rect.y).toBe(20)
+    const rect: Rect = { top: 10, left: 20, width: 100, height: 200 }
+    expect(rect.top).toBe(10)
+    expect(rect.left).toBe(20)
     expect(rect.width).toBe(100)
     expect(rect.height).toBe(200)
   })

@@ -25,16 +25,10 @@ export interface UseSortableOptions extends SortableOptions, SortableEventCallba
 }
 
 /**
- * Return type for useSortable when controls is false.
- * Simple usage returns only the items array.
- */
-export type UseSortableReturn = ReturnType<typeof useSortable>
-
-/**
  * Return type for useSortable when controls is true.
  * Advanced usage returns full control object.
  */
-export interface UseSortableControls {
+export interface UseSortableReturn {
   /** Reactive array of sortable items */
   items: ReturnType<typeof shallowRef<HTMLElement[]>>
   /** Whether dragging is currently active */
@@ -45,6 +39,10 @@ export interface UseSortableControls {
   ghostElement: ReturnType<typeof shallowRef<HTMLElement | null>>
   /** Current index of dragged element */
   currentIndex: ReturnType<typeof ref<number | null>>
+  /** Whether animations are currently running */
+  isAnimating: ReturnType<typeof ref<boolean>>
+  /** Elements currently being animated */
+  animatingElements: ReturnType<typeof shallowRef<HTMLElement[]>>
   /** Whether the sortable is supported in current environment */
   isSupported: ReturnType<typeof ref<boolean>>
   /** Start dragging programmatically */
@@ -72,7 +70,6 @@ export interface UseSortableControls {
  * ```ts
  * const items = useSortable(containerRef)
  * ```
- *
  * Advanced usage with controls:
  * ```ts
  * const { items, isDragging, start, stop } = useSortable(containerRef, {
@@ -85,7 +82,7 @@ export interface UseSortableControls {
 export function useSortable(
   target: MaybeRefOrGetter<HTMLElement | string | null>,
   options: UseSortableOptions & { controls: true }
-): UseSortableControls
+): UseSortableReturn
 
 export function useSortable(
   target: MaybeRefOrGetter<HTMLElement | string | null>,
@@ -95,7 +92,7 @@ export function useSortable(
 export function useSortable(
   target: MaybeRefOrGetter<HTMLElement | string | null>,
   options: UseSortableOptions = {},
-): UseSortableControls | ReturnType<typeof shallowRef<HTMLElement[]>> {
+): UseSortableReturn | ReturnType<typeof shallowRef<HTMLElement[]>> {
   const {
     controls = false,
     immediate = true,
@@ -157,6 +154,8 @@ export function useSortable(
       dragElement: manager.dragElement,
       ghostElement: manager.ghostElement,
       currentIndex: manager.currentIndex,
+      isAnimating: manager.isAnimating,
+      animatingElements: manager.animatingElements,
       isSupported,
       start,
       stop,

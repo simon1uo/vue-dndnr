@@ -77,12 +77,13 @@ export type EasingFunction =
 
 /**
  * Represents a rectangular area with position and dimensions
+ * Compatible with DOMRect and getBoundingClientRect() return values
  */
 export interface Rect {
-  /** The horizontal coordinate */
-  x: number
-  /** The vertical coordinate */
-  y: number
+  /** The top coordinate (distance from top edge) */
+  top: number
+  /** The left coordinate (distance from left edge) */
+  left: number
   /** The width of the rectangle */
   width: number
   /** The height of the rectangle */
