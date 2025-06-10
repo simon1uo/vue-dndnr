@@ -10,7 +10,6 @@ import { EventDispatcher } from './event-dispatcher'
 /**
  * Core sortable manager class.
  * Manages the sortable functionality for a container element.
- * Based on SortableJS architecture with Vue3 reactivity.
  */
 export class SortableManager {
   private target: MaybeRefOrGetter<HTMLElement | string | null>
@@ -24,6 +23,10 @@ export class SortableManager {
   public readonly items = shallowRef<HTMLElement[]>([])
   public readonly isAnimating = ref(false)
   public readonly animatingElements = shallowRef<HTMLElement[]>([])
+
+  // Enhanced drag preview states
+  public readonly isFallbackActive = ref(false)
+  public readonly nativeDraggable = ref(true)
 
   // Internal state
   private dragInstance: CustomDragInstance | null = null
@@ -68,6 +71,9 @@ export class SortableManager {
       ...options,
       ...this.getEventHandlers(),
     })
+
+    // Update fallback mode states
+    this.updateFallbackStates()
 
     // Initialize animation manager
     this.animationManager.setContainer(el)
@@ -270,6 +276,9 @@ export class SortableManager {
     this.currentIndex.value = evt.oldIndex ?? null
     this.dragElement.value = evt.item
 
+    // Update fallback active state
+    this.updateFallbackActiveState()
+
     // Capture animation state before drag starts
     const options = this.resolveOptions()
     if (options.animation) {
@@ -290,6 +299,7 @@ export class SortableManager {
     this.isDragging.value = false
     this.dragElement.value = null
     this.ghostElement.value = null
+    this.isFallbackActive.value = false
 
     // Update items after drag
     this.updateItems()
@@ -372,6 +382,8 @@ export class SortableManager {
     this.items.value = []
     this.isAnimating.value = false
     this.animatingElements.value = []
+    this.isFallbackActive.value = false
+    this.nativeDraggable.value = true
   }
 
   /**
@@ -394,6 +406,34 @@ export class SortableManager {
   private updateAnimationState(): void {
     this.isAnimating.value = this.animationManager.isAnimating.value
     this.animatingElements.value = this.animationManager.animatingElements.value
+  }
+
+  /**
+   * Update fallback mode states based on current drag instance.
+   */
+  private updateFallbackStates(): void {
+    if (this.dragInstance) {
+      const fallbackManager = (this.dragInstance as any).fallbackManager
+      const nativeDraggable = (this.dragInstance as any).nativeDraggable
+
+      if (fallbackManager && typeof nativeDraggable === 'boolean') {
+        this.nativeDraggable.value = nativeDraggable
+      }
+    }
+  }
+
+  /**
+   * Update fallback active state during drag operations.
+   */
+  private updateFallbackActiveState(): void {
+    if (this.dragInstance) {
+      const fallbackManager = (this.dragInstance as any).fallbackManager
+      const nativeDraggable = (this.dragInstance as any).nativeDraggable
+
+      if (fallbackManager && typeof nativeDraggable === 'boolean') {
+        this.isFallbackActive.value = !nativeDraggable && fallbackManager.isActive?.()
+      }
+    }
   }
 
   /**

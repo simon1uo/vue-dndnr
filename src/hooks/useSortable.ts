@@ -45,6 +45,10 @@ export interface UseSortableReturn {
   animatingElements: ReturnType<typeof shallowRef<HTMLElement[]>>
   /** Whether the sortable is supported in current environment */
   isSupported: ReturnType<typeof ref<boolean>>
+  /** Whether fallback mode is currently active during drag */
+  isFallbackActive: ReturnType<typeof ref<boolean>>
+  /** Whether native draggable is being used (false means fallback mode) */
+  nativeDraggable: ReturnType<typeof ref<boolean>>
   /** Start dragging programmatically */
   start: (element: HTMLElement) => void
   /** Stop dragging programmatically */
@@ -72,10 +76,14 @@ export interface UseSortableReturn {
  * ```
  * Advanced usage with controls:
  * ```ts
- * const { items, isDragging, start, stop } = useSortable(containerRef, {
+ * const { items, isDragging, isFallbackActive, nativeDraggable, start, stop } = useSortable(containerRef, {
  *   controls: true,
  *   group: 'shared',
- *   animation: 150
+ *   animation: 150,
+ *   forceFallback: false,
+ *   fallbackClass: 'my-fallback-ghost',
+ *   fallbackOnBody: true,
+ *   fallbackOffset: { x: 10, y: 10 }
  * })
  * ```
  */
@@ -157,6 +165,8 @@ export function useSortable(
       isAnimating: manager.isAnimating,
       animatingElements: manager.animatingElements,
       isSupported,
+      isFallbackActive: manager.isFallbackActive,
+      nativeDraggable: manager.nativeDraggable,
       start,
       stop,
       sort,

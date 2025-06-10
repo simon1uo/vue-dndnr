@@ -99,7 +99,6 @@ export type SortableDirectionFunction = (
 
 /**
  * Core sortable options interface.
- * Based on SortableJS options with Vue3 adaptations.
  * Contains all configuration options for sortable behavior.
  */
 export interface SortableOptions {
@@ -258,6 +257,11 @@ export interface SortableOptions {
    */
   fallbackTolerance?: number
   /**
+   * Offset for fallback mode ghost element positioning
+   * @default { x: 0, y: 0 }
+   */
+  fallbackOffset?: { x: number, y: number }
+  /**
    * Ignore dragover events on non-draggable elements
    * @default false
    */
@@ -411,6 +415,32 @@ export interface ResponsiveSortableOptions {
    * @default 'data-id'
    */
   dataIdAttr?: MaybeRefOrGetter<string>
+
+  /**
+   * Force fallback mode with reactive support
+   * @default false
+   */
+  forceFallback?: MaybeRefOrGetter<boolean>
+  /**
+   * Fallback class with reactive support
+   * @default 'sortable-fallback'
+   */
+  fallbackClass?: MaybeRefOrGetter<string>
+  /**
+   * Fallback on body with reactive support
+   * @default false
+   */
+  fallbackOnBody?: MaybeRefOrGetter<boolean>
+  /**
+   * Fallback tolerance with reactive support
+   * @default 0
+   */
+  fallbackTolerance?: MaybeRefOrGetter<number>
+  /**
+   * Fallback offset with reactive support
+   * @default { x: 0, y: 0 }
+   */
+  fallbackOffset?: MaybeRefOrGetter<{ x: number, y: number }>
 }
 
 /**

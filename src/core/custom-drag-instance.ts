@@ -6,11 +6,11 @@ import {
   getElementIndex,
 } from '@/utils/sortable-dom'
 import { dispatchSortableEvent, getCallbackName, normalizeEventData } from '@/utils/sortable-event'
+import { FallbackDragManager } from './fallback-drag-manager'
 
 /**
  * Custom drag instance class.
  * Handles the low-level drag and drop functionality.
- * Based on SortableJS drag handling logic.
  */
 export class CustomDragInstance {
   private el: HTMLElement
@@ -21,6 +21,13 @@ export class CustomDragInstance {
   private dragElement: HTMLElement | null = null
   private ghostElement: HTMLElement | null = null
   private startIndex = -1
+
+  // Fallback drag management
+  private nativeDraggable: boolean
+  private fallbackManager: FallbackDragManager
+  private tapEvt?: { clientX: number, clientY: number }
+  private currentTouchEvent?: { clientX: number, clientY: number }
+  private isUsingFallback: boolean = false
 
   // Event listeners cleanup
   private cleanupFunctions: Array<() => void> = []
@@ -34,6 +41,10 @@ export class CustomDragInstance {
   constructor(el: HTMLElement, options: SortableOptions & SortableEventCallbacks) {
     this.el = el
     this.options = { ...this.getDefaultOptions(), ...options }
+
+    // Initialize fallback drag manager
+    this.fallbackManager = new FallbackDragManager(el, this.options)
+    this.nativeDraggable = !this.fallbackManager.shouldUseFallback()
 
     this.setupEventListeners()
   }
@@ -58,11 +69,14 @@ export class CustomDragInstance {
       this.removeGhost()
     }
 
+    // Stop fallback mode if active
+    this.fallbackManager.stopFallbackMode()
+
     this.resetDragState()
   }
 
   /**
-   * Get default options based on SortableJS defaults.
+   * Get default options.
    */
   private getDefaultOptions(): Partial<SortableOptions> {
     return {
@@ -96,6 +110,20 @@ export class CustomDragInstance {
     this.cleanupFunctions.push(() => {
       this.el.removeEventListener('touchstart', onTouchStart)
     })
+
+    // Native HTML5 drag events for native mode
+    if (this.nativeDraggable) {
+      const onDragOver = this.handleDragOver.bind(this)
+      const onDragEnter = this.handleDragEnter.bind(this)
+
+      this.el.addEventListener('dragover', onDragOver)
+      this.el.addEventListener('dragenter', onDragEnter)
+
+      this.cleanupFunctions.push(() => {
+        this.el.removeEventListener('dragover', onDragOver)
+        this.el.removeEventListener('dragenter', onDragEnter)
+      })
+    }
   }
 
   /**
@@ -198,9 +226,25 @@ export class CustomDragInstance {
     this.dragElement = dragElement
     this.startIndex = getElementIndex(dragElement)
 
+    // Record initial tap/click position for fallback mode
+    if (evt instanceof MouseEvent) {
+      this.tapEvt = { clientX: evt.clientX, clientY: evt.clientY }
+    }
+    else if (evt instanceof TouchEvent && evt.touches.length > 0) {
+      const touch = evt.touches[0]
+      this.tapEvt = { clientX: touch.clientX, clientY: touch.clientY }
+    }
+
     // Add chosen class
     if (this.options.chosenClass) {
       dragElement.classList.add(this.options.chosenClass)
+    }
+
+    const isTouch = evt.type.startsWith('touch')
+      || (evt instanceof PointerEvent && (evt as PointerEvent).pointerType === 'touch')
+
+    if (this.nativeDraggable && !isTouch) {
+      dragElement.draggable = true
     }
 
     // Set up drag start with delay if specified
@@ -220,47 +264,90 @@ export class CustomDragInstance {
   /**
    * Start the actual drag operation.
    */
-  private startDrag(_evt: Event): void {
+  private startDrag(evt: Event): void {
     if (!this.dragElement)
       return
 
-    this.isDragging = true
+    const isTouch = evt.type.startsWith('touch')
+      || (evt instanceof PointerEvent && evt.pointerType === 'touch')
 
-    // Create ghost element
-    this.createGhost()
+    const shouldUseFallback = !this.nativeDraggable || isTouch
 
-    // Add drag class
-    if (this.options.dragClass) {
-      this.dragElement.classList.add(this.options.dragClass)
+    if (shouldUseFallback) {
+      this.isUsingFallback = true
+
+      this.setupFallbackDragListeners()
+
+      // Start fallback mode manager
+      if (this.tapEvt) {
+        this.fallbackManager.startFallbackMode(this.dragElement, this.tapEvt)
+      }
+
+      this.handleFallbackDragStart(evt)
     }
+    else {
+      this.isUsingFallback = false
 
-    // Dispatch start event
-    this.dispatchEvent('start', {
-      item: this.dragElement,
-      oldIndex: this.startIndex,
-    })
-
-    // Set up move and end listeners
-    this.setupDragListeners()
+      this.setupNativeDragListeners()
+    }
   }
 
   /**
    * Create ghost element for visual feedback.
+   * Only creates ghost for fallback mode - native mode uses browser's built-in drag image.
    */
   private createGhost(): void {
     if (!this.dragElement)
       return
 
-    this.ghostElement = createGhostElement(
-      this.dragElement,
-      this.options.ghostClass,
-    )
+    // Only create custom ghost when using fallback mode
+    if (!this.isUsingFallback) {
+      return
+    }
 
-    // Insert ghost after original element
-    this.dragElement.parentNode?.insertBefore(
-      this.ghostElement,
-      this.dragElement.nextSibling,
-    )
+    const rect = this.dragElement.getBoundingClientRect()
+
+    const tapDistance = this.tapEvt
+      ? {
+          left: this.tapEvt.clientX - rect.left,
+          top: this.tapEvt.clientY - rect.top,
+        }
+      : { left: rect.width / 2, top: rect.height / 2 }
+
+    // Prepare ghost element options for fallback mode
+    const ghostOptions = {
+      ghostClass: this.options.ghostClass || 'sortable-ghost',
+      fallbackClass: this.options.fallbackClass || 'sortable-fallback',
+      fallbackOnBody: this.options.fallbackOnBody || false,
+      fallbackOffset: this.options.fallbackOffset || { x: 0, y: 0 },
+      useFallback: true, // Always true for fallback mode
+      nativeDraggable: false, // Always false for fallback mode
+      tapDistance,
+      // Pass initial position for proper ghost setup
+      initialRect: rect,
+    }
+
+    this.ghostElement = createGhostElement(this.dragElement, ghostOptions)
+
+    // Choose container for fallback mode
+    const container = this.options.fallbackOnBody
+      ? document.body
+      : this.dragElement.parentNode
+
+    // Insert ghost element for fallback mode
+    if (container) {
+      if (this.options.fallbackOnBody) {
+        // For fallback mode with body container, append to body
+        container.appendChild(this.ghostElement)
+      }
+      else {
+        // For fallback mode with local container, insert after original element
+        container.insertBefore(this.ghostElement, this.dragElement.nextSibling)
+      }
+    }
+
+    // Set up ghost relative parent for absolute positioning
+    this.fallbackManager.setGhostRelativeParent(this.ghostElement, container as HTMLElement)
   }
 
   /**
@@ -274,9 +361,30 @@ export class CustomDragInstance {
   }
 
   /**
-   * Set up listeners for drag move and end events.
+   * Set up listeners for native HTML5 drag events.
    */
-  private setupDragListeners(): void {
+  private setupNativeDragListeners(): void {
+    if (!this.dragElement)
+      return
+
+    const onDragEnd = this.handleDragEnd.bind(this)
+    const onDragStart = this.handleNativeDragStart.bind(this)
+
+    this.dragElement.addEventListener('dragend', onDragEnd)
+    this.dragElement.addEventListener('dragstart', onDragStart)
+
+    this.cleanupFunctions.push(() => {
+      if (this.dragElement) {
+        this.dragElement.removeEventListener('dragend', onDragEnd)
+        this.dragElement.removeEventListener('dragstart', onDragStart)
+      }
+    })
+  }
+
+  /**
+   * Set up listeners for fallback drag events.
+   */
+  private setupFallbackDragListeners(): void {
     const onMouseMove = this.handleDragMove.bind(this)
     const onMouseUp = this.handleDragEnd.bind(this)
     const onTouchMove = this.handleDragMove.bind(this)
@@ -299,7 +407,126 @@ export class CustomDragInstance {
   }
 
   /**
-   * Handle drag move events.
+   * Handle fallback drag start.
+   */
+  private handleFallbackDragStart(_evt: Event): void {
+    if (!this.dragElement)
+      return
+
+    // Set dragging state
+    this.isDragging = true
+
+    // Add drag class
+    if (this.options.dragClass) {
+      this.dragElement.classList.add(this.options.dragClass)
+    }
+
+    // Apply ghost class to original element
+    if (this.options.ghostClass) {
+      this.dragElement.classList.add(this.options.ghostClass)
+    }
+
+    // Create and append ghost element immediately
+    this.createGhost()
+
+    // Dispatch start event
+    this.dispatchEvent('start', {
+      item: this.dragElement,
+      oldIndex: this.startIndex,
+    })
+  }
+
+  /**
+   * Handle native HTML5 dragstart event.
+   */
+  private handleNativeDragStart(evt: DragEvent): void {
+    if (!this.dragElement)
+      return
+
+    // Now we're actually dragging
+    this.isDragging = true
+
+    // Set up data transfer for native drag
+    if (evt.dataTransfer) {
+      evt.dataTransfer.effectAllowed = 'move'
+
+      // Set custom data if provided
+      if (this.options.setData) {
+        this.options.setData(evt.dataTransfer, this.dragElement)
+      }
+      else {
+        // Default data transfer
+        evt.dataTransfer.setData('text/plain', this.dragElement.textContent || '')
+      }
+    }
+
+    // Apply drag class
+    if (this.options.dragClass) {
+      this.dragElement.classList.add(this.options.dragClass)
+    }
+
+    // Dispatch start event
+    this.dispatchEvent('start', {
+      item: this.dragElement,
+      oldIndex: this.startIndex,
+    })
+
+    // Set up document-level dragover listener for native mode
+    const onDocumentDragOver = this.handleDocumentDragOver.bind(this)
+    document.addEventListener('dragover', onDocumentDragOver)
+
+    this.cleanupFunctions.push(() => {
+      document.removeEventListener('dragover', onDocumentDragOver)
+    })
+  }
+
+  /**
+   * Handle document-level dragover for native mode.
+   */
+  private handleDocumentDragOver(evt: DragEvent): void {
+    if (!this.isDragging || !this.dragElement)
+      return
+
+    evt.preventDefault()
+
+    // Find target element under cursor
+    const target = this.getElementFromPoint(evt.clientX, evt.clientY)
+    if (!target)
+      return
+
+    // Find the closest draggable element
+    const draggableTarget = this.findDraggableTarget(target)
+    if (!draggableTarget || draggableTarget === this.dragElement)
+      return
+
+    // Calculate insertion position
+    const insertPosition = this.calculateInsertPosition(
+      { clientX: evt.clientX, clientY: evt.clientY },
+      draggableTarget,
+    )
+
+    if (insertPosition !== null) {
+      this.performInsertion(draggableTarget, insertPosition)
+    }
+  }
+
+  /**
+   * Handle HTML5 dragover event on container.
+   */
+  private handleDragOver(evt: DragEvent): void {
+    evt.preventDefault()
+    evt.dataTransfer!.dropEffect = 'move'
+  }
+
+  /**
+   * Handle HTML5 dragenter event on container.
+   */
+  private handleDragEnter(evt: DragEvent): void {
+    evt.preventDefault()
+  }
+
+  /**
+   * Handle drag move events (fallback mode only).
    */
   private handleDragMove(evt: MouseEvent | TouchEvent): void {
     if (!this.isDragging || !this.dragElement)
@@ -307,9 +534,18 @@ export class CustomDragInstance {
 
     evt.preventDefault()
 
+    const touch = 'touches' in evt ? evt.touches[0] : evt
+    if (touch) {
+      this.currentTouchEvent = touch
+    }
+
+    if (this.ghostElement && this.isUsingFallback) {
+      this.fallbackManager.updateGhostPosition(this.ghostElement, evt)
+    }
+
     // Get current mouse/touch position
-    const clientX = 'touches' in evt ? evt.touches[0].clientX : evt.clientX
-    const clientY = 'touches' in evt ? evt.touches[0].clientY : evt.clientY
+    const clientX = touch.clientX
+    const clientY = touch.clientY
 
     // Find target element under cursor
     const target = this.getElementFromPoint(clientX, clientY)
@@ -335,11 +571,16 @@ export class CustomDragInstance {
   /**
    * Handle drag end events.
    */
-  private handleDragEnd(_evt: MouseEvent | TouchEvent): void {
+  private handleDragEnd(_evt: MouseEvent | TouchEvent | DragEvent): void {
     if (!this.isDragging || !this.dragElement)
       return
 
     this.isDragging = false
+
+    // Stop fallback mode if active
+    if (this.isUsingFallback) {
+      this.fallbackManager.stopFallbackMode()
+    }
 
     // Remove classes
     if (this.options.chosenClass) {
@@ -347,6 +588,11 @@ export class CustomDragInstance {
     }
     if (this.options.dragClass) {
       this.dragElement.classList.remove(this.options.dragClass)
+    }
+
+    // Reset draggable attribute for native mode
+    if (this.nativeDraggable) {
+      this.dragElement.draggable = false
     }
 
     // Remove ghost
@@ -418,6 +664,7 @@ export class CustomDragInstance {
     this.isDragging = false
     this.dragElement = null
     this.startIndex = -1
+    this.isUsingFallback = false
 
     // Clean up drag-specific listeners
     this.cleanupFunctions = this.cleanupFunctions.filter((cleanup, index) => {
@@ -497,7 +744,6 @@ export class CustomDragInstance {
     const targetRect = target.getBoundingClientRect()
     const vertical = this.detectDirection() === 'vertical'
 
-    // Use SortableJS-inspired swap direction algorithm
     return this.getSwapDirection(pointer, target, targetRect, vertical)
   }
 
@@ -542,8 +788,7 @@ export class CustomDragInstance {
   }
 
   /**
-   * Get swap direction based on SortableJS algorithm.
-   * Simplified version of _getSwapDirection from SortableJS.
+   * Get swap direction.
    */
   private getSwapDirection(
     pointer: { clientX: number, clientY: number },

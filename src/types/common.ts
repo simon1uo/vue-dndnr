@@ -89,3 +89,27 @@ export interface Rect {
   /** The height of the rectangle */
   height: number
 }
+
+/**
+ * Enhanced ghost element options supporting both native and fallback modes
+ */
+export interface GhostElementOptions {
+  /** Standard ghost class for native mode */
+  ghostClass?: string
+
+  /** Fallback mode specific options */
+  fallbackClass?: string
+  fallbackOnBody?: boolean
+  fallbackOffset?: { x: number, y: number }
+  fallbackTolerance?: number
+
+  /** Position calculation options */
+  mousePosition?: { x: number, y: number }
+  tapDistance?: { left: number, top: number }
+  transformOrigin?: string
+  initialRect?: DOMRect
+
+  /** Mode control */
+  useFallback?: boolean
+  nativeDraggable?: boolean
+}

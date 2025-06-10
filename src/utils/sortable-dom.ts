@@ -1,3 +1,4 @@
+import type { GhostElementOptions } from '@/types'
 import { isClient } from '@/utils/config'
 
 /**
@@ -107,32 +108,165 @@ export function insertElementAtIndex(
 }
 
 /**
- * Create ghost element for drag preview
- * Based on SortableJS ghost creation logic
+ * Create ghost element for drag preview with enhanced options
+ * Based on SortableJS ghost creation logic with fallback mode support
  * @param original - Original element to clone
- * @param ghostClass - CSS class for ghost element
+ * @param options - Ghost element options or legacy ghostClass string
  * @returns Cloned ghost element
  */
 export function createGhostElement(
   original: HTMLElement,
-  ghostClass = 'sortable-ghost',
+  options: string | GhostElementOptions = 'sortable-ghost',
 ): HTMLElement {
+  // Handle legacy string parameter
+  const ghostOptions: GhostElementOptions = typeof options === 'string'
+    ? { ghostClass: options }
+    : options
+
+  const {
+    ghostClass = 'sortable-ghost',
+    fallbackClass = 'sortable-fallback',
+    fallbackOnBody = false,
+    useFallback = false,
+    nativeDraggable = true,
+    transformOrigin,
+    tapDistance,
+    initialRect,
+  } = ghostOptions
+
   const ghost = cloneElement(original)
 
-  // Add ghost class
-  toggleClass(ghost, ghostClass, true)
+  // Add appropriate class based on mode
+  if (useFallback || !nativeDraggable) {
+    toggleClass(ghost, fallbackClass, true)
+  }
+  else {
+    toggleClass(ghost, ghostClass, true)
+  }
 
-  // Make ghost non-interactive and semi-transparent
-  setCss(ghost, {
+  // Get original element position for fallback mode
+  // Use provided initialRect if available, otherwise get current rect
+  const rect = initialRect || original.getBoundingClientRect()
+
+  // Base styles for ghost element
+  const baseStyles: Record<string, string> = {
     'pointer-events': 'none',
     'opacity': '0.5',
-    'position': 'absolute',
     'z-index': '100000',
     'transition': '',
     'transform': '',
-  })
+  }
+
+  // Enhanced styles for fallback mode
+  if (useFallback || !nativeDraggable) {
+    // For fallback mode, position the ghost at the exact location of the original element
+    // Based on SortableJS _appendGhost logic (lines 870-916)
+    const position = fallbackOnBody ? 'fixed' : 'absolute'
+
+    // Calculate initial position based on positioning mode
+    let top: number
+    let left: number
+
+    if (fallbackOnBody) {
+      // For body positioning, use viewport coordinates (fixed positioning)
+      // This matches SortableJS when fallbackOnBody is true
+      top = rect.top
+      left = rect.left
+    }
+    else {
+      // For container positioning, we need to calculate relative to the container
+      // This matches SortableJS getRect behavior when container is not document.body
+
+      // Get the original element's parent container (where ghost will be inserted)
+      const container = original.parentElement
+      if (container) {
+        // Get container's position to calculate relative positioning
+        const containerRect = container.getBoundingClientRect()
+
+        // Calculate position relative to container's content area
+        // This accounts for container's border and padding
+        const containerStyle = window.getComputedStyle(container)
+        const borderTop = Number.parseInt(containerStyle.borderTopWidth) || 0
+        const borderLeft = Number.parseInt(containerStyle.borderLeftWidth) || 0
+        const paddingTop = Number.parseInt(containerStyle.paddingTop) || 0
+        const paddingLeft = Number.parseInt(containerStyle.paddingLeft) || 0
+
+        // Position relative to container's content area (inside border and padding)
+        top = rect.top - containerRect.top - borderTop - paddingTop
+        left = rect.left - containerRect.left - borderLeft - paddingLeft
+
+        // Add scroll offset if container is scrollable
+        top += container.scrollTop
+        left += container.scrollLeft
+      }
+      else {
+        // Fallback to document coordinates if no container
+        top = rect.top + window.scrollY
+        left = rect.left + window.scrollX
+      }
+    }
+
+    Object.assign(baseStyles, {
+      'position': position,
+      'top': `${top}px`,
+      'left': `${left}px`,
+      'width': `${rect.width}px`,
+      'height': `${rect.height}px`,
+      'box-sizing': 'border-box',
+      'margin': '0',
+    })
+
+    // Set transform origin if specified
+    if (transformOrigin) {
+      baseStyles['transform-origin'] = transformOrigin
+    }
+    else if (tapDistance && rect.width > 0 && rect.height > 0) {
+      // Calculate transform origin based on tap distance (where user clicked)
+      // This ensures the ghost rotates/scales around the click point
+      const originX = Math.max(0, Math.min(100, (tapDistance.left / rect.width * 100)))
+      const originY = Math.max(0, Math.min(100, (tapDistance.top / rect.height * 100)))
+      baseStyles['transform-origin'] = `${originX}% ${originY}%`
+    }
+  }
+  else {
+    // Native mode styles - let browser handle positioning
+    baseStyles.position = 'absolute'
+  }
+
+  setCss(ghost, baseStyles)
 
   return ghost
+}
+
+/**
+ * Update ghost element position during drag
+ * Based on SortableJS _onTouchMove logic for fallback mode
+ * @param ghost - Ghost element to position
+ * @param position - Current mouse/touch position
+ * @param options - Position update options
+ */
+export function updateGhostPosition(
+  ghost: HTMLElement,
+  position: { x: number, y: number },
+  options: {
+    offset?: { x: number, y: number }
+    matrix?: DOMMatrix
+    scale?: { x: number, y: number }
+    tapDistance?: { left: number, top: number }
+  } = {},
+): void {
+  const {
+    offset = { x: 0, y: 0 },
+    scale = { x: 1, y: 1 },
+  } = options
+
+  // Calculate position with offset and scale
+  const x = (position.x + offset.x) / scale.x
+  const y = (position.y + offset.y) / scale.y
+
+  // Apply transform
+  const transform = `translate3d(${x}px, ${y}px, 0)`
+  ghost.style.transform = transform
 }
 
 /**
