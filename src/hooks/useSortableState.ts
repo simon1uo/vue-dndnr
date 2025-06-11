@@ -1,4 +1,5 @@
 import type { MaybeRefOrGetter } from '@vueuse/core'
+import type { Ref, ShallowRef } from 'vue'
 import { ref, shallowRef, toValue } from 'vue'
 
 /**
@@ -6,25 +7,25 @@ import { ref, shallowRef, toValue } from 'vue'
  */
 export interface SortableState {
   /** Whether dragging is currently active */
-  isDragging: ReturnType<typeof ref<boolean>>
+  isDragging: Ref<boolean>
   /** Currently dragged element */
-  dragElement: ReturnType<typeof shallowRef<HTMLElement | null>>
+  dragElement: Ref<HTMLElement | null>
   /** Ghost element for visual feedback */
-  ghostElement: ReturnType<typeof shallowRef<HTMLElement | null>>
+  ghostElement: ShallowRef<HTMLElement | null>
   /** Current index of dragged element */
-  currentIndex: ReturnType<typeof ref<number | null>>
+  currentIndex: Ref<number | null>
   /** Reactive array of sortable items */
-  items: ReturnType<typeof shallowRef<HTMLElement[]>>
+  items: ShallowRef<HTMLElement[]>
   /** Whether animations are currently running */
-  isAnimating: ReturnType<typeof ref<boolean>>
+  isAnimating: Ref<boolean>
   /** Elements currently being animated */
-  animatingElements: ReturnType<typeof shallowRef<HTMLElement[]>>
+  animatingElements: ShallowRef<HTMLElement[]>
   /** Whether fallback mode is currently active during drag */
-  isFallbackActive: ReturnType<typeof ref<boolean>>
+  isFallbackActive: Ref<boolean>
   /** Whether native draggable is being used (false means fallback mode) */
-  nativeDraggable: ReturnType<typeof ref<boolean>>
+  nativeDraggable: Ref<boolean>
   /** Whether the sortable is supported in current environment */
-  isSupported: ReturnType<typeof ref<boolean>>
+  isSupported: Ref<boolean>
 }
 
 /**

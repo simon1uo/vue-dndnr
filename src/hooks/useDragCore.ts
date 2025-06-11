@@ -1,30 +1,28 @@
 import type {
   GhostElementOptions,
   SortableEvent,
-  SortableEventCallbacks,
   SortableEventData,
   SortableEventType,
-  SortableOptions,
 } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
+import type { UseSortableOptions } from './useSortable'
+import type { SortableStateInternal } from './useSortableState'
 import {
   createGhostElement,
   findDraggableElement,
   getDraggableChildren,
   getElementIndex,
 } from '@/utils/sortable-dom'
-import { dispatchSortableEvent, getCallbackName, normalizeEventData } from '@/utils/sortable-event'
+import { dispatchSortableEvent, normalizeEventData } from '@/utils/sortable-event'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
-import { useSortableState } from './useSortableState'
 
-/**
- * Options for useDragCore composable
- */
-export interface UseDragCoreOptions extends SortableOptions, SortableEventCallbacks {
-  /** Whether to initialize immediately */
-  immediate?: boolean
-  /** Callback to notify when items should be updated after DOM manipulation */
+export interface UseDragCoreOptions extends UseSortableOptions {
+  state: SortableStateInternal
+  /**
+   * Callback function to be called when items are updated
+   * @returns void
+   */
   onItemsUpdate?: () => void
 }
 
@@ -32,40 +30,54 @@ export interface UseDragCoreOptions extends SortableOptions, SortableEventCallba
  * Return type for useDragCore composable
  */
 export interface UseDragCoreReturn {
-  /** Unified sortable state */
-  state: ReturnType<typeof useSortableState>
-  /** Start dragging programmatically */
+  /**
+   * Start dragging programmatically
+   * @param element - Element to start dragging
+   */
   startDrag: (element: HTMLElement) => void
-  /** Stop dragging programmatically */
+
+  /**
+   * Stop dragging programmatically
+   */
   stopDrag: () => void
-  /** Update options */
-  updateOptions: (options: Partial<UseDragCoreOptions>) => void
-  /** Destroy and cleanup */
+
+  /**
+   * Pause drag functionality (temporarily disable)
+   */
+  pause: () => void
+
+  /**
+   * Resume drag functionality
+   */
+  resume: () => void
+
+  /**
+   * Destroy and cleanup all resources
+   */
   destroy: () => void
 }
 
 /**
- * Core drag functionality composable.
- * Replaces CustomDragInstance class with Vue 3 Composition API.
+ * Core drag functionality composable following @vueuse/core patterns.
  *
- * This composable provides:
+ * Provides essential drag and drop functionality with:
+ * - Reactive options support with MaybeRefOrGetter
  * - Native and fallback drag mode support
- * - Event handling for mouse and touch events
+ * - Cross-browser compatibility
+ * - SSR-safe implementation
+ * - Automatic cleanup on unmount
+ * - Event handling for mouse, touch, and native drag events
  * - Ghost element management
- * - Integrated fallback drag functionality
- * - Unified state management through useSortableState
+ * - Unified state management
  *
- * @param target - Target container element
- * @param options - Drag configuration options
+ * @param target - Target container element (ref, getter, or element)
+ * @param options - Reactive drag configuration options
  * @returns Drag core functionality and state
  */
 export function useDragCore(
   target: MaybeRefOrGetter<HTMLElement | null>,
-  options: MaybeRefOrGetter<UseDragCoreOptions> = {},
+  options: MaybeRefOrGetter<UseDragCoreOptions>,
 ): UseDragCoreReturn {
-  // Initialize state management
-  const state = useSortableState()
-
   // Internal state
   const startIndex = ref(-1)
   const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
@@ -73,8 +85,9 @@ export function useDragCore(
   const isUsingFallback = ref(false)
   const cleanupFunctions = ref<Array<() => void>>([])
   const dragCleanupFunctions = ref<Array<() => void>>([])
+  const isPaused = ref(false)
 
-  // Fallback drag state (integrated from useFallbackDrag)
+  // Fallback drag state
   const isFallbackActive = ref(false)
   const loopTimer = ref<NodeJS.Timeout | undefined>()
   const ghostMatrix = ref<DOMMatrix | undefined>()
@@ -86,27 +99,37 @@ export function useDragCore(
   const ghostRelativeParentInitialScroll = ref<[number, number]>([0, 0])
   const positionGhostAbsolutely = ref(false)
 
-  // Computed options
-  const resolvedOptions = computed(() => {
-    const opts = toValue(options)
-    return {
-      draggable: '> *',
-      ghostClass: 'sortable-ghost',
-      chosenClass: 'sortable-chosen',
-      dragClass: 'sortable-drag',
-      disabled: false,
-      sort: true,
-      delay: 0,
-      delayOnTouchOnly: false,
-      animation: 150,
-      preventOnFilter: true,
-      immediate: true,
-      ...opts,
-    }
-  })
+  // Support detection
 
   // Computed target element
   const targetElement = computed(() => toValue(target))
+
+  // Destructure options with defaults using ES6 features
+  const {
+    state,
+    draggable = '> *',
+    handle,
+    filter,
+    disabled = false,
+    delay = 0,
+    delayOnTouchOnly = false,
+    ghostClass = 'sortable-ghost',
+    chosenClass = 'sortable-chosen',
+    dragClass = 'sortable-drag',
+    forceFallback = false,
+    fallbackClass = 'sortable-fallback',
+    fallbackOnBody = false,
+    fallbackOffset = { x: 0, y: 0 },
+    swapThreshold = 1,
+    preventOnFilter = true,
+    immediate = true,
+    onStart,
+    onEnd,
+    onUpdate,
+    onFilter,
+    onItemsUpdate,
+    setData,
+  } = toValue(options)
 
   /**
    * Parse scale transform when DOMMatrix is not available
@@ -287,10 +310,8 @@ export function useDragCore(
    * Determine if fallback mode should be used
    */
   const shouldUseFallback = (): boolean => {
-    const opts = resolvedOptions.value
-
     // Force fallback if explicitly requested
-    if (opts.forceFallback) {
+    if (toValue(forceFallback)) {
       return true
     }
 
@@ -398,8 +419,7 @@ export function useDragCore(
     }
 
     // Calculate movement delta with fallback offset
-    const opts = resolvedOptions.value
-    const fallbackOffset = opts.fallbackOffset || { x: 0, y: 0 }
+    const currentFallbackOffset = toValue(fallbackOffset) || { x: 0, y: 0 }
 
     // Recalculate scale factors to handle dynamic transforms
     calculateScaleFactors()
@@ -411,8 +431,8 @@ export function useDragCore(
 
     // Calculate absolute movement from initial tap position
     // Use absolute positioning instead of incremental to avoid cumulative errors
-    const rawDx = (touch.clientX - tapEvt.value.clientX) + fallbackOffset.x
-    const rawDy = (touch.clientY - tapEvt.value.clientY) + fallbackOffset.y
+    const rawDx = (touch.clientX - tapEvt.value.clientX) + currentFallbackOffset.x
+    const rawDy = (touch.clientY - tapEvt.value.clientY) + currentFallbackOffset.y
 
     // Apply scale factors
     const dx = rawDx / (scaleX.value || 1)
@@ -477,15 +497,13 @@ export function useDragCore(
   }
 
   /**
-   * Dispatch a sortable event
+   * Dispatch a sortable event with proper callback handling
    */
   const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEvent> = {}) => {
     const el = targetElement.value
     const dragElement = state.dragElement.value
     if (!el || !dragElement)
       return
-
-    const opts = resolvedOptions.value
 
     // Extract only the properties that are compatible with SortableEventData
     const compatibleData: Partial<SortableEventData> = {
@@ -513,9 +531,22 @@ export function useDragCore(
       ...compatibleData,
     })
 
-    // Get callback function
-    const callbackName = getCallbackName(eventType) as keyof SortableEventCallbacks
-    const callback = opts[callbackName] as ((evt: SortableEvent) => void) | undefined
+    // Call appropriate callback based on event type
+    let callback: ((evt: SortableEvent) => void) | undefined
+    switch (eventType) {
+      case 'start':
+        callback = onStart
+        break
+      case 'end':
+        callback = onEnd
+        break
+      case 'update':
+        callback = onUpdate
+        break
+      case 'filter':
+        callback = onFilter
+        break
+    }
 
     // Dispatch event using the utility function
     dispatchSortableEvent(el, eventType, eventData, callback)
@@ -529,30 +560,28 @@ export function useDragCore(
     if (!el)
       return null
 
-    const opts = resolvedOptions.value
-    return findDraggableElement(target, el, opts.draggable || '> *')
+    return findDraggableElement(target, el, toValue(draggable))
   }
 
   /**
    * Check if element should be filtered (not draggable)
    */
   const shouldFilterElement = (evt: Event, item: HTMLElement, target: HTMLElement): boolean => {
-    const opts = resolvedOptions.value
-    const filter = opts.filter
+    const currentFilter = toValue(filter)
 
-    if (typeof filter === 'string') {
-      if (target.matches(filter)) {
+    if (typeof currentFilter === 'string') {
+      if (target.matches(currentFilter)) {
         dispatchEvent('filter', { item, related: target })
-        if (opts.preventOnFilter) {
+        if (toValue(preventOnFilter)) {
           evt.preventDefault()
         }
         return true
       }
     }
-    else if (typeof filter === 'function') {
-      if (filter(evt, item, target)) {
+    else if (typeof currentFilter === 'function') {
+      if (currentFilter(evt, item, target)) {
         dispatchEvent('filter', { item, related: target })
-        if (opts.preventOnFilter) {
+        if (toValue(preventOnFilter)) {
           evt.preventDefault()
         }
         return true
@@ -565,8 +594,8 @@ export function useDragCore(
   /**
    * Check if target is a valid handle
    */
-  const isValidHandle = (target: HTMLElement, handle: string): boolean => {
-    return target.matches(handle) || target.closest(handle) !== null
+  const isValidHandle = (target: HTMLElement, handleSelector: string): boolean => {
+    return target.matches(handleSelector) || target.closest(handleSelector) !== null
   }
 
   /**
@@ -577,8 +606,7 @@ export function useDragCore(
     if (!el)
       return null
 
-    const opts = resolvedOptions.value
-    const children = getDraggableChildren(el, opts.draggable || '> *')
+    const children = getDraggableChildren(el, toValue(draggable))
 
     for (const child of children) {
       if (child === state.dragElement.value)
@@ -644,8 +672,7 @@ export function useDragCore(
     if (!el)
       return 'vertical'
 
-    const opts = resolvedOptions.value
-    const children = getDraggableChildren(el, opts.draggable || '> *')
+    const children = getDraggableChildren(el, toValue(draggable))
     if (children.length < 2)
       return 'vertical'
 
@@ -690,21 +717,20 @@ export function useDragCore(
     targetRect: DOMRect,
     vertical: boolean,
   ): number | null => {
-    const opts = resolvedOptions.value
     const mouseOnAxis = vertical ? pointer.clientY : pointer.clientX
     const targetLength = vertical ? targetRect.height : targetRect.width
     const targetStart = vertical ? targetRect.top : targetRect.left
     const targetCenter = targetStart + targetLength / 2
 
-    const swapThreshold = opts.swapThreshold || 1
+    const currentSwapThreshold = toValue(swapThreshold)
 
     // For full threshold (1), always allow swapping
-    if (swapThreshold >= 1) {
+    if (currentSwapThreshold >= 1) {
       return mouseOnAxis > targetCenter ? 1 : -1
     }
 
     // For partial threshold, create dead zone in the middle
-    const threshold = targetLength * (1 - swapThreshold) / 2
+    const threshold = targetLength * (1 - currentSwapThreshold) / 2
     const deadZoneStart = targetStart + threshold
     const deadZoneEnd = targetStart + targetLength - threshold
 
@@ -759,9 +785,8 @@ export function useDragCore(
     }
 
     // Immediately notify about DOM changes for responsive data updates
-    const opts = resolvedOptions.value
-    if (opts.onItemsUpdate) {
-      opts.onItemsUpdate()
+    if (onItemsUpdate) {
+      onItemsUpdate()
     }
   }
 
@@ -773,6 +798,10 @@ export function useDragCore(
     if (ghostElement) {
       ghostElement.remove()
       state._setGhostElement(null)
+    }
+
+    if (state.dragElement.value && toValue(ghostClass)) {
+      state.dragElement.value.classList.remove(toValue(ghostClass))
     }
   }
 
@@ -799,7 +828,6 @@ export function useDragCore(
     if (!dragElement || !tapEvt.value)
       return
 
-    const opts = resolvedOptions.value
     const rect = dragElement.getBoundingClientRect()
     const tapDistance = {
       left: tapEvt.value.clientX - rect.left,
@@ -808,10 +836,10 @@ export function useDragCore(
 
     // Prepare ghost element options for fallback mode
     const ghostOptions: GhostElementOptions = {
-      ghostClass: opts.ghostClass || 'sortable-ghost',
-      fallbackClass: opts.fallbackClass || 'sortable-fallback',
-      fallbackOnBody: opts.fallbackOnBody || false,
-      fallbackOffset: opts.fallbackOffset || { x: 0, y: 0 },
+      ghostClass: toValue(ghostClass),
+      fallbackClass: toValue(fallbackClass),
+      fallbackOnBody: toValue(fallbackOnBody),
+      fallbackOffset: toValue(fallbackOffset),
       useFallback: true,
       nativeDraggable: false,
       tapDistance,
@@ -822,13 +850,13 @@ export function useDragCore(
     state._setGhostElement(ghostElement)
 
     // Choose container for fallback mode
-    const container = opts.fallbackOnBody
+    const container = toValue(fallbackOnBody)
       ? document.body
       : dragElement.parentNode
 
     // Insert ghost element for fallback mode
     if (container && ghostElement) {
-      if (opts.fallbackOnBody) {
+      if (toValue(fallbackOnBody)) {
         container.appendChild(ghostElement)
       }
       else {
@@ -939,7 +967,6 @@ export function useDragCore(
       return
 
     const dragElement = state.dragElement.value
-    const opts = resolvedOptions.value
 
     state._setDragging(false)
 
@@ -950,14 +977,19 @@ export function useDragCore(
 
     // Remove classes if element exists
     if (dragElement) {
-      if (opts.chosenClass) {
-        dragElement.classList.remove(opts.chosenClass)
+      const currentChosenClass = toValue(chosenClass)
+      if (currentChosenClass) {
+        dragElement.classList.remove(currentChosenClass)
       }
-      if (opts.dragClass) {
-        dragElement.classList.remove(opts.dragClass)
+
+      const currentDragClass = toValue(dragClass)
+      if (currentDragClass) {
+        dragElement.classList.remove(currentDragClass)
       }
-      if (opts.ghostClass) {
-        dragElement.classList.remove(opts.ghostClass)
+
+      const currentGhostClass = toValue(ghostClass)
+      if (currentGhostClass) {
+        dragElement.classList.remove(currentGhostClass)
       }
 
       // Reset draggable attribute for native mode
@@ -998,8 +1030,6 @@ export function useDragCore(
     if (!dragElement)
       return
 
-    const opts = resolvedOptions.value
-
     // Now we're actually dragging
     state._setDragging(true)
 
@@ -1008,8 +1038,8 @@ export function useDragCore(
       evt.dataTransfer.effectAllowed = 'move'
 
       // Set custom data if provided
-      if (opts.setData) {
-        opts.setData(evt.dataTransfer, dragElement)
+      if (setData) {
+        setData(evt.dataTransfer, dragElement)
       }
       else {
         // Default data transfer
@@ -1018,8 +1048,9 @@ export function useDragCore(
     }
 
     // Apply drag class
-    if (opts.dragClass) {
-      dragElement.classList.add(opts.dragClass)
+    const currentDragClass = toValue(dragClass)
+    if (currentDragClass) {
+      dragElement.classList.add(currentDragClass)
     }
 
     // Dispatch start event
@@ -1089,20 +1120,20 @@ export function useDragCore(
     if (!dragElement)
       return
 
-    const opts = resolvedOptions.value
-
     // Set dragging state
     state._setDragging(true)
     state._setFallbackActive(true)
 
     // Add drag class
-    if (opts.dragClass) {
-      dragElement.classList.add(opts.dragClass)
+    const currentDragClass = toValue(dragClass)
+    if (currentDragClass) {
+      dragElement.classList.add(currentDragClass)
     }
 
     // Apply ghost class to original element
-    if (opts.ghostClass) {
-      dragElement.classList.add(opts.ghostClass)
+    const currentGhostClass = toValue(ghostClass)
+    if (currentGhostClass) {
+      dragElement.classList.add(currentGhostClass)
     }
 
     // Create and append ghost element immediately
@@ -1149,8 +1180,6 @@ export function useDragCore(
    * Prepare to start dragging
    */
   const prepareDragStart = (evt: Event, dragElement: HTMLElement) => {
-    const opts = resolvedOptions.value
-
     state._setDragElement(dragElement)
     startIndex.value = getElementIndex(dragElement)
 
@@ -1164,8 +1193,9 @@ export function useDragCore(
     }
 
     // Add chosen class
-    if (opts.chosenClass) {
-      dragElement.classList.add(opts.chosenClass)
+    const currentChosenClass = toValue(chosenClass)
+    if (currentChosenClass) {
+      dragElement.classList.add(currentChosenClass)
     }
 
     const isTouch = evt.type.startsWith('touch')
@@ -1177,12 +1207,15 @@ export function useDragCore(
     }
 
     // Handle delay
-    if (opts.delay && (!opts.delayOnTouchOnly || isTouch)) {
+    const currentDelay = toValue(delay)
+    const currentDelayOnTouchOnly = toValue(delayOnTouchOnly)
+
+    if (currentDelay && (!currentDelayOnTouchOnly || isTouch)) {
       setTimeout(() => {
         if (state.dragElement.value === dragElement) {
           startDragOperation(evt)
         }
-      }, opts.delay)
+      }, currentDelay)
     }
     else {
       // Start immediately for programmatic calls or when no delay
@@ -1200,8 +1233,7 @@ export function useDragCore(
    * Handle mouse down event to initiate drag
    */
   const handleMouseDown = (evt: MouseEvent) => {
-    const opts = resolvedOptions.value
-    if (opts.disabled || state.isDragging.value)
+    if (toValue(disabled) || state.isDragging.value || isPaused.value)
       return
 
     const target = evt.target as HTMLElement
@@ -1211,7 +1243,9 @@ export function useDragCore(
       return
     if (shouldFilterElement(evt, draggableElement, target))
       return
-    if (opts.handle && !isValidHandle(target, opts.handle))
+
+    const currentHandle = toValue(handle)
+    if (currentHandle && !isValidHandle(target, currentHandle))
       return
 
     prepareDragStart(evt, draggableElement)
@@ -1221,8 +1255,7 @@ export function useDragCore(
    * Handle touch start event for mobile drag
    */
   const handleTouchStart = (evt: TouchEvent) => {
-    const opts = resolvedOptions.value
-    if (opts.disabled || state.isDragging.value)
+    if (toValue(disabled) || state.isDragging.value || isPaused.value)
       return
 
     const target = evt.target as HTMLElement
@@ -1232,7 +1265,9 @@ export function useDragCore(
       return
     if (shouldFilterElement(evt, draggableElement, target))
       return
-    if (opts.handle && !isValidHandle(target, opts.handle))
+
+    const currentHandle = toValue(handle)
+    if (currentHandle && !isValidHandle(target, currentHandle))
       return
 
     prepareDragStart(evt, draggableElement)
@@ -1325,11 +1360,17 @@ export function useDragCore(
   }
 
   /**
-   * Update options
+   * Pause drag functionality (temporarily disable)
    */
-  const updateOptions = (_newOptions: Partial<UseDragCoreOptions>) => {
-    // Options are reactive through computed, so they will update automatically
-    // Additional logic can be added here if needed
+  const pause = () => {
+    isPaused.value = true
+  }
+
+  /**
+   * Resume drag functionality
+   */
+  const resume = () => {
+    isPaused.value = false
   }
 
   /**
@@ -1358,11 +1399,11 @@ export function useDragCore(
   watch(targetElement, (newTarget, oldTarget) => {
     if (oldTarget !== newTarget) {
       destroy()
-      if (newTarget && resolvedOptions.value.immediate) {
+      if (newTarget && toValue(immediate)) {
         initialize()
       }
     }
-  }, { immediate: true })
+  }, { immediate: toValue(immediate) })
 
   // Cleanup on unmount
   tryOnUnmounted(() => {
@@ -1370,10 +1411,10 @@ export function useDragCore(
   })
 
   return {
-    state,
     startDrag,
     stopDrag,
-    updateOptions,
+    pause,
+    resume,
     destroy,
   }
 }

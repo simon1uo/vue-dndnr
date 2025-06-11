@@ -1,4 +1,4 @@
-import type { SortableEventCallbacks, SortableOptions } from '@/types'
+import type { EasingFunction, SortableDirectionFunction, SortableEventCallbacks, SortableFilterFunction, SortableGroup, SortDirection } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { ref, shallowRef } from 'vue'
 import { getDraggableChildren } from '@/utils/sortable-dom'
@@ -6,25 +6,196 @@ import { tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
 import { useDragCore } from './useDragCore'
 import { useSortableAnimation } from './useSortableAnimation'
+import useSortableState from './useSortableState'
 
 /**
  * Options for useSortable composable.
  * Extends SortableOptions with Vue3-specific configurations.
  */
-export interface UseSortableOptions extends SortableOptions, SortableEventCallbacks {
+export interface UseSortableOptions extends SortableEventCallbacks {
   /**
-   * Whether to return controls object instead of simple reactive state.
-   * When true, returns an object with all state and methods.
-   * When false, returns only the items array for simple usage.
+   * Group configuration with reactive support
+   * @default undefined
+   */
+  group?: MaybeRefOrGetter<string | SortableGroup>
+  /**
+   * Sorting within list with reactive support
+   * @default true
+   */
+  sort?: MaybeRefOrGetter<boolean>
+  /**
+   * Disabled state with reactive support
+   * @default false
+   */
+  disabled?: MaybeRefOrGetter<boolean>
+  /**
+   * Delay before drag starts with reactive support
+   * @default 0
+   */
+  delay?: MaybeRefOrGetter<number>
+  /**
+   * Only delay on touch with reactive support
+   * @default false
+   */
+  delayOnTouchOnly?: MaybeRefOrGetter<boolean>
+  /**
+   * Touch start threshold with reactive support
+   * @default 0
+   */
+  touchStartThreshold?: MaybeRefOrGetter<number>
+  /**
+   * Draggable selector with reactive support
+   * @default undefined
+   */
+  draggable?: MaybeRefOrGetter<string>
+  /**
+   * Handle selector with reactive support
+   * @default undefined
+   */
+  handle?: MaybeRefOrGetter<string>
+  /**
+   * Filter selector or function with reactive support
+   * @default undefined
+   */
+  filter?: MaybeRefOrGetter<string | SortableFilterFunction>
+  /**
+   * Prevent on filter with reactive support
+   * @default true
+   */
+  preventOnFilter?: MaybeRefOrGetter<boolean>
+  /**
+   * Ghost class with reactive support
+   * @default 'sortable-ghost'
+   */
+  ghostClass?: MaybeRefOrGetter<string>
+  /**
+   * Chosen class with reactive support
+   * @default 'sortable-chosen'
+   */
+  chosenClass?: MaybeRefOrGetter<string>
+  /**
+   * Drag class with reactive support
+   * @default 'sortable-drag'
+   */
+  dragClass?: MaybeRefOrGetter<string>
+  /**
+   * Invert swap with reactive support
+   * @default false
+   */
+  invertSwap?: MaybeRefOrGetter<boolean>
+  /**
+   * Threshold of the inverted swap zone with reactive support
+   * @default swapThreshold
+   */
+  invertedSwapThreshold?: MaybeRefOrGetter<number>
+  /**
+   * Animation duration with reactive support
+   * @default 150
+   */
+  animation?: MaybeRefOrGetter<number>
+  /**
+   * Animation easing with reactive support
+   * @default 'cubic-bezier(1, 0, 0, 1)'
+   */
+  easing?: MaybeRefOrGetter<EasingFunction>
+  /**
+   * Scroll configuration with reactive support
+   * @default true
+   */
+  scroll?: MaybeRefOrGetter<boolean | HTMLElement>
+  /**
+   * Scroll sensitivity with reactive support
+   * @default 30
+   */
+  scrollSensitivity?: MaybeRefOrGetter<number>
+  /**
+   * Scroll speed with reactive support
+   * @default 10
+   */
+  scrollSpeed?: MaybeRefOrGetter<number>
+  /**
+   * Auto scroll with reactive support
+   * @default true
+   */
+  autoScroll?: MaybeRefOrGetter<boolean>
+  /**
+   * Bubble scroll with reactive support
+   * @default true
+   */
+  bubbleScroll?: MaybeRefOrGetter<boolean>
+  /**
+   * Swap threshold with reactive support
+   * @default 1
+   */
+  swapThreshold?: MaybeRefOrGetter<number>
+  /**
+   * Sort direction with reactive support
+   * @default 'vertical'
+   */
+  direction?: MaybeRefOrGetter<SortDirection | SortableDirectionFunction>
+  /**
+   * Data ID attribute with reactive support
+   * @default 'data-id'
+   */
+  dataIdAttr?: MaybeRefOrGetter<string>
+  /**
+   * Ignore dragover events on non-draggable elements with reactive support
+   * @default false
+   */
+  dragoverBubble?: MaybeRefOrGetter<boolean>
+  /**
+   * Remove clone from DOM when hiding with reactive support
+   * @default true
+   */
+  removeCloneOnHide?: MaybeRefOrGetter<boolean>
+  /**
+   * Threshold for empty inserting with reactive support
+   * @default 0
+   */
+  emptyInsertThreshold?: MaybeRefOrGetter<number>
+  /**
+   * Function to set custom data transfer with reactive support
+   * @param dataTransfer The DataTransfer object
+   * @param dragEl The dragged element
+   */
+  setData?: (dataTransfer: DataTransfer, dragEl: HTMLElement) => void
+
+  /**
+   * Force fallback mode with reactive support
+   * @default false
+   */
+  forceFallback?: MaybeRefOrGetter<boolean>
+  /**
+   * Fallback class with reactive support
+   * @default 'sortable-fallback'
+   */
+  fallbackClass?: MaybeRefOrGetter<string>
+  /**
+   * Fallback on body with reactive support
+   * @default false
+   */
+  fallbackOnBody?: MaybeRefOrGetter<boolean>
+  /**
+   * Fallback tolerance with reactive support
+   * @default 0
+   */
+  fallbackTolerance?: MaybeRefOrGetter<number>
+  /**
+   * Fallback offset with reactive support
+   * @default { x: 0, y: 0 }
+   */
+  fallbackOffset?: MaybeRefOrGetter<{ x: number, y: number }>
+
+  /**
+   * Whether to return controls
    * @default false
    */
   controls?: boolean
   /**
-   * Whether to initialize the sortable immediately.
+   * Whether to update items immediately
    * @default true
    */
   immediate?: boolean
-
 }
 
 /**
@@ -119,13 +290,17 @@ export function useSortable(
     return typeof el === 'string' ? document.querySelector(el) as HTMLElement : el
   })
 
-  // Initialize core composables - dragCore provides unified state management
-  const dragCore = useDragCore(targetElement, {
+  const state = useSortableState({
+    initialSupported: computed(() => typeof window !== 'undefined'),
+  })
+
+  // Initialize core composable - dragCore provides unified state management
+  const { startDrag, stopDrag, destroy } = useDragCore(targetElement, {
     ...options,
+    state,
   })
 
   const animation = useSortableAnimation(targetElement, options)
-  const state = dragCore.state
 
   // Items management
   const updateItems = () => {
@@ -139,12 +314,6 @@ export function useSortable(
     const items = getDraggableChildren(el, selector)
     state._setItems(items)
   }
-
-  dragCore.updateOptions({
-    onItemsUpdate: () => {
-      updateItems()
-    },
-  })
 
   // Watch for target changes and update items
   watch(targetElement, async (newTarget) => {
@@ -174,13 +343,13 @@ export function useSortable(
   const start = (element: HTMLElement) => {
     if (!state.isSupported.value)
       return
-    dragCore.startDrag(element)
+    startDrag(element)
   }
 
   const stop = () => {
     if (!state.isSupported.value)
       return
-    dragCore.stopDrag()
+    stopDrag()
   }
 
   const sort = (order: string[], useAnimation = true) => {
@@ -222,11 +391,6 @@ export function useSortable(
     if (useAnimation && options.animation) {
       animation.animateAll()
     }
-  }
-
-  const destroy = () => {
-    // Destroy drag core and reset state
-    dragCore.destroy()
   }
 
   // Cleanup on unmount
