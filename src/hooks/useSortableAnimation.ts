@@ -1,7 +1,23 @@
-import type { AnimationEvent, EasingFunction, Rect } from '@/types'
+import type { AnimationEvent, AnimationEventCallbacks, EasingFunction, Rect } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, shallowRef, toValue, watch } from 'vue'
+
+// Extend HTMLElement interface to include animation properties
+declare global {
+  interface HTMLElement {
+    fromRect?: Rect | null
+    toRect?: Rect | null
+    prevFromRect?: Rect | null
+    prevToRect?: Rect | null
+    thisAnimationDuration?: number | null
+    animationResetTimer?: NodeJS.Timeout
+    animatingX?: boolean
+    animatingY?: boolean
+    animated?: NodeJS.Timeout | false
+    animationTime?: number
+  }
+}
 
 /**
  * Animation state for a single element
@@ -29,14 +45,16 @@ interface AnimationState {
   /** Whether element is animating on Y axis */
   animatingY?: boolean
   /** Animation completion timer ID */
-  animated?: number
+  animated?: NodeJS.Timeout | false
+  /** Animation time for calculations */
+  animationTime?: number
 }
 
 /**
  * Animation configuration options
  * Defines how animations should be performed
  */
-export interface UseSortableAnimationOptions {
+export interface UseSortableAnimationOptions extends AnimationEventCallbacks {
   /** Animation duration in milliseconds */
   animation?: MaybeRefOrGetter<number>
   /** Easing function for animations */
@@ -63,6 +81,10 @@ export interface UseSortableAnimationReturn {
   cancelAnimations: () => void
   /** Clear animation states */
   clearAnimationStates: () => void
+  /** Add an animation state for an element */
+  addAnimationState: (state: AnimationState) => void
+  /** Remove animation state for a specific element */
+  removeAnimationState: (target: HTMLElement) => void
   /** Update options */
   updateOptions: (options: Partial<UseSortableAnimationOptions>) => void
 }
@@ -105,6 +127,9 @@ export function useSortableAnimation(
       animation: toValue(opts.animation) ?? 150,
       easing: toValue(opts.easing) ?? 'ease',
       disabled: toValue(opts.disabled) ?? false,
+      onAnimationStart: opts.onAnimationStart,
+      onAnimationEnd: opts.onAnimationEnd,
+      onAnimationCancel: opts.onAnimationCancel,
     }
   })
 
@@ -145,6 +170,85 @@ export function useSortableAnimation(
   }
 
   /**
+   * Set CSS style property on an element with !important to override any CSS classes
+   */
+  const setElementStyle = (element: HTMLElement, property: string, value: string): void => {
+    if (value === '') {
+      // Remove the property entirely
+      element.style.removeProperty(property)
+    }
+    else {
+      // Set with !important to override CSS classes like transition-all
+      element.style.setProperty(property, value, 'important')
+    }
+  }
+
+  /**
+   * Force a repaint of an element
+   */
+  const forceRepaint = (element: HTMLElement): number => {
+    return element.offsetWidth
+  }
+
+  /**
+   * Check if two rectangles are equal within tolerance
+   */
+  const isRectEqual = (rect1: Rect | null | undefined, rect2: Rect | null | undefined): boolean => {
+    if (!rect1 || !rect2)
+      return false
+
+    return Math.abs(rect1.top - rect2.top) < 1
+      && Math.abs(rect1.left - rect2.left) < 1
+      && Math.abs(rect1.width - rect2.width) < 1
+      && Math.abs(rect1.height - rect2.height) < 1
+  }
+
+  /**
+   * Check if three points are on the same line (for smooth animation transitions)
+   */
+  const isOnSameLine = (animatingRect: Rect, toRect: Rect, fromRect: Rect | null | undefined): boolean => {
+    if (!fromRect)
+      return false
+
+    // Calculate slopes to determine if points are collinear
+    const slope1 = (animatingRect.top - toRect.top) / (animatingRect.left - toRect.left)
+    const slope2 = (fromRect.top - toRect.top) / (fromRect.left - toRect.left)
+
+    return Math.abs(slope1 - slope2) < 0.1 // Allow small tolerance for floating point errors
+  }
+
+  /**
+   * Calculate real animation time for smooth transitions
+   * Based on SortableJS calculateRealTime function
+   */
+  const calculateRealTime = (
+    animatingRect: Rect,
+    fromRect: Rect | null | undefined,
+    toRect: Rect | null | undefined,
+    animationDuration: number,
+  ): number => {
+    if (!fromRect || !toRect || !animationDuration) {
+      return animationDuration || 150
+    }
+
+    // Calculate distance ratios for smooth transition
+    const currentDistance = Math.sqrt(
+      (fromRect.top - animatingRect.top) ** 2
+      + (fromRect.left - animatingRect.left) ** 2,
+    )
+
+    const totalDistance = Math.sqrt(
+      (fromRect.top - toRect.top) ** 2
+      + (fromRect.left - toRect.left) ** 2,
+    )
+
+    if (totalDistance === 0)
+      return 0
+
+    return (currentDistance / totalDistance) * animationDuration
+  }
+
+  /**
    * Dispatch animation event
    */
   const dispatchAnimationEvent = (
@@ -153,6 +257,7 @@ export function useSortableAnimation(
     duration?: number,
     easing?: string,
   ): void => {
+    const opts = resolvedOptions.value
     const event: AnimationEvent = {
       type,
       target,
@@ -172,6 +277,17 @@ export function useSortableAnimation(
     })
 
     target.dispatchEvent(customEvent)
+
+    // Call animation event callbacks if provided
+    if (type === 'start' && opts.onAnimationStart) {
+      opts.onAnimationStart(event)
+    }
+    else if (type === 'end' && opts.onAnimationEnd) {
+      opts.onAnimationEnd(event)
+    }
+    else if (type === 'cancel' && opts.onAnimationCancel) {
+      opts.onAnimationCancel(event)
+    }
   }
 
   /**
@@ -229,9 +345,12 @@ export function useSortableAnimation(
     if (!animationDuration)
       return
 
-    // Clear existing transitions and transforms
-    target.style.transition = ''
-    target.style.transform = ''
+    // Clear existing transitions and transforms completely
+    setElementStyle(target, 'transition', '')
+    setElementStyle(target, 'transition-property', '')
+    setElementStyle(target, 'transition-duration', '')
+    setElementStyle(target, 'transition-timing-function', '')
+    setElementStyle(target, 'transform', '')
 
     // Get container matrix for scaling calculations
     const containerElement = targetElement.value
@@ -254,33 +373,42 @@ export function useSortableAnimation(
     target.animatingX = !!translateX
     target.animatingY = !!translateY
 
-    // Apply initial transform
-    target.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`
+    // Apply initial transform to move element to starting position
+    const initialTransform = `translate3d(${translateX}px, ${translateY}px, 0)`
+    setElementStyle(target, 'transform', initialTransform)
+
+    // Force repaint to ensure transform is applied
+    forceRepaint(target)
 
     // Store animation duration on element
     target.thisAnimationDuration = animationDuration
 
-    // Dispatch animation start event
-    dispatchAnimationEvent('start', target, animationDuration, opts.easing)
+    // Use requestAnimationFrame to ensure styles are applied before starting animation
+    requestAnimationFrame(() => {
+      // Apply transition and animate to final position
+      const easing = opts.easing || 'ease'
+      const transition = `transform ${animationDuration}ms ${easing}`
+      setElementStyle(target, 'transition', transition)
+      setElementStyle(target, 'transform', 'translate3d(0, 0, 0)')
 
-    // Apply transition and animate to final position
-    target.style.transition = `transform ${animationDuration}ms ${opts.easing}`
-    target.style.transform = 'translate3d(0, 0, 0)'
+      // Dispatch animation start event
+      dispatchAnimationEvent('start', target, animationDuration, easing)
 
-    // Set up animation completion cleanup
-    target.animationResetTimer = setTimeout(() => {
-      // Clean up animation properties
-      target.style.transition = ''
-      target.style.transform = ''
-      target.thisAnimationDuration = undefined
-      target.animatingX = false
-      target.animatingY = false
-      target.fromRect = undefined
-      target.toRect = undefined
+      // Clear animation after completion
+      if (target.animated) {
+        clearTimeout(target.animated)
+      }
+      target.animated = setTimeout(() => {
+        setElementStyle(target, 'transition', '')
+        setElementStyle(target, 'transform', '')
+        target.animated = false
+        target.animatingX = false
+        target.animatingY = false
 
-      // Dispatch animation end event
-      dispatchAnimationEvent('end', target, animationDuration, opts.easing)
-    }, animationDuration)
+        // Dispatch animation end event
+        dispatchAnimationEvent('end', target, animationDuration, easing)
+      }, animationDuration)
+    })
   }
 
   /**
@@ -290,50 +418,102 @@ export function useSortableAnimation(
     const opts = resolvedOptions.value
 
     // Skip if animations are disabled
-    if (opts.disabled || animationStates.value.length === 0) {
-      if (callback)
+    if (opts.disabled || !opts.animation) {
+      // Clear any existing animation timer
+      if (animationCallbackTimer.value) {
+        clearTimeout(animationCallbackTimer.value)
+        animationCallbackTimer.value = null
+      }
+      if (typeof callback === 'function') {
         callback()
+      }
       return
     }
 
-    // Clear any existing animation timer
+    let animating = false
+    let animationTime = 0
+    const elementsToAnimate: HTMLElement[] = []
+
+    // Process each animation state
+    animationStates.value.forEach((state) => {
+      let time = 0
+      const target = state.target
+      const fromRect = target.fromRect
+      const toRect = getElementRect(target)
+      const prevFromRect = target.prevFromRect
+      const prevToRect = target.prevToRect
+      const animatingRect = state.rect
+
+      // Compensate for current transform if element has matrix
+      const targetMatrix = getTransformMatrix(target)
+      if (targetMatrix) {
+        toRect.top -= targetMatrix.f
+        toRect.left -= targetMatrix.e
+      }
+
+      target.toRect = toRect
+
+      // Handle chained animations
+      if (target.thisAnimationDuration) {
+        if (isRectEqual(prevFromRect, toRect)
+          && !isRectEqual(fromRect, toRect)
+          && isOnSameLine(animatingRect, toRect, fromRect)) {
+          // Calculate real time for smooth transition
+          time = calculateRealTime(animatingRect, prevFromRect, prevToRect, opts.animation)
+        }
+      }
+
+      // Only animate if positions are different
+      if (!isRectEqual(toRect, fromRect)) {
+        target.prevFromRect = fromRect
+        target.prevToRect = toRect
+
+        if (!time) {
+          time = opts.animation || 150
+        }
+
+        animate(target, animatingRect, toRect, time)
+        elementsToAnimate.push(target)
+      }
+
+      if (time) {
+        animating = true
+        animationTime = Math.max(animationTime, time)
+
+        // Clear existing timer
+        if (target.animationResetTimer) {
+          clearTimeout(target.animationResetTimer)
+        }
+
+        // Set reset timer
+        target.animationResetTimer = setTimeout(() => {
+          target.animationTime = 0
+          target.prevFromRect = null
+          target.fromRect = null
+          target.prevToRect = null
+          target.thisAnimationDuration = null
+        }, time)
+
+        target.thisAnimationDuration = time
+      }
+    })
+
+    // Update reactive state
+    isAnimating.value = animating
+    animatingElements.value = elementsToAnimate
+
+    // Handle animation completion
     if (animationCallbackTimer.value) {
       clearTimeout(animationCallbackTimer.value)
       animationCallbackTimer.value = null
     }
 
-    const elementsToAnimate: HTMLElement[] = []
-
-    // Process each animation state
-    animationStates.value.forEach((state) => {
-      const { target } = state
-      const currentRect = getElementRect(target)
-      const fromRect = target.fromRect
-
-      if (!fromRect)
-        return
-
-      // Calculate if animation is needed
-      const dx = fromRect.left - currentRect.left
-      const dy = fromRect.top - currentRect.top
-
-      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-        // Only add to animating elements if animation duration > 0
-        if (opts.animation && opts.animation > 0) {
-          elementsToAnimate.push(target)
-          animate(target, fromRect, currentRect, opts.animation)
-        }
+    if (!animating) {
+      if (typeof callback === 'function') {
+        callback()
       }
-    })
-
-    // Update animating elements
-    animatingElements.value = elementsToAnimate
-
-    // Set up completion callback
-    const animationTime = opts.animation || 150
-    if (animationTime > 0 && elementsToAnimate.length > 0) {
-      // Only set animating state if we have elements to animate and duration > 0
-      isAnimating.value = true
+    }
+    else {
       animationCallbackTimer.value = setTimeout(() => {
         isAnimating.value = false
         animatingElements.value = []
@@ -341,14 +521,6 @@ export function useSortableAnimation(
           callback()
         }
       }, animationTime)
-    }
-    else {
-      // No animation needed or zero duration
-      isAnimating.value = false
-      animatingElements.value = []
-      if (typeof callback === 'function') {
-        callback()
-      }
     }
 
     // Clear animation states
@@ -359,44 +531,73 @@ export function useSortableAnimation(
    * Cancel all ongoing animations
    */
   const cancelAnimations = (): void => {
-    // Clear animation timer
+    // Clear global animation callback
     if (animationCallbackTimer.value) {
       clearTimeout(animationCallbackTimer.value)
       animationCallbackTimer.value = null
     }
 
-    // Cancel animations for all animating elements
+    // Cancel individual element animations
     animatingElements.value.forEach((element) => {
-      // Clear animation properties
-      element.style.transition = ''
-      element.style.transform = ''
-      element.thisAnimationDuration = undefined
-      element.animatingX = false
-      element.animatingY = false
-      element.fromRect = undefined
-      element.toRect = undefined
-
-      // Clear animation reset timer
+      if (element.animated) {
+        clearTimeout(element.animated)
+      }
       if (element.animationResetTimer) {
         clearTimeout(element.animationResetTimer)
-        element.animationResetTimer = undefined
       }
 
-      // Dispatch animation cancel event
+      // Clear styles using utility method
+      setElementStyle(element, 'transition', '')
+      setElementStyle(element, 'transform', '')
+
+      // Reset animation properties
+      element.animated = false
+      element.animatingX = false
+      element.animatingY = false
+      element.thisAnimationDuration = null
+      element.fromRect = null
+      element.toRect = null
+      element.prevFromRect = null
+      element.prevToRect = null
+
+      // Dispatch cancel event
       dispatchAnimationEvent('cancel', element)
     })
 
-    // Reset state
+    // Reset reactive state
     isAnimating.value = false
     animatingElements.value = []
     animationStates.value = []
   }
 
-  const clearAnimationStates = () => {
+  /**
+   * Clear all animation states
+   */
+  const clearAnimationStates = (): void => {
     animationStates.value = []
   }
 
-  const updateOptions = (newOptions: Partial<UseSortableAnimationOptions>) => {
+  /**
+   * Add an animation state for an element
+   */
+  const addAnimationState = (state: AnimationState): void => {
+    animationStates.value.push(state)
+  }
+
+  /**
+   * Remove animation state for a specific element
+   */
+  const removeAnimationState = (target: HTMLElement): void => {
+    const index = animationStates.value.findIndex(state => state.target === target)
+    if (index !== -1) {
+      animationStates.value.splice(index, 1)
+    }
+  }
+
+  /**
+   * Update animation options
+   */
+  const updateOptions = (newOptions: Partial<UseSortableAnimationOptions>): void => {
     // For MaybeRefOrGetter, we need to handle the update differently
     // This is a simplified approach - in practice, you might want to use a ref for options
     if (typeof options === 'object' && options !== null) {
@@ -426,6 +627,8 @@ export function useSortableAnimation(
     animate,
     cancelAnimations,
     clearAnimationStates,
+    addAnimationState,
+    removeAnimationState,
     updateOptions,
   }
 }

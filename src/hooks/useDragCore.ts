@@ -24,6 +24,16 @@ export interface UseDragCoreOptions extends UseSortableOptions {
    * @returns void
    */
   onItemsUpdate?: () => void
+  /**
+   * Callback to capture animation state before DOM changes
+   * @returns void
+   */
+  onAnimationCapture?: () => void
+  /**
+   * Callback to trigger animation after DOM changes
+   * @returns void
+   */
+  onAnimationTrigger?: () => void
 }
 
 /**
@@ -78,7 +88,7 @@ export function useDragCore(
   target: MaybeRefOrGetter<HTMLElement | null>,
   options: MaybeRefOrGetter<UseDragCoreOptions>,
 ): UseDragCoreReturn {
-  // Internal state
+// Internal state
   const startIndex = ref(-1)
   const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
   const currentTouchEvent = ref<{ clientX: number, clientY: number } | undefined>()
@@ -128,6 +138,8 @@ export function useDragCore(
     onUpdate,
     onFilter,
     onItemsUpdate,
+    onAnimationCapture,
+    onAnimationTrigger,
     setData,
   } = toValue(options)
 
@@ -769,6 +781,11 @@ export function useDragCore(
     if (!parent)
       return
 
+    // Capture animation state before DOM changes (like SortableJS capture())
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
     if (direction === 1) {
       // Insert after target
       const nextSibling = target.nextSibling
@@ -787,6 +804,11 @@ export function useDragCore(
     // Immediately notify about DOM changes for responsive data updates
     if (onItemsUpdate) {
       onItemsUpdate()
+    }
+
+    // Trigger animation after DOM changes (like SortableJS completed())
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
     }
   }
 

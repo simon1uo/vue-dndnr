@@ -294,12 +294,7 @@ export function useSortable(
     initialSupported: computed(() => typeof window !== 'undefined'),
   })
 
-  // Initialize core composable - dragCore provides unified state management
-  const { startDrag, stopDrag, destroy } = useDragCore(targetElement, {
-    ...options,
-    state,
-  })
-
+  // Initialize animation composable first
   const animation = useSortableAnimation(targetElement, options)
 
   // Items management
@@ -314,6 +309,70 @@ export function useSortable(
     const items = getDraggableChildren(el, selector)
     state._setItems(items)
   }
+
+  // Initialize core composable - dragCore provides unified state management
+  const { startDrag, stopDrag, destroy } = useDragCore(targetElement, {
+    ...options,
+    state,
+    // Integrate animation with drag events
+    onStart: (evt) => {
+      // Capture animation state before drag starts
+      if (options.animation) {
+        animation.captureAnimationState()
+      }
+      // Call original onStart if provided
+      if (options.onStart) {
+        options.onStart(evt)
+      }
+    },
+    onEnd: (evt) => {
+      // Trigger animation after drag ends
+      if (options.animation) {
+        animation.animateAll()
+      }
+      // Call original onEnd if provided
+      if (options.onEnd) {
+        options.onEnd(evt)
+      }
+    },
+    onUpdate: (evt) => {
+      // Update items and trigger animation for updates
+      updateItems()
+      if (options.animation) {
+        animation.animateAll()
+      }
+      // Call original onUpdate if provided
+      if (options.onUpdate) {
+        options.onUpdate(evt)
+      }
+    },
+    // Animation integration callbacks for drag operations
+    onAnimationCapture: () => {
+      // Capture animation state before DOM changes (like SortableJS capture())
+      if (options.animation) {
+        animation.captureAnimationState()
+      }
+    },
+    onAnimationTrigger: () => {
+      // Trigger animation after DOM changes (like SortableJS completed())
+      if (options.animation) {
+        animation.animateAll()
+      }
+    },
+  })
+
+  // Sync animation state with sortable state
+  watch(animation.isAnimating, (isAnimating) => {
+    if (typeof isAnimating !== 'undefined') {
+      state._setAnimating(toValue(isAnimating))
+    }
+  }, { immediate: true })
+
+  watch(animation.animatingElements, (elements) => {
+    if (elements) {
+      state._setAnimatingElements(toValue(elements))
+    }
+  }, { immediate: true })
 
   // Watch for target changes and update items
   watch(targetElement, async (newTarget) => {
@@ -393,9 +452,17 @@ export function useSortable(
     }
   }
 
+  // Enhanced destroy method with animation cleanup
+  const enhancedDestroy = () => {
+    // Cancel any ongoing animations
+    animation.cancelAnimations()
+    // Call original destroy
+    destroy()
+  }
+
   // Cleanup on unmount
   tryOnUnmounted(() => {
-    destroy()
+    enhancedDestroy()
   })
 
   // Return based on controls option
@@ -415,7 +482,7 @@ export function useSortable(
       stop,
       sort,
       updateItems,
-      destroy,
+      destroy: enhancedDestroy,
     }
   }
 
