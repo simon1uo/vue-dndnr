@@ -1,9 +1,11 @@
 import type { SortableEventCallbacks, SortableOptions } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
-import type { shallowRef } from 'vue'
-import { SortableManager } from '@/core/sortable-manager'
+import type { ref, shallowRef } from 'vue'
+import { getDraggableChildren } from '@/utils/sortable-dom'
 import { tryOnUnmounted } from '@vueuse/core'
-import { ref } from 'vue'
+import { computed, nextTick, toValue, watch } from 'vue'
+import { useDragCore } from './useDragCore'
+import { useSortableAnimation } from './useSortableAnimation'
 
 /**
  * Options for useSortable composable.
@@ -22,6 +24,7 @@ export interface UseSortableOptions extends SortableOptions, SortableEventCallba
    * @default true
    */
   immediate?: boolean
+
 }
 
 /**
@@ -104,69 +107,146 @@ export function useSortable(
   const {
     controls = false,
     immediate = true,
-    ...sortableOptions
+    dataIdAttr = 'data-id',
+    draggable,
   } = options
 
-  // Check browser support
-  const isSupported = ref(typeof window !== 'undefined' && 'document' in window)
+  // Resolve target element
+  const targetElement = computed(() => {
+    const el = toValue(target)
+    if (!el)
+      return null
+    return typeof el === 'string' ? document.querySelector(el) as HTMLElement : el
+  })
 
-  // Create sortable manager instance
-  const manager = new SortableManager(target, sortableOptions)
+  // Initialize core composables - dragCore provides unified state management
+  const dragCore = useDragCore(targetElement, {
+    ...options,
+  })
 
-  // Initialize if immediate is true
-  if (immediate && isSupported.value) {
-    manager.initialize()
+  const animation = useSortableAnimation(targetElement, options)
+  const state = dragCore.state
+
+  // Items management
+  const updateItems = () => {
+    const el = toValue(targetElement)
+    if (!el) {
+      state._setItems([])
+      return
+    }
+
+    const selector = toValue(draggable) || '> *'
+    const items = getDraggableChildren(el, selector)
+    state._setItems(items)
+  }
+
+  dragCore.updateOptions({
+    onItemsUpdate: () => {
+      updateItems()
+    },
+  })
+
+  // Watch for target changes and update items
+  watch(targetElement, async (newTarget) => {
+    if (newTarget) {
+      await nextTick()
+      updateItems()
+    }
+    else {
+      state._setItems([])
+    }
+  }, { immediate: true })
+
+  const draggableValue = computed(() => draggable)
+  // Watch for options changes that affect items
+  watch(draggableValue, () => {
+    if (targetElement.value) {
+      updateItems()
+    }
+  })
+
+  // Initialize items immediately if target is available
+  if (immediate && state.isSupported.value && targetElement.value) {
+    updateItems()
+  }
+
+  // Control methods
+  const start = (element: HTMLElement) => {
+    if (!state.isSupported.value)
+      return
+    dragCore.startDrag(element)
+  }
+
+  const stop = () => {
+    if (!state.isSupported.value)
+      return
+    dragCore.stopDrag()
+  }
+
+  const sort = (order: string[], useAnimation = true) => {
+    if (!state.isSupported.value)
+      return
+
+    const el = targetElement.value
+    if (!el)
+      return
+
+    const dataIdAttrValue = toValue(dataIdAttr)
+
+    // Create mapping of IDs to elements
+    const items: Record<string, HTMLElement> = {}
+    state.items.value?.forEach((item) => {
+      const id = item.getAttribute(dataIdAttrValue)
+      if (id) {
+        items[id] = item
+      }
+    })
+
+    // Capture animation state before DOM changes
+    if (useAnimation && options.animation) {
+      animation.captureAnimationState()
+    }
+
+    // Reorder elements according to the order array
+    order.forEach((id) => {
+      if (items[id]) {
+        el.removeChild(items[id])
+        el.appendChild(items[id])
+      }
+    })
+
+    // Update items after reordering
+    updateItems()
+
+    // Trigger animation after DOM changes
+    if (useAnimation && options.animation) {
+      animation.animateAll()
+    }
+  }
+
+  const destroy = () => {
+    // Destroy drag core and reset state
+    dragCore.destroy()
   }
 
   // Cleanup on unmount
   tryOnUnmounted(() => {
-    manager.cleanup()
+    destroy()
   })
-
-  // Control methods
-  const start = (_element: HTMLElement) => {
-    // TODO: Implement programmatic start
-    // This will be implemented when we add programmatic control features
-    // if (!isSupported.value)
-    //   return
-  }
-
-  const stop = () => {
-    // TODO: Implement programmatic stop
-    // This will be implemented when we add programmatic control features
-    // if (!isSupported.value)
-    //   return
-  }
-
-  const sort = (order: string[], useAnimation = true) => {
-    if (!isSupported.value)
-      return
-    manager.sort(order, useAnimation)
-  }
-
-  const updateItems = () => {
-    if (!isSupported.value)
-      return
-    manager.updateItems()
-  }
-
-  const destroy = () => {
-    manager.destroy()
-  }
 
   // Return based on controls option
   if (controls) {
     return {
-      items: manager.items,
-      isDragging: manager.isDragging,
-      dragElement: manager.dragElement,
-      ghostElement: manager.ghostElement,
-      currentIndex: manager.currentIndex,
-      isAnimating: manager.isAnimating,
-      animatingElements: manager.animatingElements,
-      isSupported,
-      isFallbackActive: manager.isFallbackActive,
-      nativeDraggable: manager.nativeDraggable,
+      items: state.items,
+      isDragging: state.isDragging,
+      dragElement: state.dragElement,
+      ghostElement: state.ghostElement,
+      currentIndex: state.currentIndex,
+      isAnimating: state.isAnimating,
+      animatingElements: state.animatingElements,
+      isSupported: state.isSupported,
+      isFallbackActive: state.isFallbackActive,
+      nativeDraggable: state.nativeDraggable,
       start,
       stop,
       sort,
@@ -176,7 +256,7 @@ export function useSortable(
   }
 
   // Simple usage - return only items
-  return manager.items
+  return state.items
 }
 
 export default useSortable
