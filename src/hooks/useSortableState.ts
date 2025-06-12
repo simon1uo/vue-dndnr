@@ -1,11 +1,15 @@
-import type { MaybeRefOrGetter } from '@vueuse/core'
-import type { Ref, ShallowRef } from 'vue'
-import { ref, shallowRef, toValue } from 'vue'
+import type { ComputedRef, Ref, ShallowRef } from 'vue'
+import type { UseSortableOptions } from './useSortable'
+import { ChromeForAndroid, IOS } from '@/utils'
+import { isClient } from '@vueuse/core'
+import { computed, ref, shallowRef, toValue } from 'vue'
 
 /**
  * Sortable state interface defining all reactive state properties
  */
 export interface SortableState {
+  /** Whether the sortable is supported in current environment */
+  isSupported: boolean
   /** Whether dragging is currently active */
   isDragging: Ref<boolean>
   /** Currently dragged element */
@@ -23,9 +27,7 @@ export interface SortableState {
   /** Whether fallback mode is currently active during drag */
   isFallbackActive: Ref<boolean>
   /** Whether native draggable is being used (false means fallback mode) */
-  nativeDraggable: Ref<boolean>
-  /** Whether the sortable is supported in current environment */
-  isSupported: Ref<boolean>
+  nativeDraggable: ComputedRef<boolean>
   /** Whether the sortable is currently paused */
   isPaused: Ref<boolean>
   /** Whether the sortable is currently disabled */
@@ -52,10 +54,6 @@ export interface SortableStateInternal extends SortableState {
   _setAnimatingElements: (elements: HTMLElement[]) => void
   /** Set fallback active state */
   _setFallbackActive: (value: boolean) => void
-  /** Set native draggable state */
-  _setNativeDraggable: (value: boolean) => void
-  /** Set supported state */
-  _setSupported: (value: boolean) => void
   /** Set paused state */
   _setPaused: (value: boolean) => void
   /** Set disabled state */
@@ -66,46 +64,6 @@ export interface SortableStateInternal extends SortableState {
   _validateState: () => boolean
   /** Check if operation is allowed in current state */
   _canPerformOperation: (operation: string) => boolean
-}
-
-/**
- * Options for useSortableState composable
- */
-export interface UseSortableStateOptions {
-  /** Initial supported state */
-  initialSupported?: MaybeRefOrGetter<boolean>
-  /** Initial native draggable state */
-  initialNativeDraggable?: MaybeRefOrGetter<boolean>
-  /** Initial disabled state */
-  initialDisabled?: MaybeRefOrGetter<boolean>
-  /** Enable automatic native draggable detection */
-  autoDetectNative?: boolean
-  /** Enable state validation */
-  enableValidation?: boolean
-  /** Custom native draggable detection function */
-  detectNativeDraggable?: () => boolean
-}
-
-/**
- * Detects native draggable support in current environment
- */
-function detectNativeDraggableSupport(): boolean {
-  if (typeof window === 'undefined')
-    return false
-
-  // Check for basic drag and drop API support
-  const hasBasicSupport = 'draggable' in document.createElement('div')
-    && 'ondragstart' in window
-    && 'ondrop' in window
-
-  // Check for DataTransfer API
-  const hasDataTransfer = typeof DataTransfer !== 'undefined'
-
-  // Check for touch device (usually needs fallback)
-  const isTouchDevice = 'ontouchstart' in window
-    || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
-
-  return hasBasicSupport && hasDataTransfer && !isTouchDevice
 }
 
 /**
@@ -126,16 +84,14 @@ function detectNativeDraggableSupport(): boolean {
  * @returns State object with reactive state and internal mutation methods
  */
 export function useSortableState(
-  options: UseSortableStateOptions = {},
+  options: UseSortableOptions = {},
 ): SortableStateInternal {
   const {
-    initialSupported = typeof window !== 'undefined' && 'document' in window,
-    initialNativeDraggable = true,
-    initialDisabled = false,
-    autoDetectNative = true,
-    enableValidation = true,
-    detectNativeDraggable = detectNativeDraggableSupport,
+    disabled,
+    forceFallback,
   } = options
+
+  const isDraggableSupported = computed(() => isClient && !(ChromeForAndroid) && !(IOS) && 'draggable' in document.createElement('div'))
 
   // Core drag state
   const isDragging = ref(false)
@@ -152,22 +108,16 @@ export function useSortableState(
 
   // Control state
   const isPaused = ref(false)
-  const isDisabled = ref(toValue(initialDisabled))
+  const isDisabled = ref(toValue(disabled) ?? false)
 
   // Fallback and support state
   const isFallbackActive = ref(false)
-  const isSupported = ref(toValue(initialSupported))
 
   // Native draggable detection with auto-detection
-  const nativeDraggable = ref(
-    autoDetectNative ? detectNativeDraggable() : toValue(initialNativeDraggable),
-  )
+  const nativeDraggable = computed(() => isClient && !toValue(forceFallback) && isDraggableSupported.value)
 
   // State validation and operation control
   const _validateState = (): boolean => {
-    if (!enableValidation)
-      return true
-
     // Check for inconsistent states
     if (isDragging.value && !dragElement.value) {
       console.warn('[useSortableState] Inconsistent state: dragging is true but dragElement is null')
@@ -198,8 +148,8 @@ export function useSortableState(
       return false
     }
 
-    if (!isSupported.value) {
-      console.warn(`[useSortableState] Operation '${operation}' blocked: sortable is not supported`)
+    if (!isClient) {
+      console.warn(`[useSortableState] Operation '${operation}' blocked: sortable is not supported in non-client environment`)
       return false
     }
 
@@ -211,14 +161,10 @@ export function useSortableState(
     if (value && !_canPerformOperation('startDrag'))
       return
     isDragging.value = value
-    if (enableValidation)
-      _validateState()
   }
 
   const _setDragElement = (element: HTMLElement | null) => {
     dragElement.value = element
-    if (enableValidation)
-      _validateState()
   }
 
   const _setGhostElement = (element: HTMLElement | null) => {
@@ -235,33 +181,21 @@ export function useSortableState(
 
   const _setAnimating = (value: boolean) => {
     isAnimating.value = value
-    if (enableValidation)
-      _validateState()
   }
 
   const _setAnimatingElements = (elements: HTMLElement[]) => {
     animatingElements.value = elements
-    if (enableValidation)
-      _validateState()
   }
 
   const _setFallbackActive = (value: boolean) => {
     isFallbackActive.value = value
   }
 
-  const _setNativeDraggable = (value: boolean) => {
-    nativeDraggable.value = value
-  }
-
-  const _setSupported = (value: boolean) => {
-    isSupported.value = value
-  }
-
   const _setPaused = (value: boolean) => {
     isPaused.value = value
 
     // If unpausing, validate current state
-    if (!value && enableValidation) {
+    if (!value) {
       _validateState()
     }
   }
@@ -291,32 +225,12 @@ export function useSortableState(
     animatingElements.value = []
     isFallbackActive.value = false
     isPaused.value = false
-    isDisabled.value = toValue(initialDisabled)
-    nativeDraggable.value = autoDetectNative ? detectNativeDraggable() : toValue(initialNativeDraggable)
-    isSupported.value = toValue(initialSupported)
-  }
-
-  // Watch for environment changes and update native draggable detection
-  if (autoDetectNative && typeof window !== 'undefined') {
-    // Re-detect on window resize (might indicate device orientation change)
-    let resizeTimeout: number
-    const handleResize = () => {
-      clearTimeout(resizeTimeout)
-      resizeTimeout = setTimeout(() => {
-        const newNativeSupport = detectNativeDraggable()
-        if (newNativeSupport !== nativeDraggable.value) {
-          nativeDraggable.value = newNativeSupport
-        }
-      }, 100)
-    }
-
-    window.addEventListener('resize', handleResize)
-
-    // Cleanup on unmount would be handled by the consuming component
+    isDisabled.value = toValue(disabled) ?? false
   }
 
   return {
     // Reactive state
+    isSupported: isClient,
     isDragging,
     dragElement,
     ghostElement,
@@ -326,7 +240,6 @@ export function useSortableState(
     animatingElements,
     isFallbackActive,
     nativeDraggable,
-    isSupported,
     isPaused,
     isDisabled,
 
@@ -339,8 +252,6 @@ export function useSortableState(
     _setAnimating,
     _setAnimatingElements,
     _setFallbackActive,
-    _setNativeDraggable,
-    _setSupported,
     _setPaused,
     _setDisabled,
     _resetState,

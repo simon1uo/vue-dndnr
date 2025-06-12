@@ -1,3 +1,4 @@
+export * from './agent'
 export * from './config'
 export * from './cursor'
 export * from './dimensions'

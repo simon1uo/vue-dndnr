@@ -1180,7 +1180,7 @@ export function useDragCore(
     const isTouch = evt.type.startsWith('touch')
       || (evt instanceof PointerEvent && evt.pointerType === 'touch')
 
-    const shouldUseFallbackMode = !state.nativeDraggable.value || isTouch
+    const shouldUseFallbackMode = !toValue(state.nativeDraggable.value) || isTouch
 
     if (shouldUseFallbackMode) {
       isUsingFallback.value = true
@@ -1482,7 +1482,7 @@ export function useDragCore(
   })
 
   // Watch for native draggable changes and update listeners
-  watch(() => toValue(forceFallback), (newForceFallback, oldForceFallback) => {
+  watch(() => state.nativeDraggable.value, (newForceFallback, oldForceFallback) => {
     if (newForceFallback !== oldForceFallback && targetElement.value) {
       // Only reinitialize if not currently dragging to avoid disruption
       if (!state.isDragging.value) {
@@ -1493,8 +1493,6 @@ export function useDragCore(
         // Setup new listeners without full reinitialization
         setupEventListeners()
       }
-
-      state._setNativeDraggable(!newForceFallback)
     }
   })
 

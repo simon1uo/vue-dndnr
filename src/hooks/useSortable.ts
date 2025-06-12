@@ -219,7 +219,7 @@ export interface UseSortableReturn {
   /** Elements currently being animated */
   animatingElements: ReturnType<typeof shallowRef<HTMLElement[]>>
   /** Whether the sortable is supported in current environment */
-  isSupported: ReturnType<typeof ref<boolean>>
+  isSupported: boolean
   /** Whether fallback mode is currently active during drag */
   isFallbackActive: ReturnType<typeof ref<boolean>>
   /** Whether native draggable is being used (false means fallback mode) */
@@ -301,9 +301,7 @@ export function useSortable(
     return typeof el === 'string' ? document.querySelector(el) as HTMLElement : el
   })
 
-  const state = useSortableState({
-    initialSupported: computed(() => typeof window !== 'undefined'),
-  })
+  const state = useSortableState(options)
 
   // Initialize unified event dispatcher
   const eventDispatcher = useEventDispatcher(targetElement)
@@ -408,25 +406,25 @@ export function useSortable(
   })
 
   // Initialize items immediately if target is available
-  if (immediate && state.isSupported.value && targetElement.value) {
+  if (immediate && state.isSupported && targetElement.value) {
     updateItems()
   }
 
   // Control methods
   const start = (element: HTMLElement) => {
-    if (!state.isSupported.value)
+    if (!state.isSupported)
       return
     startDrag(element)
   }
 
   const stop = () => {
-    if (!state.isSupported.value)
+    if (!state.isSupported)
       return
     stopDrag()
   }
 
   const sort = (order: string[], useAnimation = true) => {
-    if (!state.isSupported.value)
+    if (!state.isSupported)
       return
 
     const el = targetElement.value
