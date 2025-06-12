@@ -2,6 +2,7 @@ import type { AnimationEvent, AnimationEventCallbacks, EasingFunction, Rect } fr
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, shallowRef, toValue, watch } from 'vue'
+import { useEventDispatcher } from './useEventDispatcher'
 
 // Extend HTMLElement interface to include animation properties
 declare global {
@@ -119,6 +120,11 @@ export function useSortableAnimation(
 
   // Computed target element
   const targetElement = computed(() => toValue(target))
+
+  // Initialize unified event dispatcher for animation events
+  const eventDispatcher = useEventDispatcher(target, {
+    eventPrefix: 'sortable',
+  })
 
   // Computed options with defaults
   const resolvedOptions = computed(() => {
@@ -249,7 +255,7 @@ export function useSortableAnimation(
   }
 
   /**
-   * Dispatch animation event
+   * Dispatch animation event using unified event dispatcher
    */
   const dispatchAnimationEvent = (
     type: 'start' | 'end' | 'cancel',
@@ -258,36 +264,21 @@ export function useSortableAnimation(
     easing?: string,
   ): void => {
     const opts = resolvedOptions.value
-    const event: AnimationEvent = {
-      type,
-      target,
-      duration,
-      easing,
-      properties: {
-        transform: getComputedStyle(target, 'transform'),
-        transition: getComputedStyle(target, 'transition'),
-      },
-    }
 
-    // Dispatch custom event on the target element
-    const customEvent = new CustomEvent(`sortable:animation:${type}`, {
-      detail: event,
-      bubbles: true,
-      cancelable: true,
-    })
-
-    target.dispatchEvent(customEvent)
-
-    // Call animation event callbacks if provided
+    // Get appropriate callback based on event type
+    let callback: ((event: AnimationEvent) => void) | undefined
     if (type === 'start' && opts.onAnimationStart) {
-      opts.onAnimationStart(event)
+      callback = opts.onAnimationStart
     }
     else if (type === 'end' && opts.onAnimationEnd) {
-      opts.onAnimationEnd(event)
+      callback = opts.onAnimationEnd
     }
     else if (type === 'cancel' && opts.onAnimationCancel) {
-      opts.onAnimationCancel(event)
+      callback = opts.onAnimationCancel
     }
+
+    // Dispatch animation event using unified event dispatcher
+    eventDispatcher.dispatchAnimation(type, target, duration, easing, callback)
   }
 
   /**

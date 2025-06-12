@@ -13,9 +13,9 @@ import {
   getDraggableChildren,
   getElementIndex,
 } from '@/utils/sortable-dom'
-import { dispatchSortableEvent, normalizeEventData } from '@/utils/sortable-event'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
+import { useEventDispatcher } from './useEventDispatcher'
 
 export interface UseDragCoreOptions extends UseSortableOptions {
   state: SortableStateInternal
@@ -88,7 +88,7 @@ export function useDragCore(
   target: MaybeRefOrGetter<HTMLElement | null>,
   options: MaybeRefOrGetter<UseDragCoreOptions>,
 ): UseDragCoreReturn {
-// Internal state
+  // Internal state
   const startIndex = ref(-1)
   const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
   const currentTouchEvent = ref<{ clientX: number, clientY: number } | undefined>()
@@ -96,6 +96,9 @@ export function useDragCore(
   const cleanupFunctions = ref<Array<() => void>>([])
   const dragCleanupFunctions = ref<Array<() => void>>([])
   const isPaused = ref(false)
+
+  // Initialize unified event dispatcher
+  const eventDispatcher = useEventDispatcher(target)
 
   // Fallback drag state
   const isFallbackActive = ref(false)
@@ -509,7 +512,7 @@ export function useDragCore(
   }
 
   /**
-   * Dispatch a sortable event with proper callback handling
+   * Dispatch a sortable event with proper callback handling using unified event dispatcher
    */
   const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEvent> = {}) => {
     const el = targetElement.value
@@ -533,17 +536,17 @@ export function useDragCore(
       willInsertAfter: data.willInsertAfter,
     }
 
-    // Normalize event data with defaults
-    const eventData = normalizeEventData(eventType, {
+    // Prepare event data with defaults
+    const eventData: Partial<SortableEventData> = {
       to: el,
       from: el,
       item: dragElement,
       oldIndex: startIndex.value,
       newIndex: startIndex.value,
       ...compatibleData,
-    })
+    }
 
-    // Call appropriate callback based on event type
+    // Get appropriate callback based on event type
     let callback: ((evt: SortableEvent) => void) | undefined
     switch (eventType) {
       case 'start':
@@ -560,8 +563,8 @@ export function useDragCore(
         break
     }
 
-    // Dispatch event using the utility function
-    dispatchSortableEvent(el, eventType, eventData, callback)
+    // Dispatch event using unified event dispatcher
+    eventDispatcher.dispatch(eventType, eventData, callback)
   }
 
   /**

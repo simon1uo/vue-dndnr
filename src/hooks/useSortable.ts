@@ -5,6 +5,7 @@ import { getDraggableChildren } from '@/utils/sortable-dom'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
 import { useDragCore } from './useDragCore'
+import { useEventDispatcher } from './useEventDispatcher'
 import { useSortableAnimation } from './useSortableAnimation'
 import useSortableState from './useSortableState'
 
@@ -233,6 +234,8 @@ export interface UseSortableReturn {
   updateItems: () => void
   /** Destroy the sortable instance */
   destroy: () => void
+  /** Unified event dispatcher for programmatic event handling */
+  eventDispatcher: ReturnType<typeof useEventDispatcher>
 }
 
 /**
@@ -293,6 +296,9 @@ export function useSortable(
   const state = useSortableState({
     initialSupported: computed(() => typeof window !== 'undefined'),
   })
+
+  // Initialize unified event dispatcher
+  const eventDispatcher = useEventDispatcher(targetElement)
 
   // Initialize animation composable first
   const animation = useSortableAnimation(targetElement, options)
@@ -483,6 +489,7 @@ export function useSortable(
       sort,
       updateItems,
       destroy: enhancedDestroy,
+      eventDispatcher,
     }
   }
 

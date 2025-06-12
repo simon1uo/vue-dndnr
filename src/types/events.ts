@@ -1,4 +1,26 @@
 /**
+ * Internal event types
+ * All possible event types that can be dispatched by the sortable system.
+ * Used for event handling and dispatching.
+ */
+export type SortableEventType =
+  | 'start'
+  | 'end'
+  | 'add'
+  | 'remove'
+  | 'update'
+  | 'sort'
+  | 'filter'
+  | 'move'
+  | 'clone'
+  | 'change'
+  | 'choose'
+  | 'unchoose'
+  | 'spill'
+  | 'select'
+  | 'deselect'
+
+/**
  * Sortable event interface
  * Standard drag and drop event interface based on SortableJS.
  * Contains information about the drag operation, including source and target elements,
@@ -124,28 +146,6 @@ export interface SortableEventCallbacks {
 }
 
 /**
- * Internal event types
- * All possible event types that can be dispatched by the sortable system.
- * Used for event handling and dispatching.
- */
-export type SortableEventType =
-  | 'start'
-  | 'end'
-  | 'add'
-  | 'remove'
-  | 'update'
-  | 'sort'
-  | 'filter'
-  | 'move'
-  | 'clone'
-  | 'change'
-  | 'choose'
-  | 'unchoose'
-  | 'spill'
-  | 'select'
-  | 'deselect'
-
-/**
  * Event listener function type
  * Generic event listener that can handle any sortable event and
  * optionally return a boolean to control event flow.
@@ -163,59 +163,6 @@ export type SortableEventListener = (event: SortableEvent, ...args: any[]) => vo
  */
 export type SortableEventHandlerMap = {
   [K in SortableEventType]?: SortableEventListener
-}
-
-/**
- * Plugin event interface
- * Events specific to the plugin system.
- * Used for plugin lifecycle management and communication.
- */
-export interface PluginEvent {
-  /** Plugin name identifier */
-  plugin: string
-  /** Event type identifier */
-  type: string
-  /** Optional event data payload */
-  data?: any
-  /** Target element associated with the event */
-  target?: HTMLElement
-  /**
-   * Whether the event can be cancelled
-   * @default false
-   */
-  cancelable?: boolean
-  /**
-   * Whether the event was cancelled
-   * @default false
-   */
-  cancelled?: boolean
-}
-
-/**
- * Plugin event callbacks
- * Callback functions for plugin lifecycle events.
- */
-export interface PluginEventCallbacks {
-  /**
-   * Triggered when plugin is initialized
-   * @param event The plugin event object
-   */
-  onPluginInit?: (event: PluginEvent) => void
-  /**
-   * Triggered when plugin is destroyed
-   * @param event The plugin event object
-   */
-  onPluginDestroy?: (event: PluginEvent) => void
-  /**
-   * Triggered when plugin state changes
-   * @param event The plugin event object
-   */
-  onPluginStateChange?: (event: PluginEvent) => void
-  /**
-   * Triggered when plugin error occurs
-   * @param event The plugin event object
-   */
-  onPluginError?: (event: PluginEvent) => void
 }
 
 /**
@@ -255,84 +202,6 @@ export interface SortableEventData {
    * Allows for extending the event with custom data
    */
   [key: string]: any
-}
-
-/**
- * Event dispatcher interface
- * Interface for the event dispatching system.
- * Provides methods for registering, removing, and triggering event handlers.
- */
-export interface EventDispatcher {
-  /**
-   * Add event listener
-   * @param eventType The type of event to listen for
-   * @param listener The callback function to execute
-   * @returns Cleanup function to remove the listener
-   */
-  on: (eventType: SortableEventType, listener: SortableEventListener) => () => void
-  /**
-   * Remove event listener
-   * @param eventType The type of event to remove listener from
-   * @param listener The callback function to remove
-   */
-  off: (eventType: SortableEventType, listener: SortableEventListener) => void
-  /**
-   * Dispatch event
-   * @param eventType The type of event to dispatch
-   * @param data The event data to include
-   * @returns Result from event handlers (if any)
-   */
-  dispatch: (eventType: SortableEventType, data: SortableEventData) => boolean | void
-  /**
-   * Remove all listeners
-   * Clears all registered event handlers
-   */
-  removeAllListeners: () => void
-  /**
-   * Check if has listeners for event type
-   * @param eventType The type of event to check
-   * @returns Whether there are any listeners for this event type
-   */
-  hasListeners: (eventType: SortableEventType) => boolean
-}
-
-/**
- * Event bus interface
- * For cross-component communication.
- * Provides a pub/sub pattern for components to communicate.
- */
-export interface SortableEventBus {
-  /**
-   * Emit event
-   * @param event The event name to emit
-   * @param args Additional arguments to pass to listeners
-   */
-  emit: (event: string, ...args: any[]) => void
-  /**
-   * Listen to event
-   * @param event The event name to listen for
-   * @param listener The callback function to execute
-   * @returns Cleanup function to remove the listener
-   */
-  on: (event: string, listener: (...args: any[]) => void) => () => void
-  /**
-   * Listen to event once
-   * @param event The event name to listen for
-   * @param listener The callback function to execute once
-   * @returns Cleanup function to remove the listener
-   */
-  once: (event: string, listener: (...args: any[]) => void) => () => void
-  /**
-   * Remove listener
-   * @param event The event name to remove listener from
-   * @param listener Optional specific listener to remove (removes all if not provided)
-   */
-  off: (event: string, listener?: (...args: any[]) => void) => void
-  /**
-   * Clear all listeners
-   * Removes all event listeners from all event types
-   */
-  clear: () => void
 }
 
 /**
