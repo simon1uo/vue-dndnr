@@ -224,10 +224,18 @@ export interface UseSortableReturn {
   isFallbackActive: ReturnType<typeof ref<boolean>>
   /** Whether native draggable is being used (false means fallback mode) */
   nativeDraggable: ReturnType<typeof ref<boolean>>
+  /** Whether the sortable is currently paused */
+  isPaused: ReturnType<typeof ref<boolean>>
+  /** Whether the sortable is currently disabled */
+  isDisabled: ReturnType<typeof ref<boolean>>
   /** Start dragging programmatically */
   start: (element: HTMLElement) => void
   /** Stop dragging programmatically */
   stop: () => void
+  /** Pause drag functionality (temporarily disable) */
+  pause: () => void
+  /** Resume drag functionality */
+  resume: () => void
   /** Sort items programmatically */
   sort: (order: string[], useAnimation?: boolean) => void
   /** Update items list manually */
@@ -317,7 +325,7 @@ export function useSortable(
   }
 
   // Initialize core composable - dragCore provides unified state management
-  const { startDrag, stopDrag, destroy } = useDragCore(targetElement, {
+  const { startDrag, stopDrag, pause, resume, destroy } = useDragCore(targetElement, {
     ...options,
     state,
     // Integrate animation with drag events
@@ -484,8 +492,12 @@ export function useSortable(
       isSupported: state.isSupported,
       isFallbackActive: state.isFallbackActive,
       nativeDraggable: state.nativeDraggable,
+      isPaused: state.isPaused,
+      isDisabled: state.isDisabled,
       start,
       stop,
+      pause,
+      resume,
       sort,
       updateItems,
       destroy: enhancedDestroy,

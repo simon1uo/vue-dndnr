@@ -95,7 +95,6 @@ export function useDragCore(
   const isUsingFallback = ref(false)
   const cleanupFunctions = ref<Array<() => void>>([])
   const dragCleanupFunctions = ref<Array<() => void>>([])
-  const isPaused = ref(false)
 
   // Initialize unified event dispatcher
   const eventDispatcher = useEventDispatcher(target)
@@ -240,7 +239,9 @@ export function useDragCore(
         return MatrixFn ? new MatrixFn(appliedTransforms) : null
       }
     }
-    catch { }
+    catch {
+      console.error('[useDragCore] Error getting element matrix', element)
+    }
     return null
   }
 
@@ -324,27 +325,13 @@ export function useDragCore(
   /**
    * Determine if fallback mode should be used
    */
-  const shouldUseFallback = (): boolean => {
+  const _shouldUseFallback = (): boolean => {
     // Force fallback if explicitly requested
     if (toValue(forceFallback)) {
       return true
     }
 
-    // SSR compatibility check
-    if (typeof window === 'undefined') {
-      return false
-    }
-
-    // Check for touch device
-    const isTouchDevice = ('ontouchstart' in window)
-      || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
-
-    // Check for native draggable support
-    const testDiv = document.createElement('div')
-    const supportsDraggable = 'draggable' in testDiv
-
-    // Use fallback for touch devices or browsers without native drag support
-    return isTouchDevice || !supportsDraggable
+    return !state.nativeDraggable.value
   }
 
   /**
@@ -804,6 +791,10 @@ export function useDragCore(
       parent.insertBefore(dragElement, target)
     }
 
+    // Update current index after DOM changes
+    const newCurrentIndex = getElementIndex(dragElement)
+    state._setCurrentIndex(newCurrentIndex)
+
     // Immediately notify about DOM changes for responsive data updates
     if (onItemsUpdate) {
       onItemsUpdate()
@@ -835,6 +826,7 @@ export function useDragCore(
    */
   const resetDragState = () => {
     state._setDragElement(null)
+    state._setCurrentIndex(null)
     startIndex.value = -1
     isUsingFallback.value = false
     tapEvt.value = undefined
@@ -1057,6 +1049,8 @@ export function useDragCore(
 
     // Now we're actually dragging
     state._setDragging(true)
+    // Set current index when drag actually starts
+    state._setCurrentIndex(startIndex.value)
 
     // Set up data transfer for native drag
     if (evt.dataTransfer) {
@@ -1148,6 +1142,8 @@ export function useDragCore(
     // Set dragging state
     state._setDragging(true)
     state._setFallbackActive(true)
+    // Set current index when drag actually starts
+    state._setCurrentIndex(startIndex.value)
 
     // Add drag class
     const currentDragClass = toValue(dragClass)
@@ -1176,8 +1172,10 @@ export function useDragCore(
    */
   const startDragOperation = (evt: Event) => {
     const dragElement = state.dragElement.value
-    if (!dragElement)
+    if (!dragElement) {
+      console.warn('[useDragCore] Cannot start drag operation: no drag element')
       return
+    }
 
     const isTouch = evt.type.startsWith('touch')
       || (evt instanceof PointerEvent && evt.pointerType === 'touch')
@@ -1205,6 +1203,11 @@ export function useDragCore(
    * Prepare to start dragging
    */
   const prepareDragStart = (evt: Event, dragElement: HTMLElement) => {
+    if (!state._canPerformOperation('startDrag')) {
+      console.warn('[useDragCore] Cannot prepare drag start: operation not allowed')
+      return
+    }
+
     state._setDragElement(dragElement)
     startIndex.value = getElementIndex(dragElement)
 
@@ -1255,10 +1258,31 @@ export function useDragCore(
   }
 
   /**
+   * Check if drag operation can be started
+   */
+  const canStartDrag = (): boolean => {
+    // Use state's operation permission check for consistency
+    if (!state._canPerformOperation('startDrag')) {
+      return false
+    }
+
+    // Additional checks specific to drag core
+    if (toValue(disabled)) {
+      return false
+    }
+
+    if (state.isDragging.value) {
+      return false
+    }
+
+    return true
+  }
+
+  /**
    * Handle mouse down event to initiate drag
    */
   const handleMouseDown = (evt: MouseEvent) => {
-    if (toValue(disabled) || state.isDragging.value || isPaused.value)
+    if (!canStartDrag())
       return
 
     const target = evt.target as HTMLElement
@@ -1280,7 +1304,7 @@ export function useDragCore(
    * Handle touch start event for mobile drag
    */
   const handleTouchStart = (evt: TouchEvent) => {
-    if (toValue(disabled) || state.isDragging.value || isPaused.value)
+    if (!canStartDrag())
       return
 
     const target = evt.target as HTMLElement
@@ -1343,9 +1367,6 @@ export function useDragCore(
     if (!el)
       return
 
-    // Update native draggable state
-    state._setNativeDraggable(!shouldUseFallback())
-
     // Setup event listeners
     setupEventListeners()
   }
@@ -1354,7 +1375,10 @@ export function useDragCore(
    * Start dragging programmatically
    */
   const startDrag = (element: HTMLElement) => {
-    if (state.isDragging.value || state.dragElement.value)
+    if (!canStartDrag())
+      return
+
+    if (state.dragElement.value)
       return
 
     // Create a synthetic mouse event
@@ -1386,16 +1410,28 @@ export function useDragCore(
 
   /**
    * Pause drag functionality (temporarily disable)
+   * Uses unified state management for consistency
    */
   const pause = () => {
-    isPaused.value = true
+    state._setPaused(true)
+
+    if (state.isDragging.value) {
+      console.warn('[useDragCore] Pausing during active drag - stopping current operation')
+      stopDrag()
+    }
   }
 
   /**
    * Resume drag functionality
+   * Uses unified state management for consistency
    */
   const resume = () => {
-    isPaused.value = false
+    if (!state._canPerformOperation('resume')) {
+      console.warn('[useDragCore] Cannot resume: operation not allowed')
+      return
+    }
+
+    state._setPaused(false)
   }
 
   /**
@@ -1429,6 +1465,38 @@ export function useDragCore(
       }
     }
   }, { immediate: toValue(immediate) })
+
+  // Watch for state changes that affect drag operations
+  watch(() => state.isDisabled.value, (isDisabled) => {
+    if (isDisabled && state.isDragging.value) {
+      console.warn('[useDragCore] Sortable disabled during drag - stopping operation')
+      stopDrag()
+    }
+  })
+
+  watch(() => state.isPaused.value, (isPaused) => {
+    if (isPaused && state.isDragging.value) {
+      console.warn('[useDragCore] Sortable paused during drag - stopping operation')
+      stopDrag()
+    }
+  })
+
+  // Watch for native draggable changes and update listeners
+  watch(() => toValue(forceFallback), (newForceFallback, oldForceFallback) => {
+    if (newForceFallback !== oldForceFallback && targetElement.value) {
+      // Only reinitialize if not currently dragging to avoid disruption
+      if (!state.isDragging.value) {
+        // Clean up current listeners
+        cleanupFunctions.value.forEach(cleanup => cleanup())
+        cleanupFunctions.value = []
+
+        // Setup new listeners without full reinitialization
+        setupEventListeners()
+      }
+
+      state._setNativeDraggable(!newForceFallback)
+    }
+  })
 
   // Cleanup on unmount
   tryOnUnmounted(() => {

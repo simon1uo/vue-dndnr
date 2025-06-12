@@ -26,6 +26,10 @@ export interface SortableState {
   nativeDraggable: Ref<boolean>
   /** Whether the sortable is supported in current environment */
   isSupported: Ref<boolean>
+  /** Whether the sortable is currently paused */
+  isPaused: Ref<boolean>
+  /** Whether the sortable is currently disabled */
+  isDisabled: Ref<boolean>
 }
 
 /**
@@ -52,8 +56,16 @@ export interface SortableStateInternal extends SortableState {
   _setNativeDraggable: (value: boolean) => void
   /** Set supported state */
   _setSupported: (value: boolean) => void
+  /** Set paused state */
+  _setPaused: (value: boolean) => void
+  /** Set disabled state */
+  _setDisabled: (value: boolean) => void
   /** Reset all state to initial values */
   _resetState: () => void
+  /** Validate state consistency */
+  _validateState: () => boolean
+  /** Check if operation is allowed in current state */
+  _canPerformOperation: (operation: string) => boolean
 }
 
 /**
@@ -64,6 +76,36 @@ export interface UseSortableStateOptions {
   initialSupported?: MaybeRefOrGetter<boolean>
   /** Initial native draggable state */
   initialNativeDraggable?: MaybeRefOrGetter<boolean>
+  /** Initial disabled state */
+  initialDisabled?: MaybeRefOrGetter<boolean>
+  /** Enable automatic native draggable detection */
+  autoDetectNative?: boolean
+  /** Enable state validation */
+  enableValidation?: boolean
+  /** Custom native draggable detection function */
+  detectNativeDraggable?: () => boolean
+}
+
+/**
+ * Detects native draggable support in current environment
+ */
+function detectNativeDraggableSupport(): boolean {
+  if (typeof window === 'undefined')
+    return false
+
+  // Check for basic drag and drop API support
+  const hasBasicSupport = 'draggable' in document.createElement('div')
+    && 'ondragstart' in window
+    && 'ondrop' in window
+
+  // Check for DataTransfer API
+  const hasDataTransfer = typeof DataTransfer !== 'undefined'
+
+  // Check for touch device (usually needs fallback)
+  const isTouchDevice = 'ontouchstart' in window
+    || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
+
+  return hasBasicSupport && hasDataTransfer && !isTouchDevice
 }
 
 /**
@@ -76,6 +118,9 @@ export interface UseSortableStateOptions {
  * - Internal mutation methods for controlled updates
  * - Proper initial state handling
  * - State reset functionality
+ * - Enhanced pause/resume functionality
+ * - Automatic native draggable detection
+ * - State validation and consistency checks
  *
  * @param options - Configuration options for state initialization
  * @returns State object with reactive state and internal mutation methods
@@ -86,6 +131,10 @@ export function useSortableState(
   const {
     initialSupported = typeof window !== 'undefined' && 'document' in window,
     initialNativeDraggable = true,
+    initialDisabled = false,
+    autoDetectNative = true,
+    enableValidation = true,
+    detectNativeDraggable = detectNativeDraggableSupport,
   } = options
 
   // Core drag state
@@ -101,18 +150,75 @@ export function useSortableState(
   const isAnimating = ref(false)
   const animatingElements = shallowRef<HTMLElement[]>([])
 
+  // Control state
+  const isPaused = ref(false)
+  const isDisabled = ref(toValue(initialDisabled))
+
   // Fallback and support state
   const isFallbackActive = ref(false)
-  const nativeDraggable = ref(toValue(initialNativeDraggable))
   const isSupported = ref(toValue(initialSupported))
 
-  // Internal mutation methods
+  // Native draggable detection with auto-detection
+  const nativeDraggable = ref(
+    autoDetectNative ? detectNativeDraggable() : toValue(initialNativeDraggable),
+  )
+
+  // State validation and operation control
+  const _validateState = (): boolean => {
+    if (!enableValidation)
+      return true
+
+    // Check for inconsistent states
+    if (isDragging.value && !dragElement.value) {
+      console.warn('[useSortableState] Inconsistent state: dragging is true but dragElement is null')
+      return false
+    }
+
+    if (dragElement.value && !isDragging.value) {
+      console.warn('[useSortableState] Inconsistent state: dragElement exists but dragging is false')
+      return false
+    }
+
+    if (isAnimating.value && animatingElements.value.length === 0) {
+      console.warn('[useSortableState] Inconsistent state: animating is true but no animating elements')
+      return false
+    }
+
+    return true
+  }
+
+  const _canPerformOperation = (operation: string): boolean => {
+    if (isDisabled.value) {
+      console.warn(`[useSortableState] Operation '${operation}' blocked: sortable is disabled`)
+      return false
+    }
+
+    if (isPaused.value && operation !== 'resume') {
+      console.warn(`[useSortableState] Operation '${operation}' blocked: sortable is paused`)
+      return false
+    }
+
+    if (!isSupported.value) {
+      console.warn(`[useSortableState] Operation '${operation}' blocked: sortable is not supported`)
+      return false
+    }
+
+    return true
+  }
+
+  // Internal mutation methods with validation
   const _setDragging = (value: boolean) => {
+    if (value && !_canPerformOperation('startDrag'))
+      return
     isDragging.value = value
+    if (enableValidation)
+      _validateState()
   }
 
   const _setDragElement = (element: HTMLElement | null) => {
     dragElement.value = element
+    if (enableValidation)
+      _validateState()
   }
 
   const _setGhostElement = (element: HTMLElement | null) => {
@@ -129,10 +235,14 @@ export function useSortableState(
 
   const _setAnimating = (value: boolean) => {
     isAnimating.value = value
+    if (enableValidation)
+      _validateState()
   }
 
   const _setAnimatingElements = (elements: HTMLElement[]) => {
     animatingElements.value = elements
+    if (enableValidation)
+      _validateState()
   }
 
   const _setFallbackActive = (value: boolean) => {
@@ -145,6 +255,26 @@ export function useSortableState(
 
   const _setSupported = (value: boolean) => {
     isSupported.value = value
+  }
+
+  const _setPaused = (value: boolean) => {
+    isPaused.value = value
+
+    // If unpausing, validate current state
+    if (!value && enableValidation) {
+      _validateState()
+    }
+  }
+
+  const _setDisabled = (value: boolean) => {
+    isDisabled.value = value
+
+    // If disabling while dragging, stop the drag
+    if (value && isDragging.value) {
+      isDragging.value = false
+      dragElement.value = null
+      currentIndex.value = null
+    }
   }
 
   /**
@@ -160,11 +290,33 @@ export function useSortableState(
     isAnimating.value = false
     animatingElements.value = []
     isFallbackActive.value = false
-    nativeDraggable.value = toValue(initialNativeDraggable)
+    isPaused.value = false
+    isDisabled.value = toValue(initialDisabled)
+    nativeDraggable.value = autoDetectNative ? detectNativeDraggable() : toValue(initialNativeDraggable)
     isSupported.value = toValue(initialSupported)
   }
 
+  // Watch for environment changes and update native draggable detection
+  if (autoDetectNative && typeof window !== 'undefined') {
+    // Re-detect on window resize (might indicate device orientation change)
+    let resizeTimeout: number
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        const newNativeSupport = detectNativeDraggable()
+        if (newNativeSupport !== nativeDraggable.value) {
+          nativeDraggable.value = newNativeSupport
+        }
+      }, 100)
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    // Cleanup on unmount would be handled by the consuming component
+  }
+
   return {
+    // Reactive state
     isDragging,
     dragElement,
     ghostElement,
@@ -175,6 +327,10 @@ export function useSortableState(
     isFallbackActive,
     nativeDraggable,
     isSupported,
+    isPaused,
+    isDisabled,
+
+    // Internal mutation methods
     _setDragging,
     _setDragElement,
     _setGhostElement,
@@ -185,7 +341,11 @@ export function useSortableState(
     _setFallbackActive,
     _setNativeDraggable,
     _setSupported,
+    _setPaused,
+    _setDisabled,
     _resetState,
+    _validateState,
+    _canPerformOperation,
   }
 }
 
