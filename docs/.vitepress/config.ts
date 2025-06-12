@@ -55,8 +55,6 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/api/' },
           { text: 'useDnR', link: '/api/use-dnr' },
-          { text: 'useDrag', link: '/api/use-drag' },
-          { text: 'useDrop', link: '/api/use-drop' },
         ],
       },
       {
@@ -85,8 +83,6 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/api/' },
             { text: 'useDnR', link: '/api/use-dnr' },
-            { text: 'useDrag', link: '/api/use-drag' },
-            { text: 'useDrop', link: '/api/use-drop' },
           ],
         },
       ],
