@@ -420,7 +420,7 @@ export function useSortableDrag(
       return
     }
 
-    // Calculate movement delta with fallback offset
+    // Get current fallback offset
     const currentFallbackOffset = toValue(fallbackOffset) || { x: 0, y: 0 }
 
     // Recalculate scale factors to handle dynamic transforms
@@ -431,19 +431,18 @@ export function useSortableDrag(
       ? getRelativeScrollOffset(ghostRelativeParent.value)
       : [0, 0]
 
-    // Calculate absolute movement from initial tap position
-    // Use absolute positioning instead of incremental to avoid cumulative errors
+    // Calculate movement delta from initial tap position
     const rawDx = (touch.clientX - tapEvt.value.clientX) + currentFallbackOffset.x
     const rawDy = (touch.clientY - tapEvt.value.clientY) + currentFallbackOffset.y
 
-    // Apply scale factors
+    // Apply scale factors and scroll offset adjustments
     const dx = rawDx / (scaleX.value || 1)
       + (relativeScrollOffset ? (relativeScrollOffset[0] - ghostRelativeParentInitialScroll.value[0]) : 0) / (scaleX.value || 1)
     const dy = rawDy / (scaleY.value || 1)
       + (relativeScrollOffset ? (relativeScrollOffset[1] - ghostRelativeParentInitialScroll.value[1]) : 0) / (scaleY.value || 1)
 
-    // Use absolute matrix positioning instead of incremental updates to prevent drift
-    // This ensures the ghost position always matches the cursor position exactly
+    // Create transform matrix
+    // Use absolute positioning to prevent cumulative errors
     ghostMatrix.value = {
       a: 1,
       b: 0,
@@ -460,7 +459,7 @@ export function useSortableDrag(
     ghost.style.webkitTransform = cssMatrix
     ghost.style.transform = cssMatrix
 
-    // Store current position for debugging/reference
+    // Store current position for reference
     lastDx.value = dx
     lastDy.value = dy
   }
@@ -473,11 +472,12 @@ export function useSortableDrag(
       return
     }
 
-    // Find relatively positioned parent
+    // Start with the container (like SortableJS)
     ghostRelativeParent.value = container
 
     while (
-      getComputedStyleProperty(ghostRelativeParent.value, 'position') === 'static'
+      ghostRelativeParent.value
+      && getComputedStyleProperty(ghostRelativeParent.value, 'position') === 'static'
       && getComputedStyleProperty(ghostRelativeParent.value, 'transform') === 'none'
       && ghostRelativeParent.value !== document.documentElement
     ) {
@@ -491,10 +491,11 @@ export function useSortableDrag(
       }
     }
     else {
+      // Use window scrolling element as fallback
       ghostRelativeParent.value = getWindowScrollingElement()
     }
 
-    // Store initial scroll position
+    // Store initial scroll position for later offset calculations
     ghostRelativeParentInitialScroll.value = getRelativeScrollOffset(ghostRelativeParent.value)
   }
 
@@ -845,7 +846,9 @@ export function useSortableDrag(
     if (!dragElement || !tapEvt.value)
       return
 
+    // Get element rect at the time of drag start
     const rect = dragElement.getBoundingClientRect()
+
     const tapDistance = {
       left: tapEvt.value.clientX - rect.left,
       top: tapEvt.value.clientY - rect.top,
@@ -863,15 +866,16 @@ export function useSortableDrag(
       initialRect: rect,
     }
 
+    // Choose container based on fallbackOnBody option
+    const container = toValue(fallbackOnBody)
+      ? document.body
+      : dragElement.parentNode as HTMLElement
+
+    // Create ghost element with accurate positioning
     const ghostElement = createGhostElement(dragElement, ghostOptions)
     state._setGhostElement(ghostElement)
 
-    // Choose container for fallback mode
-    const container = toValue(fallbackOnBody)
-      ? document.body
-      : dragElement.parentNode
-
-    // Insert ghost element for fallback mode
+    // Insert ghost element into the appropriate container
     if (container && ghostElement) {
       if (toValue(fallbackOnBody)) {
         container.appendChild(ghostElement)
@@ -882,8 +886,8 @@ export function useSortableDrag(
     }
 
     // Set up ghost relative parent for absolute positioning
-    if (ghostElement) {
-      setGhostRelativeParent(ghostElement, container as HTMLElement)
+    if (ghostElement && container) {
+      setGhostRelativeParent(ghostElement, container)
     }
   }
 

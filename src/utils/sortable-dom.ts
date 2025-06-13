@@ -174,35 +174,58 @@ export function createGhostElement(
       left = rect.left
     }
     else {
-      // For container positioning, we need to calculate relative to the container
-      // This matches SortableJS getRect behavior when container is not document.body
-
-      // Get the original element's parent container (where ghost will be inserted)
       const container = original.parentElement
       if (container) {
-        // Get container's position to calculate relative positioning
-        const containerRect = container.getBoundingClientRect()
+        top = rect.top
+        left = rect.left
 
-        // Calculate position relative to container's content area
-        // This accounts for container's border and padding
+        // Find the relatively positioned parent (like SortableJS does)
         const containerStyle = window.getComputedStyle(container)
-        const borderTop = Number.parseInt(containerStyle.borderTopWidth) || 0
-        const borderLeft = Number.parseInt(containerStyle.borderLeftWidth) || 0
-        const paddingTop = Number.parseInt(containerStyle.paddingTop) || 0
-        const paddingLeft = Number.parseInt(containerStyle.paddingLeft) || 0
 
-        // Position relative to container's content area (inside border and padding)
-        top = rect.top - containerRect.top - borderTop - paddingTop
-        left = rect.left - containerRect.left - borderLeft - paddingLeft
+        // Check if need to adjust for relative positioning
+        if (containerStyle.position !== 'static' || containerStyle.transform !== 'none') {
+          const containerRect = container.getBoundingClientRect()
 
-        // Add scroll offset if container is scrollable
-        top += container.scrollTop
-        left += container.scrollLeft
+          // Calculate border widths
+          const borderTop = Number.parseInt(containerStyle.borderTopWidth) || 0
+          const borderLeft = Number.parseInt(containerStyle.borderLeftWidth) || 0
+          const paddingTop = Number.parseInt(containerStyle.paddingTop) || 0
+          const paddingLeft = Number.parseInt(containerStyle.paddingLeft) || 0
+
+          // Position relative to container's border box
+          top = rect.top - containerRect.top - borderTop - paddingTop
+          left = rect.left - containerRect.left - borderLeft - paddingLeft
+
+          // Handle container transforms (simplified version of SortableJS matrix handling)
+          if (containerStyle.transform !== 'none') {
+            try {
+              const matrix = new DOMMatrix(containerStyle.transform)
+              const scaleX = Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b)
+              const scaleY = Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d)
+
+              // Apply scale adjustment if significant scaling detected
+              if (Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01) {
+                top = top / scaleY
+                left = left / scaleX
+              }
+            }
+            catch {
+              // Fallback if DOMMatrix fails
+              console.warn('[createGhostElement] Could not parse container transform')
+            }
+          }
+        }
+        else {
+          // For static positioned containers, use simple offset calculation
+          const containerRect = container.getBoundingClientRect()
+          top = rect.top - containerRect.top
+          left = rect.left - containerRect.left
+        }
       }
       else {
-        // Fallback to document coordinates if no container
-        top = rect.top + window.scrollY
-        left = rect.left + window.scrollX
+        // No container, use viewport coordinates
+        top = rect.top
+        left = rect.left
       }
     }
 
