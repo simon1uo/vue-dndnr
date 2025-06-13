@@ -4,9 +4,9 @@ import type { ref, shallowRef } from 'vue'
 import { getDraggableChildren } from '@/utils/sortable-dom'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
-import { useDragCore } from './useDragCore'
 import { useEventDispatcher } from './useEventDispatcher'
-import { useSortableAnimation } from './useSortableAnimation'
+import useSortableAnimation from './useSortableAnimation'
+import useSortableDrag from './useSortableDrag'
 import useSortableState from './useSortableState'
 
 /**
@@ -322,8 +322,8 @@ export function useSortable(
     state._setItems(items)
   }
 
-  // Initialize core composable - dragCore provides unified state management
-  const { startDrag, stopDrag, pause, resume, destroy } = useDragCore(targetElement, {
+  // Initialize core composable - sortableDrag provides unified state management
+  const { startDrag, stopDrag, pause, resume, destroy } = useSortableDrag(targetElement, {
     ...options,
     state,
     // Integrate animation with drag events

@@ -17,7 +17,7 @@ import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
 
-export interface UseDragCoreOptions extends UseSortableOptions {
+export interface UseSortableDragOptions extends UseSortableOptions {
   state: SortableStateInternal
   /**
    * Callback function to be called when items are updated
@@ -37,9 +37,9 @@ export interface UseDragCoreOptions extends UseSortableOptions {
 }
 
 /**
- * Return type for useDragCore composable
+ * Return type for useSortableDrag composable
  */
-export interface UseDragCoreReturn {
+export interface UseSortableDragReturn {
   /**
    * Start dragging programmatically
    * @param element - Element to start dragging
@@ -68,7 +68,7 @@ export interface UseDragCoreReturn {
 }
 
 /**
- * Core drag functionality composable following @vueuse/core patterns.
+ * Sortable drag functionality composable following @vueuse/core patterns.
  *
  * Provides essential drag and drop functionality with:
  * - Reactive options support with MaybeRefOrGetter
@@ -82,12 +82,12 @@ export interface UseDragCoreReturn {
  *
  * @param target - Target container element (ref, getter, or element)
  * @param options - Reactive drag configuration options
- * @returns Drag core functionality and state
+ * @returns Sortable drag functionality and state
  */
-export function useDragCore(
+export function useSortableDrag(
   target: MaybeRefOrGetter<HTMLElement | null>,
-  options: MaybeRefOrGetter<UseDragCoreOptions>,
-): UseDragCoreReturn {
+  options: MaybeRefOrGetter<UseSortableDragOptions>,
+): UseSortableDragReturn {
   // Internal state
   const startIndex = ref(-1)
   const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
@@ -240,7 +240,7 @@ export function useDragCore(
       }
     }
     catch {
-      console.error('[useDragCore] Error getting element matrix', element)
+      console.error('[useSortableDrag] Error getting element matrix', element)
     }
     return null
   }
@@ -1173,7 +1173,7 @@ export function useDragCore(
   const startDragOperation = (evt: Event) => {
     const dragElement = state.dragElement.value
     if (!dragElement) {
-      console.warn('[useDragCore] Cannot start drag operation: no drag element')
+      console.warn('[useSortableDrag] Cannot start drag operation: no drag element')
       return
     }
 
@@ -1204,7 +1204,7 @@ export function useDragCore(
    */
   const prepareDragStart = (evt: Event, dragElement: HTMLElement) => {
     if (!state._canPerformOperation('startDrag')) {
-      console.warn('[useDragCore] Cannot prepare drag start: operation not allowed')
+      console.warn('[useSortableDrag] Cannot prepare drag start: operation not allowed')
       return
     }
 
@@ -1416,7 +1416,7 @@ export function useDragCore(
     state._setPaused(true)
 
     if (state.isDragging.value) {
-      console.warn('[useDragCore] Pausing during active drag - stopping current operation')
+      console.warn('[useSortableDrag] Pausing during active drag - stopping current operation')
       stopDrag()
     }
   }
@@ -1427,7 +1427,7 @@ export function useDragCore(
    */
   const resume = () => {
     if (!state._canPerformOperation('resume')) {
-      console.warn('[useDragCore] Cannot resume: operation not allowed')
+      console.warn('[useSortableDrag] Cannot resume: operation not allowed')
       return
     }
 
@@ -1469,14 +1469,14 @@ export function useDragCore(
   // Watch for state changes that affect drag operations
   watch(() => state.isDisabled.value, (isDisabled) => {
     if (isDisabled && state.isDragging.value) {
-      console.warn('[useDragCore] Sortable disabled during drag - stopping operation')
+      console.warn('[useSortableDrag] Sortable disabled during drag - stopping operation')
       stopDrag()
     }
   })
 
   watch(() => state.isPaused.value, (isPaused) => {
     if (isPaused && state.isDragging.value) {
-      console.warn('[useDragCore] Sortable paused during drag - stopping operation')
+      console.warn('[useSortableDrag] Sortable paused during drag - stopping operation')
       stopDrag()
     }
   })
@@ -1510,4 +1510,4 @@ export function useDragCore(
   }
 }
 
-export default useDragCore
+export default useSortableDrag
