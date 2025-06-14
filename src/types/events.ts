@@ -33,6 +33,10 @@ export interface SortableEvent extends Event {
   from: HTMLElement
   /** The element being dragged */
   item: HTMLElement
+  /** The element being dragged (used in onMove events) */
+  dragged?: HTMLElement
+  /** Rectangle information of the dragged element (used in onMove events) */
+  draggedRect?: DOMRect
   /** Clone element created during drag operation, if cloning is enabled */
   clone?: HTMLElement
   /** Original index position in the source container */
@@ -52,6 +56,8 @@ export interface SortableEvent extends Event {
   pullMode?: 'clone' | undefined
   /** Related target element (typically the element being dragged over) */
   related?: HTMLElement
+  /** Rectangle information of the related element (used in onMove events) */
+  relatedRect?: DOMRect
   /**
    * Whether the item will be inserted after the target
    * @default false
@@ -179,6 +185,10 @@ export interface SortableEventData {
   from?: HTMLElement
   /** Dragged item element */
   item?: HTMLElement
+  /** The element being dragged (used in onMove events) */
+  dragged?: HTMLElement
+  /** Rectangle information of the dragged element (used in onMove events) */
+  draggedRect?: DOMRect
   /** Clone element if cloning is enabled */
   clone?: HTMLElement
   /** Original index position */
@@ -195,6 +205,8 @@ export interface SortableEventData {
   pullMode?: 'clone' | undefined
   /** Related element for move events */
   related?: HTMLElement
+  /** Rectangle information of the related element (used in onMove events) */
+  relatedRect?: DOMRect
   /** Whether the item will be inserted after the related element */
   willInsertAfter?: boolean
   /**

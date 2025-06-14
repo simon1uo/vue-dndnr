@@ -140,6 +140,14 @@ export function useSortableDrag(
     onEnd,
     onUpdate,
     onFilter,
+    onChoose,
+    onUnchoose,
+    onMove,
+    onClone,
+    onChange,
+    onSpill,
+    onSelect,
+    onDeselect,
     onItemsUpdate,
     onAnimationCapture,
     onAnimationTrigger,
@@ -445,6 +453,57 @@ export function useSortableDrag(
   }
 
   /**
+   * Dispatch a move event with special handling for onMove callback signature
+   */
+  const dispatchMoveEvent = (data: Partial<SortableEvent> = {}, originalEvent?: Event): boolean => {
+    const el = targetElement.value
+    const dragElement = state.dragElement.value
+    if (!el || !dragElement)
+      return true
+
+    // Extract only the properties that are compatible with SortableEventData
+    const compatibleData: Partial<SortableEventData> = {
+      to: data.to,
+      from: data.from,
+      item: data.item,
+      dragged: data.dragged,
+      draggedRect: data.draggedRect,
+      clone: data.clone,
+      oldIndex: data.oldIndex,
+      newIndex: data.newIndex,
+      oldDraggableIndex: data.oldDraggableIndex,
+      newDraggableIndex: data.newDraggableIndex,
+      originalEvent: data.originalEvent || originalEvent,
+      pullMode: data.pullMode,
+      related: data.related,
+      relatedRect: data.relatedRect,
+      willInsertAfter: data.willInsertAfter,
+    }
+
+    // Prepare event data with defaults
+    const eventData: Partial<SortableEventData> = {
+      to: el,
+      from: el,
+      item: dragElement,
+      dragged: dragElement,
+      oldIndex: startIndex.value,
+      newIndex: startIndex.value,
+      ...compatibleData,
+    }
+
+    // Dispatch event using unified event dispatcher
+    const result = dispatch('move', eventData, (evt) => {
+      // Call onMove callback with special signature if provided
+      if (onMove && originalEvent) {
+        return onMove(evt, originalEvent)
+      }
+      return true
+    })
+
+    return result
+  }
+
+  /**
    * Dispatch a sortable event with proper callback handling using unified event dispatcher
    */
   const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEvent> = {}) => {
@@ -458,6 +517,8 @@ export function useSortableDrag(
       to: data.to,
       from: data.from,
       item: data.item,
+      dragged: data.dragged,
+      draggedRect: data.draggedRect,
       clone: data.clone,
       oldIndex: data.oldIndex,
       newIndex: data.newIndex,
@@ -466,6 +527,7 @@ export function useSortableDrag(
       originalEvent: data.originalEvent,
       pullMode: data.pullMode,
       related: data.related,
+      relatedRect: data.relatedRect,
       willInsertAfter: data.willInsertAfter,
     }
 
@@ -495,7 +557,25 @@ export function useSortableDrag(
         callback = onFilter
         break
       case 'choose':
-        // Choose event doesn't have a direct callback in options, but we dispatch it
+        callback = onChoose
+        break
+      case 'unchoose':
+        callback = onUnchoose
+        break
+      case 'clone':
+        callback = onClone
+        break
+      case 'change':
+        callback = onChange
+        break
+      case 'spill':
+        callback = onSpill
+        break
+      case 'select':
+        callback = onSelect
+        break
+      case 'deselect':
+        callback = onDeselect
         break
     }
 
@@ -845,7 +925,26 @@ export function useSortableDrag(
     )
 
     if (insertPosition !== null) {
-      performInsertion(draggableTarget, insertPosition)
+      // Dispatch move event before performing insertion
+      const targetRect = draggableTarget.getBoundingClientRect()
+      const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+      const moveResult = dispatchMoveEvent({
+        to: targetElement.value || undefined,
+        from: targetElement.value || undefined,
+        item: state.dragElement.value || undefined,
+        dragged: state.dragElement.value || undefined,
+        draggedRect: dragRect,
+        related: draggableTarget,
+        relatedRect: targetRect,
+        willInsertAfter: insertPosition === 1,
+        originalEvent: evt,
+      }, evt)
+
+      // Only perform insertion if move event wasn't cancelled
+      if (moveResult !== false) {
+        performInsertion(draggableTarget, insertPosition)
+      }
     }
   }
 
@@ -889,7 +988,26 @@ export function useSortableDrag(
     )
 
     if (insertPosition !== null) {
-      performInsertion(draggableTarget, insertPosition)
+      // Dispatch move event before performing insertion
+      const targetRect = draggableTarget.getBoundingClientRect()
+      const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+      const moveResult = dispatchMoveEvent({
+        to: targetElement.value || undefined,
+        from: targetElement.value || undefined,
+        item: state.dragElement.value || undefined,
+        dragged: state.dragElement.value || undefined,
+        draggedRect: dragRect,
+        related: draggableTarget,
+        relatedRect: targetRect,
+        willInsertAfter: insertPosition === 1,
+        originalEvent: evt,
+      }, evt)
+
+      // Only perform insertion if move event wasn't cancelled
+      if (moveResult !== false) {
+        performInsertion(draggableTarget, insertPosition)
+      }
     }
   }
 
@@ -944,6 +1062,13 @@ export function useSortableDrag(
       }
 
       dispatchEvent('end', {
+        item: dragElement,
+        oldIndex: startIndex.value,
+        newIndex,
+      })
+
+      // Dispatch unchoose event when drag ends
+      dispatchEvent('unchoose', {
         item: dragElement,
         oldIndex: startIndex.value,
         newIndex,
@@ -1006,11 +1131,28 @@ export function useSortableDrag(
    * Disable delayed drag and clear timers
    */
   const disableDelayedDrag = () => {
+    const wasAwaitingDragStarted = awaitingDragStarted.value
+    const dragElement = state.dragElement.value
+
     if (delayTimer.value) {
       clearTimeout(delayTimer.value)
       delayTimer.value = undefined
     }
     awaitingDragStarted.value = false
+
+    // Dispatch unchoose event if we were waiting for drag to start
+    if (wasAwaitingDragStarted && dragElement) {
+      dispatchEvent('unchoose', {
+        item: dragElement,
+        oldIndex: startIndex.value,
+      })
+
+      // Remove chosen class when unchoosing
+      const currentChosenClass = toValue(chosenClass)
+      if (currentChosenClass) {
+        dragElement.classList.remove(currentChosenClass)
+      }
+    }
 
     // Clean up delayed drag listeners using dedicated array
     delayedDragEvents.value.forEach(cleanup => cleanup())
@@ -1033,6 +1175,11 @@ export function useSortableDrag(
     const touch = 'touches' in evt ? evt.touches[0] : evt
     if (!touch)
       return
+
+    // Prevent default behavior for touch events to avoid scrolling during drag threshold detection
+    if ('touches' in evt) {
+      evt.preventDefault()
+    }
 
     // Use computed threshold for more accurate detection
     const threshold = dragStartThreshold.value
@@ -1317,6 +1464,13 @@ export function useSortableDrag(
       dragElement.classList.add(currentChosenClass)
     }
 
+    // Dispatch choose event immediately when element is chosen
+    dispatchEvent('choose', {
+      item: dragElement,
+      oldIndex: startIndex.value,
+      originalEvent: evt,
+    })
+
     const isTouch = evt.type.startsWith('touch')
       || (evt instanceof PointerEvent && (evt as PointerEvent).pointerType === 'touch')
 
@@ -1424,6 +1578,10 @@ export function useSortableDrag(
     const currentHandle = toValue(handle)
     if (currentHandle && !isValidHandle(target, currentHandle))
       return
+
+    // Prevent default touch behavior to avoid scrolling during drag preparation
+    // This is crucial for touch devices to prevent simultaneous drag and scroll
+    evt.preventDefault()
 
     // Store last position for threshold detection
     const touch = evt.touches[0]
