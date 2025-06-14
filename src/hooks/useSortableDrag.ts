@@ -2,8 +2,8 @@ import type { SortableEvent, SortableEventData, SortableEventType } from '@/type
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { UseSortableOptions } from './useSortable'
 import type { SortableStateInternal } from './useSortableState'
-import { IOS } from '@/utils'
-import { tryOnUnmounted, useEventListener } from '@vueuse/core'
+import { IE, IOS, Safari } from '@/utils'
+import { isClient, tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
 
@@ -111,10 +111,10 @@ export function useSortableDrag(
   const isTouchInteraction = ref(false)
   const lastX = ref(0)
   const lastY = ref(0)
-  const supportPointer = computed(() => typeof window !== 'undefined' && 'PointerEvent' in window)
 
   // Event listener state
   const isListenersSetup = ref(false)
+  const globalTouchMoveCleanup = ref<(() => void) | undefined>()
 
   const targetElement = computed(() => toValue(target))
 
@@ -133,6 +133,7 @@ export function useSortableDrag(
     fallbackClass = 'sortable-fallback',
     fallbackOnBody = false,
     fallbackOffset = { x: 0, y: 0 },
+    fallbackTolerance = 0,
     swapThreshold = 1,
     preventOnFilter = true,
     immediate = true,
@@ -153,6 +154,17 @@ export function useSortableDrag(
     onAnimationTrigger,
     setData,
   } = toValue(options)
+
+  // Computed properties for reactive options
+  const supportPointer = computed(() => typeof window !== 'undefined' && 'PointerEvent' in window && (!Safari || IOS))
+  const supportCssPointerEvents = computed(() => {
+    if (!isClient || IE)
+      return false
+
+    const el = document.createElement('x')
+    el.style.cssText = 'pointer-events:auto'
+    return el.style.pointerEvents === 'auto'
+  })
 
   // Threshold detection state
   const dragStartThreshold = computed(() => {
@@ -885,6 +897,57 @@ export function useSortableDrag(
   }
 
   /**
+   * Cleanup global touch move event listener
+   */
+  const cleanupGlobalTouchMoveListener = () => {
+    if (globalTouchMoveCleanup.value) {
+      globalTouchMoveCleanup.value()
+      globalTouchMoveCleanup.value = undefined
+    }
+  }
+
+  /**
+   * Disable delayed drag and clear timers
+   */
+  const disableDelayedDrag = (shouldDispatchUnchoose = true) => {
+    const wasAwaitingDragStarted = awaitingDragStarted.value
+    const dragElement = state.dragElement.value
+
+    if (delayTimer.value) {
+      clearTimeout(delayTimer.value)
+      delayTimer.value = undefined
+    }
+    awaitingDragStarted.value = false
+
+    // Dispatch unchoose event if we were waiting for drag to start and should dispatch unchoose
+    if (shouldDispatchUnchoose && wasAwaitingDragStarted && dragElement) {
+      dispatchEvent('unchoose', {
+        item: dragElement,
+        oldIndex: startIndex.value,
+      })
+
+      // Remove chosen class when unchoosing
+      const currentChosenClass = toValue(chosenClass)
+      if (currentChosenClass) {
+        dragElement.classList.remove(currentChosenClass)
+      }
+    }
+
+    // Clean up delayed drag listeners using dedicated array
+    delayedDragEvents.value.forEach(cleanup => cleanup())
+    delayedDragEvents.value = []
+  }
+
+  /**
+   * Disable delayed drag events
+   */
+  const disableDelayedDragEvents = () => {
+    // Clean up delayed drag listeners
+    delayedDragEvents.value.forEach(cleanup => cleanup())
+    delayedDragEvents.value = []
+  }
+
+  /**
    * Handle HTML5 dragover event on container
    */
   const handleDragOver = (evt: DragEvent) => {
@@ -949,22 +1012,161 @@ export function useSortableDrag(
   }
 
   /**
-   * Handle drag move events (fallback mode only)
+   * Emulate drag over events for fallback mode (following SortableJS pattern)
    */
-  const handleDragMove = (evt: MouseEvent | TouchEvent) => {
-    if (!state.isDragging.value || !state.dragElement.value)
+  const emulateDragOver = (): void => {
+    const touch = currentTouchEvent.value
+    if (!touch)
       return
 
-    evt.preventDefault()
+    // Hide ghost element temporarily to get accurate elementFromPoint (following SortableJS)
+    const ghostElement = state.ghostElement.value
+    let ghostDisplay = ''
+    if (ghostElement && !supportCssPointerEvents.value) {
+      ghostDisplay = ghostElement.style.display
+      ghostElement.style.display = 'none'
+    }
 
+    // Get target element under current touch position
+    let target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
+
+    // Handle shadow DOM (following SortableJS pattern)
+    while (target && target.shadowRoot) {
+      const shadowTarget = target.shadowRoot.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement
+      if (shadowTarget === target)
+        break
+      target = shadowTarget
+    }
+
+    // Restore ghost element display
+    if (ghostElement && !supportCssPointerEvents.value) {
+      ghostElement.style.display = ghostDisplay
+    }
+
+    if (!target)
+      return
+
+    // Find the closest draggable element
+    const draggableTarget = findDraggableTarget(target)
+    if (!draggableTarget || draggableTarget === state.dragElement.value)
+      return
+
+    // Calculate insertion position
+    const insertPosition = calculateInsertPosition(
+      { clientX: touch.clientX, clientY: touch.clientY },
+      draggableTarget,
+    )
+
+    if (insertPosition !== null) {
+      // Dispatch move event before performing insertion
+      const targetRect = draggableTarget.getBoundingClientRect()
+      const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+      const moveResult = dispatchMoveEvent({
+        to: targetElement.value || undefined,
+        from: targetElement.value || undefined,
+        item: state.dragElement.value || undefined,
+        dragged: state.dragElement.value || undefined,
+        draggedRect: dragRect,
+        related: draggableTarget,
+        relatedRect: targetRect,
+        willInsertAfter: insertPosition === 1,
+        originalEvent: undefined, // No original event in emulated drag over
+      })
+
+      // Only perform insertion if move event wasn't cancelled
+      if (moveResult !== false) {
+        performInsertion(draggableTarget, insertPosition)
+      }
+    }
+  }
+
+  /**
+   * Start the actual drag operation
+   */
+  function startDragOperation(evt: Event) {
+    const dragElement = state.dragElement.value
+    if (!dragElement) {
+      return
+    }
+
+    // Disable delayed drag events
+    disableDelayedDragEvents()
+
+    // Clear text selection if exists
+    try {
+      if ((document as any).selection) {
+        // IE
+        setTimeout(() => {
+          (document as any).selection.empty()
+        }, 0)
+      }
+      else {
+        window.getSelection()?.removeAllRanges()
+      }
+    }
+    catch { }
+
+    const isTouch = evt.type.startsWith('touch')
+      || (evt instanceof PointerEvent && evt.pointerType === 'touch')
+
+    const shouldUseFallbackMode = !state.nativeDraggable.value || isTouch || toValue(forceFallback)
+
+    if (shouldUseFallbackMode) {
+      isUsingFallback.value = true
+      setupFallbackDragListeners()
+
+      // Start fallback mode
+      if (tapEvt.value) {
+        startFallbackMode(dragElement, tapEvt.value)
+      }
+
+      handleFallbackDragStart(evt)
+    }
+    else {
+      isUsingFallback.value = false
+      setupNativeDragListeners()
+    }
+  }
+
+  /**
+   * Handle drag move events (fallback mode only)
+   */
+  function handleDragMove(evt: MouseEvent | TouchEvent) {
     const touch = 'touches' in evt ? evt.touches[0] : evt
     if (touch) {
       currentTouchEvent.value = touch
     }
 
+    // Following SortableJS pattern: check if we need to start dragging when not yet dragging
+    if (!state.isDragging.value && state.dragElement.value && !awaitingDragStarted.value) {
+      const currentFallbackTolerance = toValue(fallbackTolerance)
+
+      // Check fallback tolerance (similar to SortableJS _onTouchMove)
+      if (currentFallbackTolerance && Math.max(
+        Math.abs(touch.clientX - lastX.value),
+        Math.abs(touch.clientY - lastY.value),
+      ) < currentFallbackTolerance) {
+        return
+      }
+
+      // Start drag operation (equivalent to SortableJS _onDragStart with fallback=true)
+      startDragOperation(evt)
+      return
+    }
+
+    // If we're not dragging yet, return early
+    if (!state.isDragging.value || !state.dragElement.value)
+      return
+
     const ghostElement = state.ghostElement.value
     if (ghostElement && isUsingFallback.value) {
       updateGhostPosition(ghostElement, evt)
+    }
+
+    // This prevents premature event cancellation that could limit touch drag range
+    if (evt.cancelable) {
+      evt.preventDefault()
     }
 
     // Get current mouse/touch position
@@ -1014,13 +1216,16 @@ export function useSortableDrag(
   /**
    * Handle drag end events
    */
-  const handleDragEnd = (_evt: MouseEvent | TouchEvent | DragEvent) => {
+  function handleDragEnd(_evt: MouseEvent | TouchEvent | DragEvent) {
     if (!state.isDragging.value && !state.dragElement.value)
       return
 
     const dragElement = state.dragElement.value
 
     state._setDragging(false)
+
+    // Clean up global touch move listener when drag ends
+    cleanupGlobalTouchMoveListener()
 
     // Stop fallback mode if active
     if (isUsingFallback.value) {
@@ -1084,7 +1289,7 @@ export function useSortableDrag(
   /**
    * Handle native HTML5 dragstart event
    */
-  const handleNativeDragStart = (evt: DragEvent) => {
+  function handleNativeDragStart(evt: DragEvent) {
     const dragElement = state.dragElement.value
     if (!dragElement)
       return
@@ -1128,74 +1333,75 @@ export function useSortableDrag(
   }
 
   /**
-   * Disable delayed drag and clear timers
+   * Setup global touch move event listener to prevent touch drag range limitation
    */
-  const disableDelayedDrag = () => {
-    const wasAwaitingDragStarted = awaitingDragStarted.value
-    const dragElement = state.dragElement.value
-
-    if (delayTimer.value) {
-      clearTimeout(delayTimer.value)
-      delayTimer.value = undefined
+  function setupGlobalTouchMoveListener() {
+    if (globalTouchMoveCleanup.value) {
+      return
     }
-    awaitingDragStarted.value = false
 
-    // Dispatch unchoose event if we were waiting for drag to start
-    if (wasAwaitingDragStarted && dragElement) {
-      dispatchEvent('unchoose', {
-        item: dragElement,
-        oldIndex: startIndex.value,
-      })
-
-      // Remove chosen class when unchoosing
-      const currentChosenClass = toValue(chosenClass)
-      if (currentChosenClass) {
-        dragElement.classList.remove(currentChosenClass)
+    const handleGlobalTouchMove = (evt: TouchEvent) => {
+      if ((state.isDragging.value || awaitingDragStarted.value) && evt.cancelable) {
+        evt.preventDefault()
       }
     }
 
-    // Clean up delayed drag listeners using dedicated array
-    delayedDragEvents.value.forEach(cleanup => cleanup())
-    delayedDragEvents.value = []
+    globalTouchMoveCleanup.value = useEventListener(document, 'touchmove', handleGlobalTouchMove, { passive: false })
   }
 
   /**
-   * Disable delayed drag events
+   * Setup listeners for fallback drag events
    */
-  const disableDelayedDragEvents = () => {
-    // Clean up delayed drag listeners
-    delayedDragEvents.value.forEach(cleanup => cleanup())
-    delayedDragEvents.value = []
+  function setupFallbackDragListeners() {
+    const onMouseMove = handleDragMove
+    const onMouseUp = handleDragEnd
+    const onTouchMove = handleDragMove
+    const onTouchEnd = handleDragEnd
+
+    // Set up global touch move listener for proper touch drag support
+    setupGlobalTouchMoveListener()
+
+    if (supportPointer.value) {
+      // Use pointer events for unified handling
+      const pointerMoveEvent = useEventListener(document, 'pointermove', onMouseMove, { passive: false })
+      const pointerUpEvent = useEventListener(document, 'pointerup', onMouseUp)
+      const pointerCancelEvent = useEventListener(document, 'pointercancel', onMouseUp)
+
+      dragCleanupFunctions.value.push(pointerMoveEvent, pointerUpEvent, pointerCancelEvent)
+    }
+    else {
+      // Fallback to separate mouse and touch events
+      const mouseMoveEvent = useEventListener(document, 'mousemove', onMouseMove)
+      const mouseUpEvent = useEventListener(document, 'mouseup', onMouseUp)
+      const touchMoveEvent = useEventListener(document, 'touchmove', onTouchMove, { passive: false })
+      const touchEndEvent = useEventListener(document, 'touchend', onTouchEnd)
+      const touchCancelEvent = useEventListener(document, 'touchcancel', onTouchEnd)
+
+      dragCleanupFunctions.value.push(mouseMoveEvent, mouseUpEvent, touchMoveEvent, touchEndEvent, touchCancelEvent)
+    }
   }
 
   /**
-   * Handle delayed drag touch move for threshold detection
+   * Setup listeners for native HTML5 drag events
    */
-  const handleDelayedDragTouchMove = (evt: TouchEvent | PointerEvent | MouseEvent) => {
-    const touch = 'touches' in evt ? evt.touches[0] : evt
-    if (!touch)
+  function setupNativeDragListeners() {
+    const dragElement = state.dragElement.value
+    if (!dragElement)
       return
 
-    // Prevent default behavior for touch events to avoid scrolling during drag threshold detection
-    if ('touches' in evt) {
-      evt.preventDefault()
-    }
+    const onDragEnd = handleDragEnd
+    const onDragStart = handleNativeDragStart
 
-    // Use computed threshold for more accurate detection
-    const threshold = dragStartThreshold.value
+    const dragEndEvent = useEventListener(dragElement, 'dragend', onDragEnd)
+    const dragStartEvent = useEventListener(dragElement, 'dragstart', onDragStart)
 
-    if (Math.max(
-      Math.abs(touch.clientX - lastX.value),
-      Math.abs(touch.clientY - lastY.value),
-    ) >= threshold) {
-      disableDelayedDrag()
-    }
+    dragCleanupFunctions.value.push(dragEndEvent, dragStartEvent)
   }
 
   /**
    * Start fallback mode for drag operation
    */
-  const startFallbackMode = (dragEl: HTMLElement, tapEvent: { clientX: number, clientY: number }): void => {
+  function startFallbackMode(dragEl: HTMLElement, tapEvent: { clientX: number, clientY: number }): void {
     tapEvt.value = tapEvent
     lastDx.value = 0
     lastDy.value = 0
@@ -1226,10 +1432,8 @@ export function useSortableDrag(
     isFallbackActive.value = true
     state._setFallbackActive(true)
 
-    // Start periodic drag over emulation
-    loopTimer.value = setInterval(() => {
-      // Emulate drag over events for fallback mode
-    }, 50)
+    // Start periodic drag over emulation (following SortableJS pattern)
+    loopTimer.value = setInterval(emulateDragOver, 50)
   }
 
   /**
@@ -1299,7 +1503,7 @@ export function useSortableDrag(
   /**
    * Handle fallback drag start
    */
-  const handleFallbackDragStart = (_evt: Event) => {
+  function handleFallbackDragStart(_evt: Event) {
     const dragElement = state.dragElement.value
     if (!dragElement)
       return
@@ -1333,96 +1537,23 @@ export function useSortableDrag(
   }
 
   /**
-   * Setup listeners for fallback drag events
+   * Handle delayed drag touch move for threshold detection
    */
-  const setupFallbackDragListeners = () => {
-    const onMouseMove = handleDragMove
-    const onMouseUp = handleDragEnd
-    const onTouchMove = handleDragMove
-    const onTouchEnd = handleDragEnd
-
-    if (supportPointer.value) {
-      // Use pointer events for unified handling
-      const pointerMoveEvent = useEventListener(document, 'pointermove', onMouseMove)
-      const pointerUpEvent = useEventListener(document, 'pointerup', onMouseUp)
-      const pointerCancelEvent = useEventListener(document, 'pointercancel', onMouseUp)
-
-      dragCleanupFunctions.value.push(pointerMoveEvent, pointerUpEvent, pointerCancelEvent)
-    }
-    else {
-      // Fallback to separate mouse and touch events
-      const mouseMoveEvent = useEventListener(document, 'mousemove', onMouseMove)
-      const mouseUpEvent = useEventListener(document, 'mouseup', onMouseUp)
-      const touchMoveEvent = useEventListener(document, 'touchmove', onTouchMove, { passive: false })
-      const touchEndEvent = useEventListener(document, 'touchend', onTouchEnd)
-      const touchCancelEvent = useEventListener(document, 'touchcancel', onTouchEnd)
-
-      dragCleanupFunctions.value.push(mouseMoveEvent, mouseUpEvent, touchMoveEvent, touchEndEvent, touchCancelEvent)
-    }
-  }
-
-  /**
-   * Setup listeners for native HTML5 drag events
-   */
-  const setupNativeDragListeners = () => {
-    const dragElement = state.dragElement.value
-    if (!dragElement)
+  function handleDelayedDragTouchMove(evt: TouchEvent | PointerEvent | MouseEvent) {
+    const touch = 'touches' in evt ? evt.touches[0] : evt
+    if (!touch)
       return
 
-    const onDragEnd = handleDragEnd
-    const onDragStart = handleNativeDragStart
+    // Use computed threshold for more accurate detection
+    const threshold = dragStartThreshold.value
 
-    const dragEndEvent = useEventListener(dragElement, 'dragend', onDragEnd)
-    const dragStartEvent = useEventListener(dragElement, 'dragstart', onDragStart)
-
-    dragCleanupFunctions.value.push(dragEndEvent, dragStartEvent)
-  }
-
-  /**
-   * Start the actual drag operation
-   */
-  const startDragOperation = (evt: Event) => {
-    const dragElement = state.dragElement.value
-    if (!dragElement) {
-      return
-    }
-
-    // Disable delayed drag events
-    disableDelayedDragEvents()
-
-    // Clear text selection if exists
-    try {
-      if ((document as any).selection) {
-        // IE
-        setTimeout(() => {
-          (document as any).selection.empty()
-        }, 0)
-      }
-      else {
-        window.getSelection()?.removeAllRanges()
-      }
-    }
-    catch { }
-
-    const isTouch = evt.type.startsWith('touch')
-      || (evt instanceof PointerEvent && evt.pointerType === 'touch')
-
-    const shouldUseFallbackMode = !state.nativeDraggable.value || isTouch || toValue(forceFallback)
-
-    if (shouldUseFallbackMode) {
-      isUsingFallback.value = true
-      setupFallbackDragListeners()
-
-      // Start fallback mode
-      if (tapEvt.value) {
-        startFallbackMode(dragElement, tapEvt.value)
-      }
-
-      handleFallbackDragStart(evt)
-    }
-    else {
-      isUsingFallback.value = false
-      setupNativeDragListeners()
+    if (Math.max(
+      Math.abs(touch.clientX - lastX.value),
+      Math.abs(touch.clientY - lastY.value),
+    ) >= threshold) {
+      // When threshold is exceeded, cancel the delayed drag
+      // Following SortableJS pattern: just disable delayed drag, don't start drag here
+      disableDelayedDrag(false)
     }
   }
 
@@ -1514,7 +1645,7 @@ export function useSortableDrag(
       // Set up delayed drag listeners for threshold detection using dedicated array
       if (supportPointer.value) {
         // Use pointer events for unified handling
-        const pointerMoveEvent = useEventListener(document, 'pointermove', handleDelayedDragTouchMove)
+        const pointerMoveEvent = useEventListener(document, 'pointermove', handleDelayedDragTouchMove, { passive: false })
         const pointerUpEvent = useEventListener(document, 'pointerup', disableDelayedDrag)
         const pointerCancelEvent = useEventListener(document, 'pointercancel', disableDelayedDrag)
         delayedDragEvents.value.push(pointerMoveEvent, pointerUpEvent, pointerCancelEvent)
@@ -1579,10 +1710,6 @@ export function useSortableDrag(
     if (currentHandle && !isValidHandle(target, currentHandle))
       return
 
-    // Prevent default touch behavior to avoid scrolling during drag preparation
-    // This is crucial for touch devices to prevent simultaneous drag and scroll
-    evt.preventDefault()
-
     // Store last position for threshold detection
     const touch = evt.touches[0]
     if (touch) {
@@ -1631,7 +1758,7 @@ export function useSortableDrag(
 
     // Pointer events (unified touch/mouse handling) or fallback to separate events
     if (supportPointer.value) {
-      const pointerDownEvent = useEventListener(el, 'pointerdown', handlePointerStart)
+      const pointerDownEvent = useEventListener(el, 'pointerdown', handlePointerStart, { passive: false })
       cleanupFunctions.value.push(pointerDownEvent)
     }
     else {
@@ -1736,6 +1863,9 @@ export function useSortableDrag(
 
     dragCleanupFunctions.value.forEach(cleanup => cleanup())
     dragCleanupFunctions.value = []
+
+    // Clean up global touch move listener
+    cleanupGlobalTouchMoveListener()
 
     // Remove ghost if exists
     removeGhost()
