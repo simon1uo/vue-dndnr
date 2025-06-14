@@ -1,19 +1,9 @@
-import type {
-  GhostElementOptions,
-  SortableEvent,
-  SortableEventData,
-  SortableEventType,
-} from '@/types'
+import type { SortableEvent, SortableEventData, SortableEventType } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { UseSortableOptions } from './useSortable'
 import type { SortableStateInternal } from './useSortableState'
-import {
-  createGhostElement,
-  findDraggableElement,
-  getDraggableChildren,
-  getElementIndex,
-} from '@/utils/sortable-dom'
-import { tryOnUnmounted } from '@vueuse/core'
+import { IOS } from '@/utils'
+import { tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
 
@@ -88,18 +78,18 @@ export function useSortableDrag(
   target: MaybeRefOrGetter<HTMLElement | null>,
   options: MaybeRefOrGetter<UseSortableDragOptions>,
 ): UseSortableDragReturn {
-  // Internal state
+  // Initialize unified event dispatcher
+  const { dispatch } = useEventDispatcher(target)
+
+  // Core Internal State
   const startIndex = ref(-1)
-  const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
   const currentTouchEvent = ref<{ clientX: number, clientY: number } | undefined>()
   const isUsingFallback = ref(false)
   const cleanupFunctions = ref<Array<() => void>>([])
   const dragCleanupFunctions = ref<Array<() => void>>([])
 
-  // Initialize unified event dispatcher
-  const eventDispatcher = useEventDispatcher(target)
-
   // Fallback drag state
+  const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
   const isFallbackActive = ref(false)
   const loopTimer = ref<NodeJS.Timeout | undefined>()
   const ghostMatrix = ref<DOMMatrix | undefined>()
@@ -109,14 +99,25 @@ export function useSortableDrag(
   const scaleY = ref(1)
   const ghostRelativeParent = ref<HTMLElement | undefined>()
   const ghostRelativeParentInitialScroll = ref<[number, number]>([0, 0])
-  const positionGhostAbsolutely = ref(false)
+  const positionGhostAbsolutely = computed(() => IOS)
 
-  // Support detection
+  // Drag Delay management
+  const delayTimer = ref<NodeJS.Timeout | undefined>()
+  const awaitingDragStarted = ref(false)
+  const delayedDragEvents = ref<Array<() => void>>([])
 
-  // Computed target element
+  // Touch and pointer state
+  const touchStartThreshold = ref(1)
+  const isTouchInteraction = ref(false)
+  const lastX = ref(0)
+  const lastY = ref(0)
+  const supportPointer = computed(() => typeof window !== 'undefined' && 'PointerEvent' in window)
+
+  // Event listener state
+  const isListenersSetup = ref(false)
+
   const targetElement = computed(() => toValue(target))
 
-  // Destructure options with defaults using ES6 features
   const {
     state,
     draggable = '> *',
@@ -144,6 +145,15 @@ export function useSortableDrag(
     onAnimationTrigger,
     setData,
   } = toValue(options)
+
+  // Threshold detection state
+  const dragStartThreshold = computed(() => {
+    // native draggable uses threshold 1, fallback uses configured value
+    if (state.nativeDraggable.value) {
+      return 1
+    }
+    return Math.floor(toValue(touchStartThreshold) / ((state.nativeDraggable.value && window.devicePixelRatio) || 1))
+  })
 
   /**
    * Parse scale transform when DOMMatrix is not available
@@ -207,45 +217,6 @@ export function useSortableDrag(
   }
 
   /**
-   * Get element's transform matrix
-   */
-  const getElementMatrix = (element: HTMLElement, selfOnly = false): DOMMatrix | null => {
-    try {
-      let appliedTransforms = ''
-
-      if (selfOnly) {
-        // Only get the element's own transform
-        const computedStyle = window.getComputedStyle(element)
-        const transform = computedStyle.transform
-        if (transform && transform !== 'none') {
-          appliedTransforms = transform
-        }
-      }
-      else {
-        // Get all transforms up the parent chain
-        let current: HTMLElement | null = element
-        while (current) {
-          const computedStyle = window.getComputedStyle(current)
-          const transform = computedStyle.transform
-          if (transform && transform !== 'none') {
-            appliedTransforms = `${transform} ${appliedTransforms}`
-          }
-          current = current.parentElement
-        }
-      }
-
-      if (appliedTransforms) {
-        const MatrixFn = window.DOMMatrix || (window as any).WebKitCSSMatrix || (window as any).CSSMatrix || (window as any).MSCSSMatrix
-        return MatrixFn ? new MatrixFn(appliedTransforms) : null
-      }
-    }
-    catch {
-      console.error('[useSortableDrag] Error getting element matrix', element)
-    }
-    return null
-  }
-
-  /**
    * Get relative scroll offset for an element
    */
   const getRelativeScrollOffset = (element: HTMLElement): [number, number] => {
@@ -255,13 +226,8 @@ export function useSortableDrag(
 
     let current: HTMLElement | null = element
     while (current && current !== winScroller) {
-      const elMatrix = getElementMatrix(current, false)
-      const scaleXValue = elMatrix ? elMatrix.a : 1
-      const scaleYValue = elMatrix ? elMatrix.d : 1
-
-      offsetLeft += current.scrollLeft * scaleXValue
-      offsetTop += current.scrollTop * scaleYValue
-
+      offsetLeft += current.scrollLeft * (scaleX.value || 1)
+      offsetTop += current.scrollTop * (scaleY.value || 1)
       current = current.parentElement
     }
 
@@ -323,91 +289,418 @@ export function useSortableDrag(
   }
 
   /**
-   * Determine if fallback mode should be used
+   * Set ghost relative parent for absolute positioning
    */
-  const _shouldUseFallback = (): boolean => {
-    // Force fallback if explicitly requested
-    if (toValue(forceFallback)) {
-      return true
+  const setGhostRelativeParent = (ghost: HTMLElement, container: HTMLElement): void => {
+    if (!positionGhostAbsolutely.value) {
+      return
     }
 
-    return !state.nativeDraggable.value
+    // Start with the container
+    ghostRelativeParent.value = container
+
+    while (
+      ghostRelativeParent.value
+      && getComputedStyleProperty(ghostRelativeParent.value, 'position') === 'static'
+      && getComputedStyleProperty(ghostRelativeParent.value, 'transform') === 'none'
+      && ghostRelativeParent.value !== document.documentElement
+    ) {
+      ghostRelativeParent.value = ghostRelativeParent.value.parentElement || document.documentElement
+    }
+
+    // Handle special cases
+    if (ghostRelativeParent.value !== document.body && ghostRelativeParent.value !== document.documentElement) {
+      if (ghostRelativeParent.value === document.documentElement) {
+        ghostRelativeParent.value = getWindowScrollingElement()
+      }
+    }
+    else {
+      // Use window scrolling element as fallback
+      ghostRelativeParent.value = getWindowScrollingElement()
+    }
+
+    // Store initial scroll position for later offset calculations
+    ghostRelativeParentInitialScroll.value = getRelativeScrollOffset(ghostRelativeParent.value)
   }
 
   /**
-   * Determine if ghost should be positioned absolutely
+   * Find the draggable element from the event target
+   * @param target - Event target element
+   * @returns Draggable element or null
    */
-  const shouldPositionGhostAbsolutely = (): boolean => /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const findDraggableTarget = (target: HTMLElement): HTMLElement | null => {
+    const el = targetElement.value
+    if (!el)
+      return null
 
-  /**
-   * Emulate drag over events for fallback mode
-   */
-  const emulateDragOver = (): void => {
-    // This method will be integrated with the existing drag logic
-    // For now, it serves as a placeholder for the periodic drag over simulation
-    // The actual implementation will coordinate with the drag core system
+    let current: HTMLElement | null = target
+    const draggableSelector = toValue(draggable)
+
+    while (current && current !== el) {
+      if (current.matches && current.matches(draggableSelector)) {
+        return current
+      }
+      current = current.parentElement
+    }
+
+    return null
   }
 
   /**
-   * Start fallback mode for drag operation
+   * Fallback method to find element by position (for test environments)
+   * @param clientX - X coordinate of the mouse pointer
+   * @param clientY - Y coordinate of the mouse pointer
+   * @returns Element at the given point or null if no element is found
    */
-  const startFallbackMode = (dragEl: HTMLElement, tapEvent: { clientX: number, clientY: number }): void => {
-    tapEvt.value = tapEvent
-    lastDx.value = 0
-    lastDy.value = 0
+  const findElementByPosition = (clientX: number, clientY: number): HTMLElement | null => {
+    const el = targetElement.value
+    if (!el)
+      return null
 
-    try {
-      ghostMatrix.value = new DOMMatrix()
-    }
-    catch {
-      // Fallback for test environments - create a simple matrix-like object
-      ghostMatrix.value = {
-        a: 1,
-        b: 0,
-        c: 0,
-        d: 1,
-        e: 0,
-        f: 0,
-      } as DOMMatrix
-    }
+    const children = Array.from(el.children) as HTMLElement[]
+    const draggableSelector = toValue(draggable)
 
-    // Calculate scale factors for accurate positioning
-    calculateScaleFactors()
+    for (const child of children) {
+      if (child === state.dragElement.value)
+        continue
+      if (!child.matches(draggableSelector))
+        continue
 
-    positionGhostAbsolutely.value = shouldPositionGhostAbsolutely()
-
-    if (positionGhostAbsolutely.value) {
-      initializeGhostRelativeParent()
+      const rect = child.getBoundingClientRect()
+      if (
+        clientX >= rect.left && clientX <= rect.right
+        && clientY >= rect.top && clientY <= rect.bottom
+      ) {
+        return child
+      }
     }
 
-    // Set active state
-    isFallbackActive.value = true
-    state._setFallbackActive(true)
-
-    // Start periodic drag over emulation
-    loopTimer.value = setInterval(() => {
-      emulateDragOver()
-    }, 50)
+    return null
   }
 
   /**
-   * Stop fallback mode and clean up resources
+   * Get element from point, handling touch events and shadow DOM
+   * @param clientX - X coordinate of the mouse pointer
+   * @param clientY - Y coordinate of the mouse pointer
+   * @returns Element at the given point or null if no element is found
    */
-  const stopFallbackMode = (): void => {
-    if (loopTimer.value) {
-      clearInterval(loopTimer.value)
-      loopTimer.value = undefined
+  const getElementFromPoint = (clientX: number, clientY: number): HTMLElement | null => {
+    const el = targetElement.value
+    if (!el)
+      return null
+
+    // Check if elementFromPoint is available (not in all test environments)
+    if (typeof document.elementFromPoint !== 'function') {
+      return findElementByPosition(clientX, clientY)
     }
-    tapEvt.value = undefined
-    ghostMatrix.value = undefined
-    lastDx.value = 0
-    lastDy.value = 0
-    isFallbackActive.value = false
-    state._setFallbackActive(false)
+
+    // Hide ghost element temporarily to get accurate elementFromPoint
+    const ghostElement = state.ghostElement.value
+    let ghostDisplay = ''
+    if (ghostElement) {
+      ghostDisplay = ghostElement.style.display
+      ghostElement.style.display = 'none'
+    }
+
+    let target = document.elementFromPoint(clientX, clientY) as HTMLElement | null
+
+    // Handle shadow DOM
+    while (target && target.shadowRoot) {
+      const shadowTarget = target.shadowRoot.elementFromPoint(clientX, clientY) as HTMLElement
+      if (shadowTarget === target)
+        break
+      target = shadowTarget
+    }
+
+    // Restore ghost element display
+    if (ghostElement) {
+      ghostElement.style.display = ghostDisplay
+    }
+
+    return target
   }
 
+  /**
+   * Get element index within its parent
+   * @param element - Element to get the index of
+   * @returns Index of the element or -1 if not found
+   */
+  const getElementIndex = (element: HTMLElement): number => {
+    const parent = element.parentElement
+    if (!parent)
+      return -1
+
+    const children = Array.from(parent.children) as HTMLElement[]
+    const draggableSelector = toValue(draggable)
+
+    let index = 0
+    for (const child of children) {
+      if (child === element)
+        return index
+      if (child.matches(draggableSelector))
+        index++
+    }
+
+    return -1
+  }
+
+  /**
+   * Dispatch a sortable event with proper callback handling using unified event dispatcher
+   */
+  const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEvent> = {}) => {
+    const el = targetElement.value
+    const dragElement = state.dragElement.value
+    if (!el || !dragElement)
+      return
+
+    // Extract only the properties that are compatible with SortableEventData
+    const compatibleData: Partial<SortableEventData> = {
+      to: data.to,
+      from: data.from,
+      item: data.item,
+      clone: data.clone,
+      oldIndex: data.oldIndex,
+      newIndex: data.newIndex,
+      oldDraggableIndex: data.oldDraggableIndex,
+      newDraggableIndex: data.newDraggableIndex,
+      originalEvent: data.originalEvent,
+      pullMode: data.pullMode,
+      related: data.related,
+      willInsertAfter: data.willInsertAfter,
+    }
+
+    // Prepare event data with defaults
+    const eventData: Partial<SortableEventData> = {
+      to: el,
+      from: el,
+      item: dragElement,
+      oldIndex: startIndex.value,
+      newIndex: startIndex.value,
+      ...compatibleData,
+    }
+
+    // Get appropriate callback based on event type
+    let callback: ((evt: SortableEvent) => void) | undefined
+    switch (eventType) {
+      case 'start':
+        callback = onStart
+        break
+      case 'end':
+        callback = onEnd
+        break
+      case 'update':
+        callback = onUpdate
+        break
+      case 'filter':
+        callback = onFilter
+        break
+      case 'choose':
+        // Choose event doesn't have a direct callback in options, but we dispatch it
+        break
+    }
+
+    // Dispatch event using unified event dispatcher
+    dispatch(eventType, eventData, callback)
+  }
+
+  /**
+   * Check if element should be filtered (not draggable)
+   * @param evt - Event object
+   * @param item - Item element
+   * @param target - Target element
+   * @returns True if element should be filtered, false otherwise
+   */
+  const shouldFilterElement = (evt: Event, item: HTMLElement, target: HTMLElement): boolean => {
+    const currentFilter = toValue(filter)
+
+    if (typeof currentFilter === 'string') {
+      if (target.matches(currentFilter)) {
+        dispatchEvent('filter', { item, related: target })
+        if (toValue(preventOnFilter)) {
+          evt.preventDefault()
+        }
+        return true
+      }
+    }
+    else if (typeof currentFilter === 'function') {
+      if (currentFilter(evt, item, target)) {
+        dispatchEvent('filter', { item, related: target })
+        if (toValue(preventOnFilter)) {
+          evt.preventDefault()
+        }
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Check if target is a valid handle
+   * @param target - Target element
+   * @param handleSelector - Handle selector
+   * @returns True if target is a valid handle, false otherwise
+   */
+  const isValidHandle = (target: HTMLElement, handleSelector: string): boolean => {
+    return target.matches(handleSelector) || target.closest(handleSelector) !== null
+  }
+
+  /**
+   * Check if drag operation can be started
+   * @returns True if drag operation can be started, false otherwise
+   */
+  const canStartDrag = (): boolean => {
+    if (!state._canPerformOperation('startDrag')) {
+      return false
+    }
+
+    if (toValue(disabled)) {
+      return false
+    }
+
+    if (state.isDragging.value) {
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Detect layout direction (vertical or horizontal)
+   * @returns 'vertical' | 'horizontal'
+   */
+  const detectDirection = (): 'vertical' | 'horizontal' => {
+    const el = targetElement.value
+    if (!el)
+      return 'vertical'
+
+    const children = Array.from(el.children) as HTMLElement[]
+    const draggableSelector = toValue(draggable)
+    const draggableChildren = children.filter(child => child.matches(draggableSelector))
+
+    if (draggableChildren.length < 2)
+      return 'vertical'
+
+    const first = draggableChildren[0]
+    const second = draggableChildren[1]
+    const firstRect = first.getBoundingClientRect()
+    const secondRect = second.getBoundingClientRect()
+
+    // Check container styles for explicit direction
+    const containerStyle = getComputedStyle(el)
+    if (containerStyle.display === 'flex') {
+      const flexDirection = containerStyle.flexDirection
+      if (flexDirection === 'row' || flexDirection === 'row-reverse') {
+        return 'horizontal'
+      }
+      if (flexDirection === 'column' || flexDirection === 'column-reverse') {
+        return 'vertical'
+      }
+    }
+
+    // Check relative positions of elements
+    if (secondRect.left >= firstRect.right - 5) {
+      return 'horizontal'
+    }
+
+    if (secondRect.top >= firstRect.bottom - 5) {
+      return 'vertical'
+    }
+
+    return 'vertical'
+  }
+
+  /**
+   * Calculate insertion position based on mouse position and target element
+   * @param pointer - Pointer object containing clientX and clientY coordinates
+   * @param {number} pointer.clientX - The X coordinate of the pointer
+   * @param {number} pointer.clientY - The Y coordinate of the pointer
+   * @param target - Target element
+   * @returns Insertion position or null if no position is found
+   */
+  const calculateInsertPosition = (
+    pointer: { clientX: number, clientY: number },
+    target: HTMLElement,
+  ): number | null => {
+    const targetRect = target.getBoundingClientRect()
+    const vertical = detectDirection() === 'vertical'
+    const mouseOnAxis = vertical ? pointer.clientY : pointer.clientX
+    const targetLength = vertical ? targetRect.height : targetRect.width
+    const targetStart = vertical ? targetRect.top : targetRect.left
+    const targetCenter = targetStart + targetLength / 2
+
+    const currentSwapThreshold = toValue(swapThreshold)
+
+    // For full threshold (1), always allow swapping
+    if (currentSwapThreshold >= 1) {
+      return mouseOnAxis > targetCenter ? 1 : -1
+    }
+
+    // For partial threshold, create dead zone in the middle
+    const threshold = targetLength * (1 - currentSwapThreshold) / 2
+    const deadZoneStart = targetStart + threshold
+    const deadZoneEnd = targetStart + targetLength - threshold
+
+    // Check if mouse is in the middle area (no swap)
+    if (mouseOnAxis > deadZoneStart && mouseOnAxis < deadZoneEnd) {
+      return null
+    }
+
+    // Determine direction: 1 for after, -1 for before
+    return mouseOnAxis > targetCenter ? 1 : -1
+  }
+  /**
+   * Perform the actual DOM insertion
+   * @param target - Target element
+   * @param direction - Direction of the insertion
+   */
+  const performInsertion = (target: HTMLElement, direction: number) => {
+    const dragElement = state.dragElement.value
+    if (!dragElement)
+      return
+
+    const parent = target.parentNode
+    if (!parent)
+      return
+
+    // Capture animation state before DOM changes
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
+    if (direction === 1) {
+      // Insert after target
+      const nextSibling = target.nextSibling
+      if (nextSibling) {
+        parent.insertBefore(dragElement, nextSibling)
+      }
+      else {
+        parent.appendChild(dragElement)
+      }
+    }
+    else {
+      // Insert before target
+      parent.insertBefore(dragElement, target)
+    }
+
+    // Update current index after DOM changes
+    const newCurrentIndex = getElementIndex(dragElement)
+    state._setCurrentIndex(newCurrentIndex)
+
+    // Immediately notify about DOM changes for responsive data updates
+    if (onItemsUpdate) {
+      onItemsUpdate()
+    }
+
+    // Trigger animation after DOM changes
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
+    }
+  }
   /**
    * Update ghost element position during drag
+   * @param ghost - Ghost element
+   * @param evt - Event object
    */
   const updateGhostPosition = (ghost: HTMLElement, evt: MouseEvent | TouchEvent): void => {
     if (!tapEvt.value) {
@@ -465,346 +758,19 @@ export function useSortableDrag(
   }
 
   /**
-   * Set ghost relative parent for absolute positioning
+   * Stop fallback mode and clean up resources
    */
-  const setGhostRelativeParent = (ghost: HTMLElement, container: HTMLElement): void => {
-    if (!positionGhostAbsolutely.value) {
-      return
+  const stopFallbackMode = (): void => {
+    if (loopTimer.value) {
+      clearInterval(loopTimer.value)
+      loopTimer.value = undefined
     }
-
-    // Start with the container (like SortableJS)
-    ghostRelativeParent.value = container
-
-    while (
-      ghostRelativeParent.value
-      && getComputedStyleProperty(ghostRelativeParent.value, 'position') === 'static'
-      && getComputedStyleProperty(ghostRelativeParent.value, 'transform') === 'none'
-      && ghostRelativeParent.value !== document.documentElement
-    ) {
-      ghostRelativeParent.value = ghostRelativeParent.value.parentElement || document.documentElement
-    }
-
-    // Handle special cases
-    if (ghostRelativeParent.value !== document.body && ghostRelativeParent.value !== document.documentElement) {
-      if (ghostRelativeParent.value === document.documentElement) {
-        ghostRelativeParent.value = getWindowScrollingElement()
-      }
-    }
-    else {
-      // Use window scrolling element as fallback
-      ghostRelativeParent.value = getWindowScrollingElement()
-    }
-
-    // Store initial scroll position for later offset calculations
-    ghostRelativeParentInitialScroll.value = getRelativeScrollOffset(ghostRelativeParent.value)
-  }
-
-  /**
-   * Dispatch a sortable event with proper callback handling using unified event dispatcher
-   */
-  const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEvent> = {}) => {
-    const el = targetElement.value
-    const dragElement = state.dragElement.value
-    if (!el || !dragElement)
-      return
-
-    // Extract only the properties that are compatible with SortableEventData
-    const compatibleData: Partial<SortableEventData> = {
-      to: data.to,
-      from: data.from,
-      item: data.item,
-      clone: data.clone,
-      oldIndex: data.oldIndex,
-      newIndex: data.newIndex,
-      oldDraggableIndex: data.oldDraggableIndex,
-      newDraggableIndex: data.newDraggableIndex,
-      originalEvent: data.originalEvent,
-      pullMode: data.pullMode,
-      related: data.related,
-      willInsertAfter: data.willInsertAfter,
-    }
-
-    // Prepare event data with defaults
-    const eventData: Partial<SortableEventData> = {
-      to: el,
-      from: el,
-      item: dragElement,
-      oldIndex: startIndex.value,
-      newIndex: startIndex.value,
-      ...compatibleData,
-    }
-
-    // Get appropriate callback based on event type
-    let callback: ((evt: SortableEvent) => void) | undefined
-    switch (eventType) {
-      case 'start':
-        callback = onStart
-        break
-      case 'end':
-        callback = onEnd
-        break
-      case 'update':
-        callback = onUpdate
-        break
-      case 'filter':
-        callback = onFilter
-        break
-    }
-
-    // Dispatch event using unified event dispatcher
-    eventDispatcher.dispatch(eventType, eventData, callback)
-  }
-
-  /**
-   * Find the draggable element from the event target
-   */
-  const findDraggableTarget = (target: HTMLElement): HTMLElement | null => {
-    const el = targetElement.value
-    if (!el)
-      return null
-
-    return findDraggableElement(target, el, toValue(draggable))
-  }
-
-  /**
-   * Check if element should be filtered (not draggable)
-   */
-  const shouldFilterElement = (evt: Event, item: HTMLElement, target: HTMLElement): boolean => {
-    const currentFilter = toValue(filter)
-
-    if (typeof currentFilter === 'string') {
-      if (target.matches(currentFilter)) {
-        dispatchEvent('filter', { item, related: target })
-        if (toValue(preventOnFilter)) {
-          evt.preventDefault()
-        }
-        return true
-      }
-    }
-    else if (typeof currentFilter === 'function') {
-      if (currentFilter(evt, item, target)) {
-        dispatchEvent('filter', { item, related: target })
-        if (toValue(preventOnFilter)) {
-          evt.preventDefault()
-        }
-        return true
-      }
-    }
-
-    return false
-  }
-
-  /**
-   * Check if target is a valid handle
-   */
-  const isValidHandle = (target: HTMLElement, handleSelector: string): boolean => {
-    return target.matches(handleSelector) || target.closest(handleSelector) !== null
-  }
-
-  /**
-   * Fallback method to find element by position (for test environments)
-   */
-  const findElementByPosition = (clientX: number, clientY: number): HTMLElement | null => {
-    const el = targetElement.value
-    if (!el)
-      return null
-
-    const children = getDraggableChildren(el, toValue(draggable))
-
-    for (const child of children) {
-      if (child === state.dragElement.value)
-        continue
-
-      const rect = child.getBoundingClientRect()
-      if (
-        clientX >= rect.left && clientX <= rect.right
-        && clientY >= rect.top && clientY <= rect.bottom
-      ) {
-        return child
-      }
-    }
-
-    return null
-  }
-
-  /**
-   * Get element from point, handling touch events and shadow DOM
-   */
-  const getElementFromPoint = (clientX: number, clientY: number): HTMLElement | null => {
-    const el = targetElement.value
-    if (!el)
-      return null
-
-    // Check if elementFromPoint is available (not in all test environments)
-    if (typeof document.elementFromPoint !== 'function') {
-      // Fallback for test environments - find element by position
-      return findElementByPosition(clientX, clientY)
-    }
-
-    // Hide ghost element temporarily to get accurate elementFromPoint
-    const ghostElement = state.ghostElement.value
-    let ghostDisplay = ''
-    if (ghostElement) {
-      ghostDisplay = ghostElement.style.display
-      ghostElement.style.display = 'none'
-    }
-
-    let target = document.elementFromPoint(clientX, clientY) as HTMLElement | null
-
-    // Handle shadow DOM
-    while (target && target.shadowRoot) {
-      const shadowTarget = target.shadowRoot.elementFromPoint(clientX, clientY) as HTMLElement
-      if (shadowTarget === target)
-        break
-      target = shadowTarget
-    }
-
-    // Restore ghost element display
-    if (ghostElement) {
-      ghostElement.style.display = ghostDisplay
-    }
-
-    return target
-  }
-
-  /**
-   * Detect layout direction (vertical or horizontal)
-   */
-  const detectDirection = (): 'vertical' | 'horizontal' => {
-    const el = targetElement.value
-    if (!el)
-      return 'vertical'
-
-    const children = getDraggableChildren(el, toValue(draggable))
-    if (children.length < 2)
-      return 'vertical'
-
-    const first = children[0]
-    const second = children[1]
-    const firstRect = first.getBoundingClientRect()
-    const secondRect = second.getBoundingClientRect()
-
-    // Check container styles for explicit direction
-    const containerStyle = getComputedStyle(el)
-    if (containerStyle.display === 'flex') {
-      const flexDirection = containerStyle.flexDirection
-      if (flexDirection === 'row' || flexDirection === 'row-reverse') {
-        return 'horizontal'
-      }
-      if (flexDirection === 'column' || flexDirection === 'column-reverse') {
-        return 'vertical'
-      }
-    }
-
-    // Check relative positions of elements
-    // If second element is significantly to the right of first, it's horizontal
-    if (secondRect.left >= firstRect.right - 5) {
-      return 'horizontal'
-    }
-
-    // If second element is significantly below first, it's vertical
-    if (secondRect.top >= firstRect.bottom - 5) {
-      return 'vertical'
-    }
-
-    // Default to vertical for ambiguous cases
-    return 'vertical'
-  }
-
-  /**
-   * Get swap direction
-   */
-  const getSwapDirection = (
-    pointer: { clientX: number, clientY: number },
-    target: HTMLElement,
-    targetRect: DOMRect,
-    vertical: boolean,
-  ): number | null => {
-    const mouseOnAxis = vertical ? pointer.clientY : pointer.clientX
-    const targetLength = vertical ? targetRect.height : targetRect.width
-    const targetStart = vertical ? targetRect.top : targetRect.left
-    const targetCenter = targetStart + targetLength / 2
-
-    const currentSwapThreshold = toValue(swapThreshold)
-
-    // For full threshold (1), always allow swapping
-    if (currentSwapThreshold >= 1) {
-      return mouseOnAxis > targetCenter ? 1 : -1
-    }
-
-    // For partial threshold, create dead zone in the middle
-    const threshold = targetLength * (1 - currentSwapThreshold) / 2
-    const deadZoneStart = targetStart + threshold
-    const deadZoneEnd = targetStart + targetLength - threshold
-
-    // Check if mouse is in the middle area (no swap)
-    if (mouseOnAxis > deadZoneStart && mouseOnAxis < deadZoneEnd) {
-      return null
-    }
-
-    // Determine direction: 1 for after, -1 for before
-    return mouseOnAxis > targetCenter ? 1 : -1
-  }
-
-  /**
-   * Calculate insertion position based on mouse position and target element
-   * Returns 1 for after, -1 for before, null for no insertion
-   */
-  const calculateInsertPosition = (
-    pointer: { clientX: number, clientY: number },
-    target: HTMLElement,
-  ): number | null => {
-    const targetRect = target.getBoundingClientRect()
-    const vertical = detectDirection() === 'vertical'
-
-    return getSwapDirection(pointer, target, targetRect, vertical)
-  }
-
-  /**
-   * Perform the actual DOM insertion
-   */
-  const performInsertion = (target: HTMLElement, direction: number) => {
-    const dragElement = state.dragElement.value
-    if (!dragElement)
-      return
-
-    const parent = target.parentNode
-    if (!parent)
-      return
-
-    // Capture animation state before DOM changes (like SortableJS capture())
-    if (onAnimationCapture) {
-      onAnimationCapture()
-    }
-
-    if (direction === 1) {
-      // Insert after target
-      const nextSibling = target.nextSibling
-      if (nextSibling) {
-        parent.insertBefore(dragElement, nextSibling)
-      }
-      else {
-        parent.appendChild(dragElement)
-      }
-    }
-    else {
-      // Insert before target
-      parent.insertBefore(dragElement, target)
-    }
-
-    // Update current index after DOM changes
-    const newCurrentIndex = getElementIndex(dragElement)
-    state._setCurrentIndex(newCurrentIndex)
-
-    // Immediately notify about DOM changes for responsive data updates
-    if (onItemsUpdate) {
-      onItemsUpdate()
-    }
-
-    // Trigger animation after DOM changes (like SortableJS completed())
-    if (onAnimationTrigger) {
-      onAnimationTrigger()
-    }
+    tapEvt.value = undefined
+    ghostMatrix.value = undefined
+    lastDx.value = 0
+    lastDy.value = 0
+    isFallbackActive.value = false
+    state._setFallbackActive(false)
   }
 
   /**
@@ -836,59 +802,6 @@ export function useSortableDrag(
     // Clean up only drag-specific listeners (not base listeners)
     dragCleanupFunctions.value.forEach(cleanup => cleanup())
     dragCleanupFunctions.value = []
-  }
-
-  /**
-   * Create ghost element for fallback mode
-   */
-  const createGhost = () => {
-    const dragElement = state.dragElement.value
-    if (!dragElement || !tapEvt.value)
-      return
-
-    // Get element rect at the time of drag start
-    const rect = dragElement.getBoundingClientRect()
-
-    const tapDistance = {
-      left: tapEvt.value.clientX - rect.left,
-      top: tapEvt.value.clientY - rect.top,
-    }
-
-    // Prepare ghost element options for fallback mode
-    const ghostOptions: GhostElementOptions = {
-      ghostClass: toValue(ghostClass),
-      fallbackClass: toValue(fallbackClass),
-      fallbackOnBody: toValue(fallbackOnBody),
-      fallbackOffset: toValue(fallbackOffset),
-      useFallback: true,
-      nativeDraggable: false,
-      tapDistance,
-      initialRect: rect,
-    }
-
-    // Choose container based on fallbackOnBody option
-    const container = toValue(fallbackOnBody)
-      ? document.body
-      : dragElement.parentNode as HTMLElement
-
-    // Create ghost element with accurate positioning
-    const ghostElement = createGhostElement(dragElement, ghostOptions)
-    state._setGhostElement(ghostElement)
-
-    // Insert ghost element into the appropriate container
-    if (container && ghostElement) {
-      if (toValue(fallbackOnBody)) {
-        container.appendChild(ghostElement)
-      }
-      else {
-        container.insertBefore(ghostElement, dragElement.nextSibling)
-      }
-    }
-
-    // Set up ghost relative parent for absolute positioning
-    if (ghostElement && container) {
-      setGhostRelativeParent(ghostElement, container)
-    }
   }
 
   /**
@@ -1084,55 +997,156 @@ export function useSortableDrag(
 
     // Set up document-level dragover listener for native mode
     const onDocumentDragOver = handleDocumentDragOver
-    document.addEventListener('dragover', onDocumentDragOver)
+    const cleanup = useEventListener(document, 'dragover', onDocumentDragOver)
 
-    dragCleanupFunctions.value.push(() => {
-      document.removeEventListener('dragover', onDocumentDragOver)
-    })
+    dragCleanupFunctions.value.push(cleanup)
   }
 
   /**
-   * Setup listeners for fallback drag events
+   * Disable delayed drag and clear timers
    */
-  const setupFallbackDragListeners = () => {
-    const onMouseMove = handleDragMove
-    const onMouseUp = handleDragEnd
-    const onTouchMove = handleDragMove
-    const onTouchEnd = handleDragEnd
+  const disableDelayedDrag = () => {
+    if (delayTimer.value) {
+      clearTimeout(delayTimer.value)
+      delayTimer.value = undefined
+    }
+    awaitingDragStarted.value = false
 
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-    document.addEventListener('touchmove', onTouchMove, { passive: false })
-    document.addEventListener('touchend', onTouchEnd)
-
-    dragCleanupFunctions.value.push(() => {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      document.removeEventListener('touchmove', onTouchMove)
-      document.removeEventListener('touchend', onTouchEnd)
-    })
+    // Clean up delayed drag listeners using dedicated array
+    delayedDragEvents.value.forEach(cleanup => cleanup())
+    delayedDragEvents.value = []
   }
 
   /**
-   * Setup listeners for native HTML5 drag events
+   * Disable delayed drag events
    */
-  const setupNativeDragListeners = () => {
-    const dragElement = state.dragElement.value
-    if (!dragElement)
+  const disableDelayedDragEvents = () => {
+    // Clean up delayed drag listeners
+    delayedDragEvents.value.forEach(cleanup => cleanup())
+    delayedDragEvents.value = []
+  }
+
+  /**
+   * Handle delayed drag touch move for threshold detection
+   */
+  const handleDelayedDragTouchMove = (evt: TouchEvent | PointerEvent | MouseEvent) => {
+    const touch = 'touches' in evt ? evt.touches[0] : evt
+    if (!touch)
       return
 
-    const onDragEnd = handleDragEnd
-    const onDragStart = handleNativeDragStart
+    // Use computed threshold for more accurate detection
+    const threshold = dragStartThreshold.value
 
-    dragElement.addEventListener('dragend', onDragEnd)
-    dragElement.addEventListener('dragstart', onDragStart)
+    if (Math.max(
+      Math.abs(touch.clientX - lastX.value),
+      Math.abs(touch.clientY - lastY.value),
+    ) >= threshold) {
+      disableDelayedDrag()
+    }
+  }
 
-    dragCleanupFunctions.value.push(() => {
-      if (dragElement) {
-        dragElement.removeEventListener('dragend', onDragEnd)
-        dragElement.removeEventListener('dragstart', onDragStart)
+  /**
+   * Start fallback mode for drag operation
+   */
+  const startFallbackMode = (dragEl: HTMLElement, tapEvent: { clientX: number, clientY: number }): void => {
+    tapEvt.value = tapEvent
+    lastDx.value = 0
+    lastDy.value = 0
+
+    try {
+      ghostMatrix.value = new DOMMatrix()
+    }
+    catch {
+      // Fallback for test environments - create a simple matrix-like object
+      ghostMatrix.value = {
+        a: 1,
+        b: 0,
+        c: 0,
+        d: 1,
+        e: 0,
+        f: 0,
+      } as DOMMatrix
+    }
+
+    // Calculate scale factors for accurate positioning
+    calculateScaleFactors()
+
+    if (positionGhostAbsolutely.value) {
+      initializeGhostRelativeParent()
+    }
+
+    // Set active state
+    isFallbackActive.value = true
+    state._setFallbackActive(true)
+
+    // Start periodic drag over emulation
+    loopTimer.value = setInterval(() => {
+      // Emulate drag over events for fallback mode
+    }, 50)
+  }
+
+  /**
+   * Create ghost element for fallback mode
+   */
+  const createGhost = () => {
+    const dragElement = state.dragElement.value
+    if (!dragElement || !tapEvt.value)
+      return
+
+    // Get element rect at the time of drag start
+    const rect = dragElement.getBoundingClientRect()
+
+    const tapDistance = {
+      left: tapEvt.value.clientX - rect.left,
+      top: tapEvt.value.clientY - rect.top,
+    }
+
+    // Simple ghost creation - clone the element
+    const ghostElement = dragElement.cloneNode(true) as HTMLElement
+
+    // Apply fallback class
+    const currentFallbackClass = toValue(fallbackClass)
+    if (currentFallbackClass) {
+      ghostElement.classList.add(currentFallbackClass)
+    }
+
+    // Position the ghost element
+    ghostElement.style.position = 'fixed'
+    ghostElement.style.top = `${rect.top}px`
+    ghostElement.style.left = `${rect.left}px`
+    ghostElement.style.width = `${rect.width}px`
+    ghostElement.style.height = `${rect.height}px`
+    ghostElement.style.pointerEvents = 'none'
+    ghostElement.style.zIndex = '100000'
+
+    // Set transform-origin based on tap distance (where user clicked)
+    // This ensures the ghost rotates/scales around the click point, following SortableJS behavior
+    if (rect.width > 0 && rect.height > 0) {
+      const originX = Math.max(0, Math.min(100, (tapDistance.left / rect.width * 100)))
+      const originY = Math.max(0, Math.min(100, (tapDistance.top / rect.height * 100)))
+      ghostElement.style.transformOrigin = `${originX}% ${originY}%`
+    }
+
+    // Choose container based on fallbackOnBody option
+    const container = toValue(fallbackOnBody)
+      ? document.body
+      : dragElement.parentNode as HTMLElement
+
+    // Insert ghost element into the appropriate container
+    if (container && ghostElement) {
+      if (toValue(fallbackOnBody)) {
+        container.appendChild(ghostElement)
       }
-    })
+      else {
+        container.insertBefore(ghostElement, dragElement.nextSibling)
+      }
+      state._setGhostElement(ghostElement)
+    }
+
+    // Set up ghost relative parent for absolute positioning
+    if (ghostElement && container) {
+      setGhostRelativeParent(ghostElement, container)
+    }
   }
 
   /**
@@ -1172,19 +1186,81 @@ export function useSortableDrag(
   }
 
   /**
+   * Setup listeners for fallback drag events
+   */
+  const setupFallbackDragListeners = () => {
+    const onMouseMove = handleDragMove
+    const onMouseUp = handleDragEnd
+    const onTouchMove = handleDragMove
+    const onTouchEnd = handleDragEnd
+
+    if (supportPointer.value) {
+      // Use pointer events for unified handling
+      const pointerMoveEvent = useEventListener(document, 'pointermove', onMouseMove)
+      const pointerUpEvent = useEventListener(document, 'pointerup', onMouseUp)
+      const pointerCancelEvent = useEventListener(document, 'pointercancel', onMouseUp)
+
+      dragCleanupFunctions.value.push(pointerMoveEvent, pointerUpEvent, pointerCancelEvent)
+    }
+    else {
+      // Fallback to separate mouse and touch events
+      const mouseMoveEvent = useEventListener(document, 'mousemove', onMouseMove)
+      const mouseUpEvent = useEventListener(document, 'mouseup', onMouseUp)
+      const touchMoveEvent = useEventListener(document, 'touchmove', onTouchMove, { passive: false })
+      const touchEndEvent = useEventListener(document, 'touchend', onTouchEnd)
+      const touchCancelEvent = useEventListener(document, 'touchcancel', onTouchEnd)
+
+      dragCleanupFunctions.value.push(mouseMoveEvent, mouseUpEvent, touchMoveEvent, touchEndEvent, touchCancelEvent)
+    }
+  }
+
+  /**
+   * Setup listeners for native HTML5 drag events
+   */
+  const setupNativeDragListeners = () => {
+    const dragElement = state.dragElement.value
+    if (!dragElement)
+      return
+
+    const onDragEnd = handleDragEnd
+    const onDragStart = handleNativeDragStart
+
+    const dragEndEvent = useEventListener(dragElement, 'dragend', onDragEnd)
+    const dragStartEvent = useEventListener(dragElement, 'dragstart', onDragStart)
+
+    dragCleanupFunctions.value.push(dragEndEvent, dragStartEvent)
+  }
+
+  /**
    * Start the actual drag operation
    */
   const startDragOperation = (evt: Event) => {
     const dragElement = state.dragElement.value
     if (!dragElement) {
-      console.warn('[useSortableDrag] Cannot start drag operation: no drag element')
       return
     }
+
+    // Disable delayed drag events
+    disableDelayedDragEvents()
+
+    // Clear text selection if exists
+    try {
+      if ((document as any).selection) {
+        // IE
+        setTimeout(() => {
+          (document as any).selection.empty()
+        }, 0)
+      }
+      else {
+        window.getSelection()?.removeAllRanges()
+      }
+    }
+    catch { }
 
     const isTouch = evt.type.startsWith('touch')
       || (evt instanceof PointerEvent && evt.pointerType === 'touch')
 
-    const shouldUseFallbackMode = !toValue(state.nativeDraggable.value) || isTouch
+    const shouldUseFallbackMode = !state.nativeDraggable.value || isTouch || toValue(forceFallback)
 
     if (shouldUseFallbackMode) {
       isUsingFallback.value = true
@@ -1208,20 +1284,31 @@ export function useSortableDrag(
    */
   const prepareDragStart = (evt: Event, dragElement: HTMLElement) => {
     if (!state._canPerformOperation('startDrag')) {
-      console.warn('[useSortableDrag] Cannot prepare drag start: operation not allowed')
       return
     }
 
     state._setDragElement(dragElement)
     startIndex.value = getElementIndex(dragElement)
 
-    // Record initial tap/click position for fallback mode
+    // Record initial tap/click position for fallback mode (enhanced following SortableJS)
     if (evt instanceof MouseEvent) {
       tapEvt.value = { clientX: evt.clientX, clientY: evt.clientY }
+      lastX.value = evt.clientX
+      lastY.value = evt.clientY
+      isTouchInteraction.value = false
+    }
+    else if (evt instanceof PointerEvent) {
+      tapEvt.value = { clientX: evt.clientX, clientY: evt.clientY }
+      lastX.value = evt.clientX
+      lastY.value = evt.clientY
+      isTouchInteraction.value = evt.pointerType === 'touch'
     }
     else if (evt instanceof TouchEvent && evt.touches.length > 0) {
       const touch = evt.touches[0]
       tapEvt.value = { clientX: touch.clientX, clientY: touch.clientY }
+      lastX.value = touch.clientX
+      lastY.value = touch.clientY
+      isTouchInteraction.value = true
     }
 
     // Add chosen class
@@ -1243,43 +1330,59 @@ export function useSortableDrag(
     const currentDelayOnTouchOnly = toValue(delayOnTouchOnly)
 
     if (currentDelay && (!currentDelayOnTouchOnly || isTouch)) {
-      setTimeout(() => {
-        if (state.dragElement.value === dragElement) {
+      awaitingDragStarted.value = true
+
+      // Create drag start function
+      const dragStartFn = () => {
+        if (state.dragElement.value === dragElement && awaitingDragStarted.value) {
+          awaitingDragStarted.value = false
+
+          // Disable delayed drag events
+          disableDelayedDragEvents()
+
+          // Dispatch choose event
+          dispatchEvent('choose', {
+            item: dragElement,
+            oldIndex: startIndex.value,
+            originalEvent: evt,
+          })
+
+          // Add chosen class if not already added
+          const currentChosenClass = toValue(chosenClass)
+          if (currentChosenClass && !dragElement.classList.contains(currentChosenClass)) {
+            dragElement.classList.add(currentChosenClass)
+          }
+
           startDragOperation(evt)
         }
-      }, currentDelay)
-    }
-    else {
-      // Start immediately for programmatic calls or when no delay
-      if (evt.type === 'mousedown' && (evt as MouseEvent).clientX === 0 && (evt as MouseEvent).clientY === 0) {
-        // This is a programmatic call, start immediately
-        startDragOperation(evt)
+      }
+
+      // Set up delayed drag listeners for threshold detection using dedicated array
+      if (supportPointer.value) {
+        // Use pointer events for unified handling
+        const pointerMoveEvent = useEventListener(document, 'pointermove', handleDelayedDragTouchMove)
+        const pointerUpEvent = useEventListener(document, 'pointerup', disableDelayedDrag)
+        const pointerCancelEvent = useEventListener(document, 'pointercancel', disableDelayedDrag)
+        delayedDragEvents.value.push(pointerMoveEvent, pointerUpEvent, pointerCancelEvent)
+      }
+      else if (isTouch) {
+        const touchMoveEvent = useEventListener(document, 'touchmove', handleDelayedDragTouchMove, { passive: false })
+        const touchEndEvent = useEventListener(document, 'touchend', disableDelayedDrag)
+        const touchCancelEvent = useEventListener(document, 'touchcancel', disableDelayedDrag)
+        delayedDragEvents.value.push(touchMoveEvent, touchEndEvent, touchCancelEvent)
       }
       else {
-        startDragOperation(evt)
+        const mouseMoveEvent = useEventListener(document, 'mousemove', handleDelayedDragTouchMove)
+        const mouseUpEvent = useEventListener(document, 'mouseup', disableDelayedDrag)
+        delayedDragEvents.value.push(mouseMoveEvent, mouseUpEvent)
       }
-    }
-  }
 
-  /**
-   * Check if drag operation can be started
-   */
-  const canStartDrag = (): boolean => {
-    // Use state's operation permission check for consistency
-    if (!state._canPerformOperation('startDrag')) {
-      return false
+      delayTimer.value = setTimeout(dragStartFn, currentDelay)
     }
-
-    // Additional checks specific to drag core
-    if (toValue(disabled)) {
-      return false
+    else {
+      // Start immediately
+      startDragOperation(evt)
     }
-
-    if (state.isDragging.value) {
-      return false
-    }
-
-    return true
   }
 
   /**
@@ -1303,7 +1406,6 @@ export function useSortableDrag(
 
     prepareDragStart(evt, draggableElement)
   }
-
   /**
    * Handle touch start event for mobile drag
    */
@@ -1323,6 +1425,41 @@ export function useSortableDrag(
     if (currentHandle && !isValidHandle(target, currentHandle))
       return
 
+    // Store last position for threshold detection
+    const touch = evt.touches[0]
+    if (touch) {
+      lastX.value = touch.clientX
+      lastY.value = touch.clientY
+      isTouchInteraction.value = true
+    }
+
+    prepareDragStart(evt, draggableElement)
+  }
+
+  /**
+   * Handle pointer start event
+   */
+  const handlePointerStart = (evt: PointerEvent) => {
+    if (!canStartDrag())
+      return
+
+    const target = evt.target as HTMLElement
+    const draggableElement = findDraggableTarget(target)
+
+    if (!draggableElement)
+      return
+    if (shouldFilterElement(evt, draggableElement, target))
+      return
+
+    const currentHandle = toValue(handle)
+    if (currentHandle && !isValidHandle(target, currentHandle))
+      return
+
+    // Store last position for threshold detection
+    lastX.value = evt.clientX
+    lastY.value = evt.clientY
+    isTouchInteraction.value = evt.pointerType === 'touch'
+
     prepareDragStart(evt, draggableElement)
   }
 
@@ -1331,36 +1468,33 @@ export function useSortableDrag(
    */
   const setupEventListeners = () => {
     const el = targetElement.value
-    if (!el)
+    if (!el || isListenersSetup.value)
       return
 
-    // Mouse events
-    const onMouseDown = handleMouseDown
-    el.addEventListener('mousedown', onMouseDown)
-    cleanupFunctions.value.push(() => {
-      el.removeEventListener('mousedown', onMouseDown)
-    })
+    // Pointer events (unified touch/mouse handling) or fallback to separate events
+    if (supportPointer.value) {
+      const pointerDownEvent = useEventListener(el, 'pointerdown', handlePointerStart)
+      cleanupFunctions.value.push(pointerDownEvent)
+    }
+    else {
+      // Mouse events
+      const mouseDownEvent = useEventListener(el, 'mousedown', handleMouseDown)
+      cleanupFunctions.value.push(mouseDownEvent)
 
-    // Touch events for mobile support
-    const onTouchStart = handleTouchStart
-    el.addEventListener('touchstart', onTouchStart, { passive: false })
-    cleanupFunctions.value.push(() => {
-      el.removeEventListener('touchstart', onTouchStart)
-    })
+      // Touch events for mobile support
+      const touchStartEvent = useEventListener(el, 'touchstart', handleTouchStart, { passive: false })
+      cleanupFunctions.value.push(touchStartEvent)
+    }
 
     // Native HTML5 drag events for native mode
     if (state.nativeDraggable.value) {
-      const onDragOver = handleDragOver
-      const onDragEnter = handleDragEnter
+      const dragOverEvent = useEventListener(el, 'dragover', handleDragOver)
+      const dragEnterEvent = useEventListener(el, 'dragenter', handleDragEnter)
 
-      el.addEventListener('dragover', onDragOver)
-      el.addEventListener('dragenter', onDragEnter)
-
-      cleanupFunctions.value.push(() => {
-        el.removeEventListener('dragover', onDragOver)
-        el.removeEventListener('dragenter', onDragEnter)
-      })
+      cleanupFunctions.value.push(dragOverEvent, dragEnterEvent)
     }
+
+    isListenersSetup.value = true
   }
 
   /**
@@ -1414,24 +1548,20 @@ export function useSortableDrag(
 
   /**
    * Pause drag functionality (temporarily disable)
-   * Uses unified state management for consistency
    */
   const pause = () => {
     state._setPaused(true)
 
     if (state.isDragging.value) {
-      console.warn('[useSortableDrag] Pausing during active drag - stopping current operation')
       stopDrag()
     }
   }
 
   /**
    * Resume drag functionality
-   * Uses unified state management for consistency
    */
   const resume = () => {
     if (!state._canPerformOperation('resume')) {
-      console.warn('[useSortableDrag] Cannot resume: operation not allowed')
       return
     }
 
@@ -1439,7 +1569,7 @@ export function useSortableDrag(
   }
 
   /**
-   * Destroy and cleanup
+   * Destroy and cleanup all resources
    */
   const destroy = () => {
     // Clean up all event listeners (both base and drag-specific)
@@ -1455,9 +1585,20 @@ export function useSortableDrag(
     // Stop fallback mode if active
     stopFallbackMode()
 
+    // Clear timers and delayed events
+    if (delayTimer.value) {
+      clearTimeout(delayTimer.value)
+      delayTimer.value = undefined
+    }
+
+    // Clean up delayed drag events
+    delayedDragEvents.value.forEach(cleanup => cleanup())
+    delayedDragEvents.value = []
+
     // Reset state
     state._resetState()
     resetDragState()
+    isListenersSetup.value = false
   }
 
   // Watch target changes and reinitialize
@@ -1473,28 +1614,27 @@ export function useSortableDrag(
   // Watch for state changes that affect drag operations
   watch(() => state.isDisabled.value, (isDisabled) => {
     if (isDisabled && state.isDragging.value) {
-      console.warn('[useSortableDrag] Sortable disabled during drag - stopping operation')
       stopDrag()
     }
   })
 
   watch(() => state.isPaused.value, (isPaused) => {
     if (isPaused && state.isDragging.value) {
-      console.warn('[useSortableDrag] Sortable paused during drag - stopping operation')
       stopDrag()
     }
   })
 
   // Watch for native draggable changes and update listeners
-  watch(() => state.nativeDraggable.value, (newForceFallback, oldForceFallback) => {
-    if (newForceFallback !== oldForceFallback && targetElement.value) {
+  watch(() => state.nativeDraggable.value, (newNativeDraggable, oldNativeDraggable) => {
+    if (newNativeDraggable !== oldNativeDraggable && targetElement.value) {
       // Only reinitialize if not currently dragging to avoid disruption
       if (!state.isDragging.value) {
         // Clean up current listeners
         cleanupFunctions.value.forEach(cleanup => cleanup())
         cleanupFunctions.value = []
+        isListenersSetup.value = false
 
-        // Setup new listeners without full reinitialization
+        // Setup new listeners
         setupEventListeners()
       }
     }
