@@ -1,13 +1,78 @@
 import type { EasingFunction, SortableDirectionFunction, SortableEventCallbacks, SortableFilterFunction, SortableGroup, SortDirection } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { ref, shallowRef } from 'vue'
-import { getDraggableChildren } from '@/utils/sortable-dom'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
 import useSortableAnimation from './useSortableAnimation'
 import useSortableDrag from './useSortableDrag'
 import useSortableState from './useSortableState'
+
+/**
+ * Check if element matches selector with cross-browser support
+ * Based on SortableJS matches function
+ * @param el - The element to check
+ * @param selector - The selector to check
+ * @returns Whether the element matches the selector
+ */
+function matchesSelector(el: HTMLElement, selector: string): boolean {
+  if (!selector)
+    return true
+
+  // Handle child selector
+  if (selector.startsWith('>')) {
+    selector = selector.substring(1).trim()
+  }
+
+  if (!el)
+    return false
+
+  try {
+    if (el.matches) {
+      return el.matches(selector)
+    }
+    else if ((el as any).msMatchesSelector) {
+      return (el as any).msMatchesSelector(selector)
+    }
+    else if ((el as any).webkitMatchesSelector) {
+      return (el as any).webkitMatchesSelector(selector)
+    }
+  }
+  catch {
+    return false
+  }
+
+  return false
+}
+/**
+ * Get all draggable children from container
+ * Based on SortableJS getChild logic
+ * @param container - The parent container
+ * @param selector - Selector for draggable elements (default: '> *')
+ * @returns Array of draggable child elements
+ */
+export function getDraggableChildren(
+  container: HTMLElement,
+  selector = '> *',
+): HTMLElement[] {
+  if (!container)
+    return []
+
+  const children = Array.from(container.children) as HTMLElement[]
+
+  return children.filter((child) => {
+    // Skip hidden elements and templates
+    if (
+      child.style.display === 'none'
+      || child.nodeName.toUpperCase() === 'TEMPLATE'
+    ) {
+      return false
+    }
+
+    // Apply selector filter
+    return matchesSelector(child, selector)
+  })
+}
 
 /**
  * Options for useSortable composable.
