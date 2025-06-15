@@ -6,9 +6,165 @@ import type {
   SortableEventType,
 } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
-import { createSortableEvent, dispatchSortableEvent, normalizeEventData } from '@/utils/sortable-event'
+import { IE } from '@/utils'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, toValue } from 'vue'
+
+/**
+ * Browser compatibility check for CustomEvent support.
+ */
+const isCustomEventSupported = (() => {
+  if (typeof window === 'undefined')
+    return false
+
+  try {
+    // Check for CustomEvent constructor
+    if (typeof window.CustomEvent === 'function') {
+      // Test if it actually works
+      const testEvent = new CustomEvent('test', { bubbles: true, cancelable: true })
+      return testEvent instanceof Event
+    }
+    return false
+  }
+  catch {
+    return false
+  }
+})()
+
+/**
+ * Create a sortable event with cross-browser compatibility.
+ *
+ * @param eventType - The type of event to create
+ * @param eventData - The data to include in the event
+ * @param target - The target element for the event
+ * @returns A properly formatted SortableEvent
+ */
+function createSortableEvent(
+  eventType: SortableEventType,
+  eventData: SortableEventData,
+  target?: HTMLElement,
+): SortableEvent {
+  let event: Event
+
+  // Create event with browser compatibility
+  if (isCustomEventSupported && !IE) {
+    // Modern browsers with full CustomEvent support
+    event = new CustomEvent(eventType, {
+      bubbles: true,
+      cancelable: true,
+      detail: eventData,
+    })
+  }
+  else {
+    // Fallback for older browsers
+    event = document.createEvent('Event')
+    event.initEvent(eventType, true, true)
+  }
+
+  // Cast to SortableEvent and add properties
+  const sortableEvent = event as SortableEvent
+
+  // Add standard sortable properties
+  sortableEvent.to = eventData.to || target || document.body
+  sortableEvent.from = eventData.from || target || document.body
+  sortableEvent.item = eventData.item || target || document.body
+  sortableEvent.clone = eventData.clone
+  sortableEvent.oldIndex = eventData.oldIndex
+  sortableEvent.newIndex = eventData.newIndex
+  sortableEvent.oldDraggableIndex = eventData.oldDraggableIndex
+  sortableEvent.newDraggableIndex = eventData.newDraggableIndex
+  sortableEvent.originalEvent = eventData.originalEvent
+  sortableEvent.pullMode = eventData.pullMode
+  sortableEvent.related = eventData.related
+  sortableEvent.willInsertAfter = eventData.willInsertAfter
+
+  // Add any additional custom properties
+  for (const key in eventData) {
+    if (key !== 'type' && !(key in sortableEvent)) {
+      ; (sortableEvent as any)[key] = eventData[key]
+    }
+  }
+
+  return sortableEvent
+}
+
+/**
+ * Dispatch a sortable event on a target element.
+ * Handles both DOM event dispatching and callback execution.
+ *
+ * @param target - The target element to dispatch the event on
+ * @param eventType - The type of event to dispatch
+ * @param eventData - The data to include in the event
+ * @param callback - Optional callback function to execute
+ * @returns Whether the event was not cancelled
+ */
+function dispatchSortableEvent(
+  target: HTMLElement,
+  eventType: SortableEventType,
+  eventData: SortableEventData,
+  callback?: (event: SortableEvent) => void | boolean,
+): boolean {
+  // Create the event
+  const event = createSortableEvent(eventType, eventData, target)
+
+  // Dispatch DOM event
+  let domEventResult = true
+  try {
+    domEventResult = target.dispatchEvent(event)
+  }
+  catch (error) {
+    console.error(`Error dispatching DOM event ${eventType}:`, error)
+  }
+
+  // Execute callback if provided
+  let callbackResult = true
+  if (callback) {
+    try {
+      const result = callback(event)
+      if (result === false) {
+        callbackResult = false
+      }
+    }
+    catch (error) {
+      console.error(`Error in event callback for ${eventType}:`, error)
+    }
+  }
+
+  // Event is cancelled if either DOM event or callback returned false
+  return domEventResult && callbackResult
+}
+
+/**
+ * Normalize event data to ensure all required properties are present.
+ * Provides default values for missing properties.
+ *
+ * @param eventType - The type of event
+ * @param data - The raw event data
+ * @param defaults - Default values to use
+ * @returns Normalized event data
+ */
+function normalizeEventData(
+  eventType: SortableEventType,
+  data: Partial<SortableEventData>,
+  defaults: Partial<SortableEventData> = {},
+): SortableEventData {
+  return {
+    type: eventType,
+    to: data.to || defaults.to,
+    from: data.from || defaults.from,
+    item: data.item || defaults.item,
+    clone: data.clone || defaults.clone,
+    oldIndex: data.oldIndex ?? defaults.oldIndex,
+    newIndex: data.newIndex ?? defaults.newIndex,
+    oldDraggableIndex: data.oldDraggableIndex ?? defaults.oldDraggableIndex,
+    newDraggableIndex: data.newDraggableIndex ?? defaults.newDraggableIndex,
+    originalEvent: data.originalEvent || defaults.originalEvent,
+    pullMode: data.pullMode || defaults.pullMode,
+    related: data.related || defaults.related,
+    willInsertAfter: data.willInsertAfter ?? defaults.willInsertAfter ?? false,
+    ...data, // Include any additional custom properties
+  }
+}
 
 /**
  * Event dispatcher options for configuration
