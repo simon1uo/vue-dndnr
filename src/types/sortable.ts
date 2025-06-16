@@ -22,13 +22,14 @@ export interface SortableGroup {
   pull?: boolean | 'clone' | SortablePullFunction
   /**
    * Controls whether items can be put into this list
-   * - true: Items can be put into this list
+   * - true: Items can be put into this list from any group
    * - false: Items cannot be put into this list
+   * - 'same-group': Only items from the same group can be put (default)
    * - string[]: Array of allowed group names
    * - function: Custom logic for put behavior
-   * @default true
+   * @default 'same-group'
    */
-  put?: boolean | string[] | SortablePutFunction
+  put?: boolean | 'same-group' | string[] | SortablePutFunction
   /**
    * Whether to revert cloned element to original position after moving to another list
    * @default false

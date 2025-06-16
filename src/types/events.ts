@@ -1,3 +1,5 @@
+import type { SortablePullFunction } from './sortable'
+
 /**
  * Internal event types
  * All possible event types that can be dispatched by the sortable system.
@@ -53,7 +55,7 @@ export interface SortableEvent extends Event {
    * Pull mode when cross-list dragging
    * @default undefined
    */
-  pullMode?: 'clone' | undefined
+  pullMode?: boolean | 'clone' | SortablePullFunction
   /** Related target element (typically the element being dragged over) */
   related?: HTMLElement
   /** Rectangle information of the related element (used in onMove events) */
@@ -202,7 +204,7 @@ export interface SortableEventData {
   /** Original DOM event that triggered this */
   originalEvent?: Event
   /** Pull mode when cross-list dragging */
-  pullMode?: 'clone' | undefined
+  pullMode?: boolean | 'clone' | SortablePullFunction
   /** Related element for move events */
   related?: HTMLElement
   /** Rectangle information of the related element (used in onMove events) */

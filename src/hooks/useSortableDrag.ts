@@ -3,6 +3,7 @@ import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { UseSortableOptions } from './useSortable'
 import type { SortableStateInternal } from './useSortableState'
 import { IE, IOS, Safari } from '@/utils'
+import { globalGroupManager } from '@/utils/group-manager'
 import { isClient, tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
@@ -357,6 +358,48 @@ export function useSortableDrag(
     const draggableSelector = toValue(draggable)
 
     while (current && current !== el) {
+      if (current.matches && current.matches(draggableSelector)) {
+        return current
+      }
+      current = current.parentElement
+    }
+
+    return null
+  }
+
+  /**
+   * Find the sortable container for a given element (for cross-list detection)
+   * @param target - Event target element
+   * @returns Sortable container element or null
+   */
+  const findSortableContainer = (target: HTMLElement): HTMLElement | null => {
+    let current: HTMLElement | null = target
+
+    while (current) {
+      // Check if this element is registered as a sortable container
+      if (current.hasAttribute('data-sortable-group')) {
+        return current
+      }
+      current = current.parentElement
+    }
+
+    return null
+  }
+
+  /**
+   * Find draggable element in any sortable container (for cross-list detection)
+   * @param target - Event target element
+   * @param container - Sortable container element
+   * @returns Draggable element or null
+   */
+  const findCrossListDraggableTarget = (target: HTMLElement, container: HTMLElement): HTMLElement | null => {
+    if (!container)
+      return null
+
+    let current: HTMLElement | null = target
+    const draggableSelector = toValue(draggable)
+
+    while (current && current !== container) {
       if (current.matches && current.matches(draggableSelector)) {
         return current
       }
@@ -789,6 +832,124 @@ export function useSortableDrag(
       onAnimationTrigger()
     }
   }
+
+  /**
+   * Perform cross-list DOM insertion with proper event handling
+   * @param target - Target element in the destination container
+   * @param direction - Direction of the insertion
+   * @param targetContainer - Destination container element
+   */
+  const performCrossListInsertion = (target: HTMLElement, direction: number, targetContainer: HTMLElement | null) => {
+    const dragElement = state.dragElement.value
+    const sourceContainer = targetElement.value
+
+    if (!dragElement || !targetContainer || !sourceContainer)
+      return
+
+    // Check drop permission again to be safe
+    const dropResult = globalGroupManager.canAcceptDrop(
+      sourceContainer,
+      targetContainer,
+      dragElement,
+    )
+
+    if (!dropResult.allowed) {
+      return
+    }
+
+    const parent = target.parentNode
+    if (!parent)
+      return
+
+    // Store original indices for event data
+    const oldIndex = getElementIndex(dragElement)
+    const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
+    const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
+
+    // Handle clone mode
+    let elementToInsert = dragElement
+    if (dropResult.pullMode === 'clone') {
+      elementToInsert = dragElement.cloneNode(true) as HTMLElement
+
+      // Dispatch clone event
+      dispatch('clone', {
+        item: elementToInsert,
+        clone: elementToInsert,
+        from: sourceContainer,
+        to: targetContainer,
+        oldIndex,
+        oldDraggableIndex,
+      })
+    }
+
+    // Capture animation state before DOM changes
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
+    // Perform the actual insertion
+    if (direction === 1) {
+      // Insert after target
+      const nextSibling = target.nextSibling
+      if (nextSibling) {
+        parent.insertBefore(elementToInsert, nextSibling)
+      }
+      else {
+        parent.appendChild(elementToInsert)
+      }
+    }
+    else {
+      // Insert before target
+      parent.insertBefore(elementToInsert, target)
+    }
+
+    // Calculate new indices
+    const targetItems = Array.from(targetContainer.children) as HTMLElement[]
+    const newIndex = targetItems.indexOf(elementToInsert)
+    const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
+
+    // For clone mode, original element stays in source
+    if (typeof dropResult.pullMode === 'string') {
+      // Dispatch remove event for source container
+      dispatch('remove', {
+        item: dragElement,
+        from: sourceContainer,
+        to: targetContainer,
+        oldIndex,
+        oldDraggableIndex,
+        clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
+        pullMode: dropResult.pullMode,
+      })
+    }
+
+    // Dispatch add event for target container
+    dispatch('add', {
+      item: elementToInsert,
+      from: sourceContainer,
+      to: targetContainer,
+      oldIndex,
+      newIndex,
+      oldDraggableIndex,
+      newDraggableIndex,
+      clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
+      pullMode: dropResult.pullMode,
+    })
+
+    // Update current index for the moved/cloned element
+    if (dropResult.pullMode !== 'clone') {
+      state._setCurrentIndex(newIndex)
+    }
+
+    // Immediately notify about DOM changes for responsive data updates
+    if (onItemsUpdate) {
+      onItemsUpdate()
+    }
+
+    // Trigger animation after DOM changes
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
+    }
+  }
   /**
    * Update ghost element position during drag
    * @param ghost - Ghost element
@@ -976,8 +1137,29 @@ export function useSortableDrag(
     if (!target)
       return
 
-    // Find the closest draggable element
-    const draggableTarget = findDraggableTarget(target)
+    // First try to find draggable in current container
+    let draggableTarget = findDraggableTarget(target)
+    let targetContainer = targetElement.value
+
+    // If not found in current container, check for cross-list drag
+    if (!draggableTarget) {
+      const crossListContainer = findSortableContainer(target)
+      if (crossListContainer && crossListContainer !== targetElement.value) {
+        // Check if cross-list drop is allowed
+        const dropResult = globalGroupManager.canAcceptDrop(
+          targetElement.value!,
+          crossListContainer,
+          state.dragElement.value,
+          evt,
+        )
+
+        if (dropResult.allowed) {
+          draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
+          targetContainer = crossListContainer
+        }
+      }
+    }
+
     if (!draggableTarget || draggableTarget === state.dragElement.value)
       return
 
@@ -993,7 +1175,7 @@ export function useSortableDrag(
       const dragRect = state.dragElement.value?.getBoundingClientRect()
 
       const moveResult = dispatchMoveEvent({
-        to: targetElement.value || undefined,
+        to: targetContainer || undefined,
         from: targetElement.value || undefined,
         item: state.dragElement.value || undefined,
         dragged: state.dragElement.value || undefined,
@@ -1006,7 +1188,7 @@ export function useSortableDrag(
 
       // Only perform insertion if move event wasn't cancelled
       if (moveResult !== false) {
-        performInsertion(draggableTarget, insertPosition)
+        performCrossListInsertion(draggableTarget, insertPosition, targetContainer)
       }
     }
   }
@@ -1046,8 +1228,28 @@ export function useSortableDrag(
     if (!target)
       return
 
-    // Find the closest draggable element
-    const draggableTarget = findDraggableTarget(target)
+    // First try to find draggable in current container
+    let draggableTarget = findDraggableTarget(target)
+    let targetContainer = targetElement.value
+
+    // If not found in current container, check for cross-list drag
+    if (!draggableTarget) {
+      const crossListContainer = findSortableContainer(target)
+      if (crossListContainer && crossListContainer !== targetElement.value) {
+        // Check if cross-list drop is allowed
+        const dropResult = globalGroupManager.canAcceptDrop(
+          targetElement.value!,
+          crossListContainer,
+          state.dragElement.value!,
+        )
+
+        if (dropResult.allowed) {
+          draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
+          targetContainer = crossListContainer
+        }
+      }
+    }
+
     if (!draggableTarget || draggableTarget === state.dragElement.value)
       return
 
@@ -1063,7 +1265,7 @@ export function useSortableDrag(
       const dragRect = state.dragElement.value?.getBoundingClientRect()
 
       const moveResult = dispatchMoveEvent({
-        to: targetElement.value || undefined,
+        to: targetContainer || undefined,
         from: targetElement.value || undefined,
         item: state.dragElement.value || undefined,
         dragged: state.dragElement.value || undefined,
@@ -1076,7 +1278,12 @@ export function useSortableDrag(
 
       // Only perform insertion if move event wasn't cancelled
       if (moveResult !== false) {
-        performInsertion(draggableTarget, insertPosition)
+        if (targetContainer === targetElement.value) {
+          performInsertion(draggableTarget, insertPosition)
+        }
+        else {
+          performCrossListInsertion(draggableTarget, insertPosition, targetContainer)
+        }
       }
     }
   }
@@ -1178,8 +1385,29 @@ export function useSortableDrag(
     if (!target)
       return
 
-    // Find the closest draggable element
-    const draggableTarget = findDraggableTarget(target)
+    // First try to find draggable in current container
+    let draggableTarget = findDraggableTarget(target)
+    let targetContainer = targetElement.value
+
+    // If not found in current container, check for cross-list drag
+    if (!draggableTarget) {
+      const crossListContainer = findSortableContainer(target)
+      if (crossListContainer && crossListContainer !== targetElement.value) {
+        // Check if cross-list drop is allowed
+        const dropResult = globalGroupManager.canAcceptDrop(
+          targetElement.value!,
+          crossListContainer,
+          state.dragElement.value!,
+          evt,
+        )
+
+        if (dropResult.allowed) {
+          draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
+          targetContainer = crossListContainer
+        }
+      }
+    }
+
     if (!draggableTarget || draggableTarget === state.dragElement.value)
       return
 
@@ -1195,7 +1423,7 @@ export function useSortableDrag(
       const dragRect = state.dragElement.value?.getBoundingClientRect()
 
       const moveResult = dispatchMoveEvent({
-        to: targetElement.value || undefined,
+        to: targetContainer || undefined,
         from: targetElement.value || undefined,
         item: state.dragElement.value || undefined,
         dragged: state.dragElement.value || undefined,
@@ -1208,7 +1436,12 @@ export function useSortableDrag(
 
       // Only perform insertion if move event wasn't cancelled
       if (moveResult !== false) {
-        performInsertion(draggableTarget, insertPosition)
+        if (targetContainer === targetElement.value) {
+          performInsertion(draggableTarget, insertPosition)
+        }
+        else {
+          performCrossListInsertion(draggableTarget, insertPosition, targetContainer)
+        }
       }
     }
   }

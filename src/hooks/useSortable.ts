@@ -1,6 +1,7 @@
 import type { EasingFunction, SortableDirectionFunction, SortableEventCallbacks, SortableFilterFunction, SortableGroup, SortDirection } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { ref, shallowRef } from 'vue'
+import { globalGroupManager } from '@/utils/group-manager'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
@@ -356,6 +357,7 @@ export function useSortable(
     immediate = true,
     dataIdAttr = 'data-id',
     draggable,
+    group,
   } = options
 
   // Resolve target element
@@ -452,8 +454,19 @@ export function useSortable(
   }, { immediate: true })
 
   // Watch for target changes and update items
-  watch(targetElement, async (newTarget) => {
+  watch(targetElement, async (newTarget, oldTarget) => {
+    // Unregister old target from group manager
+    if (oldTarget) {
+      globalGroupManager.unregisterList(oldTarget)
+    }
+
     if (newTarget) {
+      // Register new target with group manager if group is specified
+      const groupValue = toValue(group)
+      if (groupValue) {
+        globalGroupManager.registerList(newTarget, groupValue)
+      }
+
       await nextTick()
       updateItems()
     }
@@ -463,12 +476,38 @@ export function useSortable(
   }, { immediate: true })
 
   const draggableValue = computed(() => draggable)
+  const groupValue = computed(() => toValue(options.group))
+
   // Watch for options changes that affect items
   watch(draggableValue, () => {
     if (targetElement.value) {
       updateItems()
     }
   })
+
+  // Watch for group changes and re-register
+  watch(groupValue, (newGroup, oldGroup) => {
+    const el = targetElement.value
+    if (!el)
+      return
+
+    // Only re-register if group actually changed
+    const newGroupValue = toValue(newGroup)
+    const oldGroupValue = toValue(oldGroup)
+
+    // Compare group values properly (handle both string and object cases)
+    const newGroupName = typeof newGroupValue === 'string' ? newGroupValue : newGroupValue?.name
+    const oldGroupName = typeof oldGroupValue === 'string' ? oldGroupValue : oldGroupValue?.name
+
+    if (newGroupName !== oldGroupName) {
+      if (newGroupValue) {
+        globalGroupManager.registerList(el, newGroupValue)
+      }
+      else {
+        globalGroupManager.unregisterList(el)
+      }
+    }
+  }, { flush: 'sync' })
 
   // Initialize items immediately if target is available
   if (immediate && state.isSupported && targetElement.value) {
@@ -531,6 +570,12 @@ export function useSortable(
 
   // Enhanced destroy method with animation cleanup
   const enhancedDestroy = () => {
+    // Unregister from group manager
+    const el = targetElement.value
+    if (el) {
+      globalGroupManager.unregisterList(el)
+    }
+
     // Cancel any ongoing animations
     animation.cancelAnimations()
     // Call original destroy
