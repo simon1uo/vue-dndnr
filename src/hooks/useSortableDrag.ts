@@ -1562,6 +1562,15 @@ export function useSortableDrag(
   const resetDragState = () => {
     state._setDragElement(null)
     state._setCurrentIndex(null)
+    state._setIsActive(false)
+
+    // Reset cross-list drag states following SortableJS _nulling pattern (lines 1544-1570)
+    state._setPutSortable(null)
+    state._setActiveGroup(null)
+    state._setLastPutMode(null)
+    state._setIsOwner(false)
+    state._setRevert(false)
+
     startIndex.value = -1
     isUsingFallback.value = false
     tapEvt.value = undefined
@@ -1673,6 +1682,21 @@ export function useSortableDrag(
           draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
           targetContainer = crossListContainer
 
+          state._updatePutSortable(crossListContainer)
+
+          let pullMode: boolean | 'clone' | null = null
+          if (dropResult.pullMode === true || dropResult.pullMode === false) {
+            pullMode = dropResult.pullMode
+          }
+          else if (dropResult.pullMode === 'clone') {
+            pullMode = 'clone'
+          }
+          else if (typeof dropResult.pullMode === 'function') {
+            // TODO: For function results, we need to evaluate them, but for now set to true if allowed
+            pullMode = true
+          }
+          state._setLastPutMode(pullMode)
+
           // If still no draggable target, check for empty container
           if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
             isEmptyTarget = true
@@ -1681,6 +1705,14 @@ export function useSortableDrag(
         }
       }
     }
+
+    const currentActiveGroup = state.activeGroup.value
+    const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
+    const isOwner = currentActiveGroup === targetGroup
+    const revert = state.parentEl.value !== state.rootEl.value
+
+    state._setIsOwner(isOwner)
+    state._setRevert(revert)
 
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
@@ -1830,6 +1862,23 @@ export function useSortableDrag(
           draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
           targetContainer = crossListContainer
 
+          // Update putSortable state following SortableJS logic
+          state._updatePutSortable(crossListContainer)
+
+          // Set lastPutMode from drop result (handle undefined case and normalize function results)
+          let pullMode: boolean | 'clone' | null = null
+          if (dropResult.pullMode === true || dropResult.pullMode === false) {
+            pullMode = dropResult.pullMode
+          }
+          else if (dropResult.pullMode === 'clone') {
+            pullMode = 'clone'
+          }
+          else if (typeof dropResult.pullMode === 'function') {
+            // For function results, we need to evaluate them, but for now set to true if allowed
+            pullMode = true
+          }
+          state._setLastPutMode(pullMode)
+
           // If still no draggable target, check for empty container
           if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
             isEmptyTarget = true
@@ -1838,6 +1887,15 @@ export function useSortableDrag(
         }
       }
     }
+
+    // Set isOwner and revert states following SortableJS _onDragOver logic
+    const currentActiveGroup = state.activeGroup.value
+    const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
+    const isOwner = currentActiveGroup === targetGroup
+    const revert = state.parentEl.value !== state.rootEl.value
+
+    state._setIsOwner(isOwner)
+    state._setRevert(revert)
 
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
@@ -2055,6 +2113,23 @@ export function useSortableDrag(
           draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
           targetContainer = crossListContainer
 
+          // Update putSortable state following SortableJS logic
+          state._updatePutSortable(crossListContainer)
+
+          // Set lastPutMode from drop result (handle undefined case and normalize function results)
+          let pullMode: boolean | 'clone' | null = null
+          if (dropResult.pullMode === true || dropResult.pullMode === false) {
+            pullMode = dropResult.pullMode
+          }
+          else if (dropResult.pullMode === 'clone') {
+            pullMode = 'clone'
+          }
+          else if (typeof dropResult.pullMode === 'function') {
+            // For function results, we need to evaluate them, but for now set to true if allowed
+            pullMode = true
+          }
+          state._setLastPutMode(pullMode)
+
           // If still no draggable target, check for empty container
           if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
             isEmptyTarget = true
@@ -2063,6 +2138,15 @@ export function useSortableDrag(
         }
       }
     }
+
+    // Set isOwner and revert states following SortableJS _onDragOver logic
+    const currentActiveGroup = state.activeGroup.value
+    const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
+    const isOwner = currentActiveGroup === targetGroup
+    const revert = state.parentEl.value !== state.rootEl.value
+
+    state._setIsOwner(isOwner)
+    state._setRevert(revert)
 
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
@@ -2172,6 +2256,7 @@ export function useSortableDrag(
     const dragElement = state.dragElement.value
 
     state._setDragging(false)
+    state._setIsActive(false)
 
     // Clean up global touch move listener when drag ends
     cleanupGlobalTouchMoveListener()
@@ -2203,8 +2288,46 @@ export function useSortableDrag(
         dragElement.draggable = false
       }
 
+      // Update parentEl state to reflect final position - following SortableJS _onDrop (line 1386)
+      const finalParentEl = dragElement.parentElement
+      if (finalParentEl) {
+        state._setParentEl(finalParentEl)
+      }
+
       // Calculate final index
       const newIndex = getElementIndex(dragElement)
+
+      // Check if this was a cross-list operation following SortableJS logic (line 1460)
+      const originalParent = state.parentEl.value
+      const currentParent = dragElement.parentElement
+      const wasCrossListDrag = originalParent !== currentParent
+
+      // Dispatch cross-list events if needed
+      if (wasCrossListDrag && newIndex >= 0) {
+        // Dispatch remove event for source container (following SortableJS line 1472)
+        if (originalParent && state.lastPutMode.value !== 'clone') {
+          dispatchEvent('remove', {
+            item: dragElement,
+            from: originalParent,
+            to: currentParent || undefined,
+            oldIndex: startIndex.value,
+            newIndex,
+            pullMode: state.lastPutMode.value || undefined,
+          })
+        }
+
+        // Dispatch add event for target container (following SortableJS line 1463)
+        if (currentParent) {
+          dispatchEvent('add', {
+            item: dragElement,
+            from: originalParent || undefined,
+            to: currentParent,
+            oldIndex: startIndex.value,
+            newIndex,
+            pullMode: state.lastPutMode.value || undefined,
+          })
+        }
+      }
 
       // Dispatch appropriate events
       if (newIndex !== startIndex.value) {
@@ -2247,6 +2370,8 @@ export function useSortableDrag(
     state._setDragging(true)
     // Set current index when drag actually starts
     state._setCurrentIndex(startIndex.value)
+
+    state._setIsActive(true)
 
     // Set up data transfer for native drag
     if (evt.dataTransfer) {
@@ -2463,6 +2588,8 @@ export function useSortableDrag(
     // Set current index when drag actually starts
     state._setCurrentIndex(startIndex.value)
 
+    state._setIsActive(true)
+
     // Add drag class
     const currentDragClass = toValue(dragClass)
     if (currentDragClass) {
@@ -2514,8 +2641,34 @@ export function useSortableDrag(
       return
     }
 
+    // Set drag element (this automatically sets parentEl and nextEl in useSortableState)
     state._setDragElement(dragElement)
     startIndex.value = getElementIndex(dragElement)
+
+    // Set root element (current sortable container) - following SortableJS _prepareDragStart
+    state._setRootEl(targetElement.value)
+
+    // Set active group from options - following SortableJS pattern
+    const currentGroup = toValue(options).group
+    if (typeof currentGroup === 'string') {
+      state._setActiveGroup(currentGroup)
+    }
+    else if (currentGroup && typeof currentGroup === 'object') {
+      // Handle both direct SortableGroup object and Ref<SortableGroup>
+      const groupValue = toValue(currentGroup)
+      if (typeof groupValue === 'string') {
+        state._setActiveGroup(groupValue)
+      }
+      else if (groupValue && typeof groupValue === 'object' && 'name' in groupValue) {
+        state._setActiveGroup(groupValue.name || null)
+      }
+    }
+
+    // Mark this sortable instance as active - following SortableJS pattern (line 756)
+    state._setIsActive(true)
+
+    // Set initial isOwner to true (dragging within same container initially)
+    state._setIsOwner(true)
 
     // Record initial tap/click position for fallback mode (enhanced following SortableJS)
     if (evt instanceof MouseEvent) {

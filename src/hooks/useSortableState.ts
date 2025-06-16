@@ -12,6 +12,8 @@ export interface SortableState {
   isSupported: boolean
   /** Whether dragging is currently active */
   isDragging: Ref<boolean>
+  /** Whether this sortable instance is currently active */
+  isActive: Ref<boolean>
   /** Currently dragged element */
   dragElement: Ref<HTMLElement | null>
   /** Ghost element for visual feedback */
@@ -38,6 +40,20 @@ export interface SortableState {
   activeGroup: Ref<string | null>
   /** Last put mode used in cross-list operations */
   lastPutMode: Ref<'clone' | boolean | null>
+  /** Original parent container of the dragged element (parentEl equivalent) */
+  parentEl: Ref<HTMLElement | null>
+  /** Root container element for current drag operation (rootEl equivalent) */
+  rootEl: Ref<HTMLElement | null>
+  /** Next sibling element of the dragged element for position restoration (nextEl equivalent) */
+  nextEl: Ref<HTMLElement | null>
+  /** Clone element for clone mode operations (cloneEl equivalent) */
+  cloneEl: Ref<HTMLElement | null>
+  /** Whether the clone element is currently hidden (cloneHidden equivalent) */
+  cloneHidden: Ref<boolean>
+  /** Whether current operation is within the same container (isOwner equivalent) */
+  isOwner: Ref<boolean>
+  /** Whether the drag should revert to original position (revert equivalent) */
+  revert: Ref<boolean>
 }
 
 /**
@@ -70,6 +86,24 @@ export interface SortableStateInternal extends SortableState {
   _setActiveGroup: (group: string | null) => void
   /** Set last put mode */
   _setLastPutMode: (mode: 'clone' | boolean | null) => void
+  /** Set parent element */
+  _setParentEl: (element: HTMLElement | null) => void
+  /** Set root element */
+  _setRootEl: (element: HTMLElement | null) => void
+  /** Set next element */
+  _setNextEl: (element: HTMLElement | null) => void
+  /** Set clone element */
+  _setCloneEl: (element: HTMLElement | null) => void
+  /** Set clone hidden state */
+  _setCloneHidden: (hidden: boolean) => void
+  /** Set is owner state */
+  _setIsOwner: (isOwner: boolean) => void
+  /** Set revert state */
+  _setRevert: (revert: boolean) => void
+  /** Set active state */
+  _setIsActive: (active: boolean) => void
+  /** Update putSortable state with SortableJS logic */
+  _updatePutSortable: (targetContainer: HTMLElement | null, currentContainer?: HTMLElement | null) => void
   /** Reset all state to initial values */
   _resetState: () => void
   /** Validate state consistency */
@@ -107,6 +141,7 @@ export function useSortableState(
 
   // Core drag state
   const isDragging = ref(false)
+  const isActive = ref(false)
   const dragElement = shallowRef<HTMLElement | null>(null)
   const ghostElement = shallowRef<HTMLElement | null>(null)
   const currentIndex = ref<number | null>(null)
@@ -130,6 +165,19 @@ export function useSortableState(
   const activeGroup = ref<string | null>(null)
   const lastPutMode = ref<'clone' | boolean | null>(null)
 
+  // Position and container tracking state
+  const parentEl = ref<HTMLElement | null>(null)
+  const rootEl = ref<HTMLElement | null>(null)
+  const nextEl = ref<HTMLElement | null>(null)
+
+  // Clone mode state
+  const cloneEl = ref<HTMLElement | null>(null)
+  const cloneHidden = ref<boolean>(false)
+
+  // Operation state
+  const isOwner = ref<boolean>(false)
+  const revert = ref<boolean>(false)
+
   // Native draggable detection with auto-detection
   const nativeDraggable = computed(() => isClient && !toValue(forceFallback) && isDraggableSupported.value)
 
@@ -149,6 +197,26 @@ export function useSortableState(
     if (isAnimating.value && animatingElements.value.length === 0) {
       console.warn('[useSortableState] Inconsistent state: animating is true but no animating elements')
       return false
+    }
+
+    // Validate cross-list state consistency
+    if (isDragging.value && dragElement.value) {
+      // If we have a dragElement, we should have parentEl and rootEl
+      if (!parentEl.value) {
+        console.warn('[useSortableState] Inconsistent state: dragElement exists but parentEl is null')
+        return false
+      }
+
+      if (!rootEl.value) {
+        console.warn('[useSortableState] Inconsistent state: dragElement exists but rootEl is null')
+        return false
+      }
+
+      // If we have a clone element, cloneHidden should be properly set
+      if (cloneEl.value && cloneHidden.value === undefined) {
+        console.warn('[useSortableState] Inconsistent state: cloneEl exists but cloneHidden is undefined')
+        return false
+      }
     }
 
     return true
@@ -182,6 +250,20 @@ export function useSortableState(
 
   const _setDragElement = (element: HTMLElement | null) => {
     dragElement.value = element
+
+    // Automatically set related state when drag element is set
+    if (element) {
+      // Set parent element (original container)
+      parentEl.value = element.parentElement
+
+      // Set next sibling for position restoration
+      nextEl.value = element.nextElementSibling as HTMLElement | null
+    }
+    else {
+      // Clear related state when drag element is cleared
+      parentEl.value = null
+      nextEl.value = null
+    }
   }
 
   const _setGhostElement = (element: HTMLElement | null) => {
@@ -220,16 +302,48 @@ export function useSortableState(
   const _setDisabled = (value: boolean) => {
     isDisabled.value = value
 
-    // If disabling while dragging, stop the drag
+    // If disabling while dragging, stop the drag and clear all related state
     if (value && isDragging.value) {
       isDragging.value = false
       dragElement.value = null
       currentIndex.value = null
+      parentEl.value = null
+      rootEl.value = null
+      nextEl.value = null
+      cloneEl.value = null
+      cloneHidden.value = false
+      isOwner.value = false
+      revert.value = false
+      putSortable.value = null
+      activeGroup.value = null
+      lastPutMode.value = null
+      isActive.value = false
     }
   }
 
   const _setPutSortable = (container: HTMLElement | null) => {
     putSortable.value = container
+  }
+
+  /**
+   * Update putSortable state following SortableJS logic
+   * Based on SortableJS _onDragOver implementation (lines 1076-1080)
+   * @param targetContainer - The target container being dragged over
+   * @param currentContainer - The current sortable container
+   */
+  const _updatePutSortable = (targetContainer: HTMLElement | null, currentContainer?: HTMLElement | null) => {
+    if (!targetContainer) {
+      putSortable.value = null
+      return
+    }
+
+    const isCurrentActive = currentContainer && isActive.value
+    if (putSortable.value !== targetContainer && !isCurrentActive) {
+      putSortable.value = targetContainer
+    }
+    else if (isCurrentActive && putSortable.value) {
+      putSortable.value = null
+    }
   }
 
   const _setActiveGroup = (group: string | null) => {
@@ -238,6 +352,38 @@ export function useSortableState(
 
   const _setLastPutMode = (mode: 'clone' | boolean | null) => {
     lastPutMode.value = mode
+  }
+
+  const _setParentEl = (element: HTMLElement | null) => {
+    parentEl.value = element
+  }
+
+  const _setRootEl = (element: HTMLElement | null) => {
+    rootEl.value = element
+  }
+
+  const _setNextEl = (element: HTMLElement | null) => {
+    nextEl.value = element
+  }
+
+  const _setCloneEl = (element: HTMLElement | null) => {
+    cloneEl.value = element
+  }
+
+  const _setCloneHidden = (hidden: boolean) => {
+    cloneHidden.value = hidden
+  }
+
+  const _setIsOwner = (owner: boolean) => {
+    isOwner.value = owner
+  }
+
+  const _setRevert = (shouldRevert: boolean) => {
+    revert.value = shouldRevert
+  }
+
+  const _setIsActive = (active: boolean) => {
+    isActive.value = active
   }
 
   /**
@@ -258,12 +404,21 @@ export function useSortableState(
     putSortable.value = null
     activeGroup.value = null
     lastPutMode.value = null
+    parentEl.value = null
+    rootEl.value = null
+    nextEl.value = null
+    cloneEl.value = null
+    cloneHidden.value = false
+    isOwner.value = false
+    revert.value = false
+    isActive.value = false
   }
 
   return {
     // Reactive state
     isSupported: isClient,
     isDragging,
+    isActive,
     dragElement,
     ghostElement,
     currentIndex,
@@ -277,6 +432,13 @@ export function useSortableState(
     putSortable,
     activeGroup,
     lastPutMode,
+    parentEl,
+    rootEl,
+    nextEl,
+    cloneEl,
+    cloneHidden,
+    isOwner,
+    revert,
 
     // Internal mutation methods
     _setDragging,
@@ -292,6 +454,15 @@ export function useSortableState(
     _setPutSortable,
     _setActiveGroup,
     _setLastPutMode,
+    _setParentEl,
+    _setRootEl,
+    _setNextEl,
+    _setCloneEl,
+    _setCloneHidden,
+    _setIsOwner,
+    _setRevert,
+    _setIsActive,
+    _updatePutSortable,
     _resetState,
     _validateState,
     _canPerformOperation,

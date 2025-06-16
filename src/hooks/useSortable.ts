@@ -274,6 +274,8 @@ export interface UseSortableReturn {
   items: ReturnType<typeof shallowRef<HTMLElement[]>>
   /** Whether dragging is currently active */
   isDragging: ReturnType<typeof ref<boolean>>
+  /** Whether this sortable instance is currently active (Sortable.active equivalent) */
+  isActive: ReturnType<typeof ref<boolean>>
   /** Currently dragged element */
   dragElement: ReturnType<typeof shallowRef<HTMLElement | null>>
   /** Ghost element for visual feedback */
@@ -294,6 +296,26 @@ export interface UseSortableReturn {
   isPaused: ReturnType<typeof ref<boolean>>
   /** Whether the sortable is currently disabled */
   isDisabled: ReturnType<typeof ref<boolean>>
+  /** Current target container for cross-list dragging (putSortable equivalent) */
+  putSortable: ReturnType<typeof ref<HTMLElement | null>>
+  /** Active group name for cross-list operations */
+  activeGroup: ReturnType<typeof ref<string | null>>
+  /** Last put mode used in cross-list operations */
+  lastPutMode: ReturnType<typeof ref<'clone' | boolean | null>>
+  /** Original parent container of the dragged element (parentEl equivalent) */
+  parentEl: ReturnType<typeof ref<HTMLElement | null>>
+  /** Root container element for current drag operation (rootEl equivalent) */
+  rootEl: ReturnType<typeof ref<HTMLElement | null>>
+  /** Next sibling element of the dragged element for position restoration (nextEl equivalent) */
+  nextEl: ReturnType<typeof ref<HTMLElement | null>>
+  /** Clone element for clone mode operations (cloneEl equivalent) */
+  cloneEl: ReturnType<typeof ref<HTMLElement | null>>
+  /** Whether the clone element is currently hidden (cloneHidden equivalent) */
+  cloneHidden: ReturnType<typeof ref<boolean>>
+  /** Whether current operation is within the same container (isOwner equivalent) */
+  isOwner: ReturnType<typeof ref<boolean>>
+  /** Whether the drag should revert to original position (revert equivalent) */
+  revert: ReturnType<typeof ref<boolean>>
   /** Start dragging programmatically */
   start: (element: HTMLElement) => void
   /** Stop dragging programmatically */
@@ -592,6 +614,7 @@ export function useSortable(
     return {
       items: state.items,
       isDragging: state.isDragging,
+      isActive: state.isActive,
       dragElement: state.dragElement,
       ghostElement: state.ghostElement,
       currentIndex: state.currentIndex,
@@ -602,6 +625,16 @@ export function useSortable(
       nativeDraggable: state.nativeDraggable,
       isPaused: state.isPaused,
       isDisabled: state.isDisabled,
+      putSortable: state.putSortable,
+      activeGroup: state.activeGroup,
+      lastPutMode: state.lastPutMode,
+      parentEl: state.parentEl,
+      rootEl: state.rootEl,
+      nextEl: state.nextEl,
+      cloneEl: state.cloneEl,
+      cloneHidden: state.cloneHidden,
+      isOwner: state.isOwner,
+      revert: state.revert,
       start,
       stop,
       pause,
