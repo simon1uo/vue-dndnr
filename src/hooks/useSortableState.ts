@@ -32,6 +32,12 @@ export interface SortableState {
   isPaused: Ref<boolean>
   /** Whether the sortable is currently disabled */
   isDisabled: Ref<boolean>
+  /** Current target container for cross-list dragging (putSortable equivalent) */
+  putSortable: Ref<HTMLElement | null>
+  /** Active group name for cross-list operations */
+  activeGroup: Ref<string | null>
+  /** Last put mode used in cross-list operations */
+  lastPutMode: Ref<'clone' | boolean | null>
 }
 
 /**
@@ -58,6 +64,12 @@ export interface SortableStateInternal extends SortableState {
   _setPaused: (value: boolean) => void
   /** Set disabled state */
   _setDisabled: (value: boolean) => void
+  /** Set put sortable container */
+  _setPutSortable: (container: HTMLElement | null) => void
+  /** Set active group */
+  _setActiveGroup: (group: string | null) => void
+  /** Set last put mode */
+  _setLastPutMode: (mode: 'clone' | boolean | null) => void
   /** Reset all state to initial values */
   _resetState: () => void
   /** Validate state consistency */
@@ -112,6 +124,11 @@ export function useSortableState(
 
   // Fallback and support state
   const isFallbackActive = ref(false)
+
+  // Cross-list drag state
+  const putSortable = ref<HTMLElement | null>(null)
+  const activeGroup = ref<string | null>(null)
+  const lastPutMode = ref<'clone' | boolean | null>(null)
 
   // Native draggable detection with auto-detection
   const nativeDraggable = computed(() => isClient && !toValue(forceFallback) && isDraggableSupported.value)
@@ -211,6 +228,18 @@ export function useSortableState(
     }
   }
 
+  const _setPutSortable = (container: HTMLElement | null) => {
+    putSortable.value = container
+  }
+
+  const _setActiveGroup = (group: string | null) => {
+    activeGroup.value = group
+  }
+
+  const _setLastPutMode = (mode: 'clone' | boolean | null) => {
+    lastPutMode.value = mode
+  }
+
   /**
    * Reset all state to initial values.
    * Useful for cleanup and reinitialization.
@@ -226,6 +255,9 @@ export function useSortableState(
     isFallbackActive.value = false
     isPaused.value = false
     isDisabled.value = toValue(disabled) ?? false
+    putSortable.value = null
+    activeGroup.value = null
+    lastPutMode.value = null
   }
 
   return {
@@ -242,6 +274,9 @@ export function useSortableState(
     nativeDraggable,
     isPaused,
     isDisabled,
+    putSortable,
+    activeGroup,
+    lastPutMode,
 
     // Internal mutation methods
     _setDragging,
@@ -254,6 +289,9 @@ export function useSortableState(
     _setFallbackActive,
     _setPaused,
     _setDisabled,
+    _setPutSortable,
+    _setActiveGroup,
+    _setLastPutMode,
     _resetState,
     _validateState,
     _canPerformOperation,

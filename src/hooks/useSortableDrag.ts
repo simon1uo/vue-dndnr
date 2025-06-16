@@ -8,6 +8,167 @@ import { isClient, tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
 
+/**
+ * Get the bounding rectangle of an element (enhanced version following SortableJS pattern)
+ * @param el - The target element
+ * @param relativeToContainingBlock - Whether the rect should be relative to the containing block
+ * @param relativeToNonStaticParent - Whether the rect should be relative to the relative parent
+ * @param undoScale - Whether the container's scale should be undone
+ * @param container - The parent the element will be placed in
+ * @returns The bounding client rect with specified adjustments
+ */
+function getRect(
+  el: HTMLElement | Window,
+  relativeToContainingBlock?: boolean,
+  relativeToNonStaticParent?: boolean,
+  _undoScale?: boolean,
+  container?: HTMLElement,
+): DOMRect {
+  if (el !== window && !('getBoundingClientRect' in el)) {
+    return new DOMRect()
+  }
+
+  let elRect: DOMRect
+  let top: number
+  let left: number
+  let height: number
+  let width: number
+
+  if (el === window) {
+    top = 0
+    left = 0
+    height = window.innerHeight
+    width = window.innerWidth
+  }
+  else {
+    elRect = (el as HTMLElement).getBoundingClientRect()
+    top = elRect.top
+    left = elRect.left
+    height = elRect.height
+    width = elRect.width
+  }
+
+  if (relativeToContainingBlock || relativeToNonStaticParent) {
+    const parentElement = container || (el as HTMLElement).parentElement
+
+    // Adjust for relative positioning
+    if (parentElement) {
+      const containerRect = parentElement.getBoundingClientRect()
+      left -= containerRect.left
+      top -= containerRect.top
+    }
+  }
+
+  return new DOMRect(left, top, width, height)
+}
+
+/**
+ * Get the child element at the specified index
+ * @param el - The parent element
+ * @param childNum - The index of the child
+ * @param options - Options object containing draggable selector
+ * @param includeDragEl - Whether to include the currently dragged element
+ * @returns The child at index childNum, or null if not found
+ */
+function getChild(
+  el: HTMLElement,
+  childNum: number,
+  options: { draggable?: string },
+  _includeDragEl?: boolean,
+): HTMLElement | null {
+  let currentChild = 0
+  let i = 0
+  const children = el.children
+
+  while (i < children.length) {
+    const child = children[i] as HTMLElement
+
+    if (options.draggable && !child.matches(options.draggable)) {
+      i++
+      continue
+    }
+
+    if (currentChild === childNum) {
+      return child
+    }
+
+    currentChild++
+    i++
+  }
+
+  return null
+}
+
+/**
+ * Get the last child in the element, ignoring ghost elements or invisible elements
+ * @param el - Parent element
+ * @param selector - Draggable selector to filter children
+ * @returns The last child, or null if not found
+ */
+function lastChild(el: HTMLElement, selector?: string): HTMLElement | null {
+  let last = el.lastElementChild as HTMLElement | null
+
+  if (selector) {
+    while (last && !last.matches(selector)) {
+      last = last.previousElementSibling as HTMLElement | null
+    }
+  }
+
+  return last
+}
+
+/**
+ * Get the containing rectangle from all draggable children of an element
+ * @param container - The container element
+ * @param options - Options object containing draggable selector
+ * @param ghostEl - The ghost element to exclude
+ * @returns The containing rectangle of all children
+ */
+function getChildContainingRectFromElement(
+  container: HTMLElement,
+  options: { draggable?: string },
+  ghostEl?: HTMLElement | null,
+): DOMRect {
+  const rect = {
+    left: Infinity,
+    top: Infinity,
+    right: -Infinity,
+    bottom: -Infinity,
+  }
+
+  Array.from(container.children).forEach((child) => {
+    const childEl = child as HTMLElement
+
+    // Skip non-draggable elements, animated elements, and ghost element
+    if (
+      (options.draggable && !childEl.matches(options.draggable))
+      || (childEl as any).animated
+      || childEl === ghostEl
+    ) {
+      return
+    }
+
+    const childRect = getRect(childEl)
+    rect.left = Math.min(rect.left, childRect.left)
+    rect.top = Math.min(rect.top, childRect.top)
+    rect.right = Math.max(rect.right, childRect.right)
+    rect.bottom = Math.max(rect.bottom, childRect.bottom)
+  })
+
+  // If no valid children found, return container rect
+  if (rect.left === Infinity) {
+    const containerRect = getRect(container)
+    return new DOMRect(containerRect.left, containerRect.top, containerRect.width, containerRect.height)
+  }
+
+  return new DOMRect(
+    rect.left,
+    rect.top,
+    rect.right - rect.left,
+    rect.bottom - rect.top,
+  )
+}
+
 export interface UseSortableDragOptions extends UseSortableOptions {
   state: SortableStateInternal
   /**
@@ -387,6 +548,25 @@ export function useSortableDrag(
   }
 
   /**
+   * Check if target is an empty container or container's empty area
+   * @param target - Event target element
+   * @param container - Sortable container element
+   * @returns Whether target represents an empty insertion point
+   */
+  const isEmptyContainerTarget = (target: HTMLElement, container: HTMLElement): boolean => {
+    // Direct container click
+    if (target === container) {
+      return true
+    }
+
+    // Check if container has no draggable children
+    const draggableSelector = toValue(draggable)
+    const draggableChildren = container.querySelectorAll(draggableSelector)
+
+    return draggableChildren.length === 0
+  }
+
+  /**
    * Find draggable element in any sortable container (for cross-list detection)
    * @param target - Event target element
    * @param container - Sortable container element
@@ -746,6 +926,242 @@ export function useSortableDrag(
   }
 
   /**
+   * Check if the ghost element is at the first position in the container
+   * Following SortableJS _ghostIsFirst implementation
+   * @param evt - Drag event with coordinates
+   * @param vertical - Whether the layout is vertical
+   * @param container - Container element
+   * @returns Whether the ghost is at the first position
+   */
+  const _ghostIsFirst = (evt: { clientX: number, clientY: number }, vertical: boolean, container: HTMLElement): boolean => {
+    const draggableSelector = toValue(draggable)
+    const firstEl = getChild(container, 0, { draggable: draggableSelector }, true)
+
+    if (!firstEl) {
+      return false
+    }
+
+    const firstElRect = getRect(firstEl)
+    const childContainingRect = getChildContainingRectFromElement(container, { draggable: draggableSelector }, state.ghostElement.value)
+    const spacer = 10
+
+    return vertical
+      ? (evt.clientX < childContainingRect.left - spacer || (evt.clientY < firstElRect.top && evt.clientX < firstElRect.right))
+      : (evt.clientY < childContainingRect.top - spacer || (evt.clientY < firstElRect.bottom && evt.clientX < firstElRect.left))
+  }
+
+  /**
+   * Check if the ghost element is at the last position in the container
+   * Following SortableJS _ghostIsLast implementation
+   * @param evt - Drag event with coordinates
+   * @param vertical - Whether the layout is vertical
+   * @param container - Container element
+   * @returns Whether the ghost is at the last position
+   */
+  const _ghostIsLast = (evt: { clientX: number, clientY: number }, vertical: boolean, container: HTMLElement): boolean => {
+    const draggableSelector = toValue(draggable)
+    const lastEl = lastChild(container, draggableSelector)
+
+    if (!lastEl) {
+      return false
+    }
+
+    const lastElRect = getRect(lastEl)
+    const childContainingRect = getChildContainingRectFromElement(container, { draggable: draggableSelector }, state.ghostElement.value)
+    const spacer = 10
+
+    return vertical
+      ? (evt.clientX > childContainingRect.right + spacer || (evt.clientY > lastElRect.bottom && evt.clientX > lastElRect.left))
+      : (evt.clientY > childContainingRect.bottom + spacer || (evt.clientX > lastElRect.right && evt.clientY > lastElRect.top))
+  }
+
+  /**
+   * Detect if the cursor is in a gap between elements or at container boundaries
+   * @param evt - Drag event with coordinates
+   * @param container - Container element
+   * @returns Object with insertion info or null
+   */
+  const detectContainerBoundaryInsertion = (
+    evt: { clientX: number, clientY: number },
+    container: HTMLElement,
+  ): { insertAtEnd: boolean, insertAtStart: boolean } | null => {
+    const vertical = detectDirection() === 'vertical'
+
+    // Check if at first position
+    const isAtFirst = _ghostIsFirst(evt, vertical, container)
+    if (isAtFirst) {
+      return { insertAtEnd: false, insertAtStart: true }
+    }
+
+    // Check if at last position
+    const isAtLast = _ghostIsLast(evt, vertical, container)
+    if (isAtLast) {
+      return { insertAtEnd: true, insertAtStart: false }
+    }
+
+    return null
+  }
+
+  /**
+   * Perform boundary insertion (at start or end of container)
+   * @param container - Target container
+   * @param insertAtEnd - Whether to insert at the end
+   * @param insertAtStart - Whether to insert at the start
+   */
+  const performBoundaryInsertion = (container: HTMLElement, insertAtEnd: boolean, insertAtStart: boolean) => {
+    const dragElement = state.dragElement.value
+    if (!dragElement) {
+      return
+    }
+
+    // Capture animation state before DOM changes
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
+    if (insertAtEnd) {
+      // Insert at the end of the container
+      container.appendChild(dragElement)
+    }
+    else if (insertAtStart) {
+      // Insert at the beginning of the container
+      const firstChild = container.firstElementChild
+      if (firstChild) {
+        container.insertBefore(dragElement, firstChild)
+      }
+      else {
+        container.appendChild(dragElement)
+      }
+    }
+
+    // Update current index after DOM changes
+    const newCurrentIndex = getElementIndex(dragElement)
+    state._setCurrentIndex(newCurrentIndex)
+
+    // Immediately notify about DOM changes for responsive data updates
+    if (onItemsUpdate) {
+      onItemsUpdate()
+    }
+
+    // Trigger animation after DOM changes
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
+    }
+  }
+
+  /**
+   * Perform cross-list boundary insertion
+   * @param container - Target container
+   * @param insertAtEnd - Whether to insert at the end
+   * @param insertAtStart - Whether to insert at the start
+   */
+  const performCrossListBoundaryInsertion = (container: HTMLElement, insertAtEnd: boolean, insertAtStart: boolean) => {
+    const dragElement = state.dragElement.value
+    const sourceContainer = targetElement.value
+
+    if (!dragElement || !container || !sourceContainer) {
+      return
+    }
+
+    // Check drop permission
+    const dropResult = globalGroupManager.canAcceptDrop(
+      sourceContainer,
+      container,
+      dragElement,
+    )
+
+    if (!dropResult.allowed) {
+      return
+    }
+
+    // Store original indices for event data
+    const oldIndex = getElementIndex(dragElement)
+    const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
+    const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
+
+    // Handle clone mode
+    let elementToInsert = dragElement
+    if (dropResult.pullMode === 'clone') {
+      elementToInsert = dragElement.cloneNode(true) as HTMLElement
+
+      // Dispatch clone event
+      dispatch('clone', {
+        item: elementToInsert,
+        clone: elementToInsert,
+        from: sourceContainer,
+        to: container,
+        oldIndex,
+        oldDraggableIndex,
+      })
+    }
+
+    // Capture animation state before DOM changes
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
+    // Perform the insertion
+    if (insertAtEnd) {
+      container.appendChild(elementToInsert)
+    }
+    else if (insertAtStart) {
+      const firstChild = container.firstElementChild
+      if (firstChild) {
+        container.insertBefore(elementToInsert, firstChild)
+      }
+      else {
+        container.appendChild(elementToInsert)
+      }
+    }
+
+    // Calculate new indices
+    const targetItems = Array.from(container.children) as HTMLElement[]
+    const newIndex = targetItems.indexOf(elementToInsert)
+    const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
+
+    // For non-clone mode, dispatch remove event for source container
+    if (dropResult.pullMode !== 'clone') {
+      dispatch('remove', {
+        item: dragElement,
+        from: sourceContainer,
+        to: container,
+        oldIndex,
+        oldDraggableIndex,
+        clone: elementToInsert,
+        pullMode: dropResult.pullMode,
+      })
+    }
+
+    // Dispatch add event for target container
+    dispatch('add', {
+      item: elementToInsert,
+      from: sourceContainer,
+      to: container,
+      oldIndex,
+      newIndex,
+      oldDraggableIndex,
+      newDraggableIndex,
+      clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
+      pullMode: dropResult.pullMode,
+    })
+
+    // Update current index for the moved/cloned element
+    if (dropResult.pullMode !== 'clone') {
+      state._setCurrentIndex(newIndex)
+    }
+
+    // Immediately notify about DOM changes for responsive data updates
+    if (onItemsUpdate) {
+      onItemsUpdate()
+    }
+
+    // Trigger animation after DOM changes
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
+    }
+  }
+
+  /**
    * Calculate insertion position based on mouse position and target element
    * @param pointer - Pointer object containing clientX and clientY coordinates
    * @param {number} pointer.clientX - The X coordinate of the pointer
@@ -918,6 +1334,105 @@ export function useSortableDrag(
         oldIndex,
         oldDraggableIndex,
         clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
+        pullMode: dropResult.pullMode,
+      })
+    }
+
+    // Dispatch add event for target container
+    dispatch('add', {
+      item: elementToInsert,
+      from: sourceContainer,
+      to: targetContainer,
+      oldIndex,
+      newIndex,
+      oldDraggableIndex,
+      newDraggableIndex,
+      clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
+      pullMode: dropResult.pullMode,
+    })
+
+    // Update current index for the moved/cloned element
+    if (dropResult.pullMode !== 'clone') {
+      state._setCurrentIndex(newIndex)
+    }
+
+    // Immediately notify about DOM changes for responsive data updates
+    if (onItemsUpdate) {
+      onItemsUpdate()
+    }
+
+    // Trigger animation after DOM changes
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
+    }
+  }
+
+  /**
+   * Perform insertion into empty container
+   * @param targetContainer - Empty target container element
+   */
+  const performEmptyContainerInsertion = (targetContainer: HTMLElement) => {
+    const dragElement = state.dragElement.value
+    const sourceContainer = targetElement.value
+
+    if (!dragElement || !targetContainer || !sourceContainer)
+      return
+
+    // Check drop permission again to be safe
+    const dropResult = globalGroupManager.canAcceptDrop(
+      sourceContainer,
+      targetContainer,
+      dragElement,
+    )
+
+    if (!dropResult.allowed) {
+      return
+    }
+
+    // Store original indices for event data
+    const oldIndex = getElementIndex(dragElement)
+    const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
+    const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
+
+    // Handle clone mode
+    let elementToInsert = dragElement
+    if (dropResult.pullMode === 'clone') {
+      elementToInsert = dragElement.cloneNode(true) as HTMLElement
+
+      // Dispatch clone event
+      dispatch('clone', {
+        item: elementToInsert,
+        clone: elementToInsert,
+        from: sourceContainer,
+        to: targetContainer,
+        oldIndex,
+        oldDraggableIndex,
+      })
+    }
+
+    // Capture animation state before DOM changes
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
+    // Insert into empty container (append to end)
+    targetContainer.appendChild(elementToInsert)
+
+    // Calculate new indices
+    const targetItems = Array.from(targetContainer.children) as HTMLElement[]
+    const newIndex = targetItems.indexOf(elementToInsert)
+    const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
+
+    // For clone mode, original element stays in source
+    if (dropResult.pullMode !== 'clone') {
+      // Dispatch remove event for source container
+      dispatch('remove', {
+        item: dragElement,
+        from: sourceContainer,
+        to: targetContainer,
+        oldIndex,
+        oldDraggableIndex,
+        clone: elementToInsert,
         pullMode: dropResult.pullMode,
       })
     }
@@ -1140,6 +1655,7 @@ export function useSortableDrag(
     // First try to find draggable in current container
     let draggableTarget = findDraggableTarget(target)
     let targetContainer = targetElement.value
+    let isEmptyTarget = false
 
     // If not found in current container, check for cross-list drag
     if (!draggableTarget) {
@@ -1156,7 +1672,73 @@ export function useSortableDrag(
         if (dropResult.allowed) {
           draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
           targetContainer = crossListContainer
+
+          // If still no draggable target, check for empty container
+          if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
+            isEmptyTarget = true
+            targetContainer = crossListContainer
+          }
         }
+      }
+    }
+
+    // Handle empty container insertion
+    if (isEmptyTarget && targetContainer) {
+      // Dispatch move event for empty container
+      const containerRect = targetContainer.getBoundingClientRect()
+      const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+      const moveResult = dispatchMoveEvent({
+        to: targetContainer || undefined,
+        from: targetElement.value || undefined,
+        item: state.dragElement.value || undefined,
+        dragged: state.dragElement.value || undefined,
+        draggedRect: dragRect,
+        related: targetContainer,
+        relatedRect: containerRect,
+        willInsertAfter: true,
+        originalEvent: evt,
+      }, evt)
+
+      if (moveResult !== false) {
+        performEmptyContainerInsertion(targetContainer)
+      }
+      return
+    }
+
+    // Check for boundary insertion when no specific draggable target is found
+    if (!draggableTarget && targetContainer) {
+      const boundaryInsertion = detectContainerBoundaryInsertion(
+        { clientX: evt.clientX, clientY: evt.clientY },
+        targetContainer,
+      )
+
+      if (boundaryInsertion) {
+        // Dispatch move event for boundary insertion
+        const containerRect = targetContainer.getBoundingClientRect()
+        const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+        const moveResult = dispatchMoveEvent({
+          to: targetContainer || undefined,
+          from: targetElement.value || undefined,
+          item: state.dragElement.value || undefined,
+          dragged: state.dragElement.value || undefined,
+          draggedRect: dragRect,
+          related: targetContainer,
+          relatedRect: containerRect,
+          willInsertAfter: boundaryInsertion.insertAtEnd,
+          originalEvent: evt,
+        }, evt)
+
+        if (moveResult !== false) {
+          if (targetContainer === targetElement.value) {
+            performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          }
+          else {
+            performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          }
+        }
+        return
       }
     }
 
@@ -1231,6 +1813,7 @@ export function useSortableDrag(
     // First try to find draggable in current container
     let draggableTarget = findDraggableTarget(target)
     let targetContainer = targetElement.value
+    let isEmptyTarget = false
 
     // If not found in current container, check for cross-list drag
     if (!draggableTarget) {
@@ -1246,7 +1829,73 @@ export function useSortableDrag(
         if (dropResult.allowed) {
           draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
           targetContainer = crossListContainer
+
+          // If still no draggable target, check for empty container
+          if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
+            isEmptyTarget = true
+            targetContainer = crossListContainer
+          }
         }
+      }
+    }
+
+    // Handle empty container insertion
+    if (isEmptyTarget && targetContainer) {
+      // Dispatch move event for empty container
+      const containerRect = targetContainer.getBoundingClientRect()
+      const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+      const moveResult = dispatchMoveEvent({
+        to: targetContainer || undefined,
+        from: targetElement.value || undefined,
+        item: state.dragElement.value || undefined,
+        dragged: state.dragElement.value || undefined,
+        draggedRect: dragRect,
+        related: targetContainer,
+        relatedRect: containerRect,
+        willInsertAfter: true,
+        originalEvent: undefined,
+      })
+
+      if (moveResult !== false) {
+        performEmptyContainerInsertion(targetContainer)
+      }
+      return
+    }
+
+    // Check for boundary insertion when no specific draggable target is found
+    if (!draggableTarget && targetContainer) {
+      const boundaryInsertion = detectContainerBoundaryInsertion(
+        { clientX: touch.clientX, clientY: touch.clientY },
+        targetContainer,
+      )
+
+      if (boundaryInsertion) {
+        // Dispatch move event for boundary insertion
+        const containerRect = targetContainer.getBoundingClientRect()
+        const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+        const moveResult = dispatchMoveEvent({
+          to: targetContainer || undefined,
+          from: targetElement.value || undefined,
+          item: state.dragElement.value || undefined,
+          dragged: state.dragElement.value || undefined,
+          draggedRect: dragRect,
+          related: targetContainer,
+          relatedRect: containerRect,
+          willInsertAfter: boundaryInsertion.insertAtEnd,
+          originalEvent: undefined,
+        })
+
+        if (moveResult !== false) {
+          if (targetContainer === targetElement.value) {
+            performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          }
+          else {
+            performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          }
+        }
+        return
       }
     }
 
@@ -1388,6 +2037,7 @@ export function useSortableDrag(
     // First try to find draggable in current container
     let draggableTarget = findDraggableTarget(target)
     let targetContainer = targetElement.value
+    let isEmptyTarget = false
 
     // If not found in current container, check for cross-list drag
     if (!draggableTarget) {
@@ -1404,7 +2054,73 @@ export function useSortableDrag(
         if (dropResult.allowed) {
           draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
           targetContainer = crossListContainer
+
+          // If still no draggable target, check for empty container
+          if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
+            isEmptyTarget = true
+            targetContainer = crossListContainer
+          }
         }
+      }
+    }
+
+    // Handle empty container insertion
+    if (isEmptyTarget && targetContainer) {
+      // Dispatch move event for empty container
+      const containerRect = targetContainer.getBoundingClientRect()
+      const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+      const moveResult = dispatchMoveEvent({
+        to: targetContainer || undefined,
+        from: targetElement.value || undefined,
+        item: state.dragElement.value || undefined,
+        dragged: state.dragElement.value || undefined,
+        draggedRect: dragRect,
+        related: targetContainer,
+        relatedRect: containerRect,
+        willInsertAfter: true,
+        originalEvent: evt,
+      }, evt)
+
+      if (moveResult !== false) {
+        performEmptyContainerInsertion(targetContainer)
+      }
+      return
+    }
+
+    // Check for boundary insertion when no specific draggable target is found
+    if (!draggableTarget && targetContainer) {
+      const boundaryInsertion = detectContainerBoundaryInsertion(
+        { clientX, clientY },
+        targetContainer,
+      )
+
+      if (boundaryInsertion) {
+        // Dispatch move event for boundary insertion
+        const containerRect = targetContainer.getBoundingClientRect()
+        const dragRect = state.dragElement.value?.getBoundingClientRect()
+
+        const moveResult = dispatchMoveEvent({
+          to: targetContainer || undefined,
+          from: targetElement.value || undefined,
+          item: state.dragElement.value || undefined,
+          dragged: state.dragElement.value || undefined,
+          draggedRect: dragRect,
+          related: targetContainer,
+          relatedRect: containerRect,
+          willInsertAfter: boundaryInsertion.insertAtEnd,
+          originalEvent: evt,
+        }, evt)
+
+        if (moveResult !== false) {
+          if (targetContainer === targetElement.value) {
+            performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          }
+          else {
+            performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          }
+        }
+        return
       }
     }
 
