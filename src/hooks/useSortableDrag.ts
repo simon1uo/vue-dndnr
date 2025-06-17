@@ -301,7 +301,10 @@ export function useSortableDrag(
     immediate = true,
     onStart,
     onEnd,
+    onAdd,
+    onRemove,
     onUpdate,
+    onSort,
     onFilter,
     onChoose,
     onUnchoose,
@@ -785,8 +788,17 @@ export function useSortableDrag(
       case 'end':
         callback = onEnd
         break
+      case 'add':
+        callback = onAdd
+        break
+      case 'remove':
+        callback = onRemove
+        break
       case 'update':
         callback = onUpdate
+        break
+      case 'sort':
+        callback = onSort
         break
       case 'filter':
         callback = onFilter
@@ -1072,11 +1084,6 @@ export function useSortableDrag(
       return
     }
 
-    // Store original indices for event data
-    const oldIndex = getElementIndex(dragElement)
-    const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
-    const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
-
     // In clone mode, still move the original element during drag
     // The clone logic will be handled at drag end
     const elementToInsert = dragElement
@@ -1103,34 +1110,6 @@ export function useSortableDrag(
     // Calculate new indices
     const targetItems = Array.from(container.children) as HTMLElement[]
     const newIndex = targetItems.indexOf(elementToInsert)
-    const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
-
-    // Don't dispatch events during drag for clone mode - events will be dispatched on drag end
-    // For non-clone mode, dispatch events normally
-    if (dropResult.pullMode !== 'clone') {
-      dispatchEvent('remove', {
-        item: dragElement,
-        from: sourceContainer,
-        to: container,
-        oldIndex,
-        oldDraggableIndex,
-        clone: elementToInsert,
-        pullMode: dropResult.pullMode,
-      })
-
-      // Dispatch add event for target container
-      dispatchEvent('add', {
-        item: elementToInsert,
-        from: sourceContainer,
-        to: container,
-        oldIndex,
-        newIndex,
-        oldDraggableIndex,
-        newDraggableIndex,
-        clone: undefined,
-        pullMode: dropResult.pullMode,
-      })
-    }
 
     // Update current index for the moved/cloned element
     if (dropResult.pullMode !== 'clone') {
@@ -1266,11 +1245,6 @@ export function useSortableDrag(
     if (!parent)
       return
 
-    // Store original indices for event data
-    const oldIndex = getElementIndex(dragElement)
-    const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
-    const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
-
     // In clone mode, still move the original element during drag
     // The clone logic will be handled at drag end
     const elementToInsert = dragElement
@@ -1299,34 +1273,6 @@ export function useSortableDrag(
     // Calculate new indices
     const targetItems = Array.from(targetContainer.children) as HTMLElement[]
     const newIndex = targetItems.indexOf(elementToInsert)
-    const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
-
-    // Don't dispatch events during drag for clone mode - events will be dispatched on drag end
-    // For non-clone mode, dispatch events normally
-    if (dropResult.pullMode !== 'clone') {
-      dispatchEvent('remove', {
-        item: dragElement,
-        from: sourceContainer,
-        to: targetContainer,
-        oldIndex,
-        oldDraggableIndex,
-        clone: elementToInsert,
-        pullMode: dropResult.pullMode,
-      })
-
-      // Dispatch add event for target container
-      dispatchEvent('add', {
-        item: elementToInsert,
-        from: sourceContainer,
-        to: targetContainer,
-        oldIndex,
-        newIndex,
-        oldDraggableIndex,
-        newDraggableIndex,
-        clone: undefined,
-        pullMode: dropResult.pullMode,
-      })
-    }
 
     // Update current index for the moved/cloned element
     if (dropResult.pullMode !== 'clone') {
@@ -1366,11 +1312,6 @@ export function useSortableDrag(
       return
     }
 
-    // Store original indices for event data
-    const oldIndex = getElementIndex(dragElement)
-    const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
-    const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
-
     // In clone mode, still move the original element during drag
     // The clone logic will be handled at drag end
     const elementToInsert = dragElement
@@ -1386,34 +1327,6 @@ export function useSortableDrag(
     // Calculate new indices
     const targetItems = Array.from(targetContainer.children) as HTMLElement[]
     const newIndex = targetItems.indexOf(elementToInsert)
-    const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
-
-    // Don't dispatch events during drag for clone mode - events will be dispatched on drag end
-    // For non-clone mode, dispatch events normally
-    if (dropResult.pullMode !== 'clone') {
-      dispatchEvent('remove', {
-        item: dragElement,
-        from: sourceContainer,
-        to: targetContainer,
-        oldIndex,
-        oldDraggableIndex,
-        clone: elementToInsert,
-        pullMode: dropResult.pullMode,
-      })
-
-      // Dispatch add event for target container
-      dispatchEvent('add', {
-        item: elementToInsert,
-        from: sourceContainer,
-        to: targetContainer,
-        oldIndex,
-        newIndex,
-        oldDraggableIndex,
-        newDraggableIndex,
-        clone: undefined,
-        pullMode: dropResult.pullMode,
-      })
-    }
 
     // Update current index for the moved/cloned element
     if (dropResult.pullMode !== 'clone') {
@@ -2611,11 +2524,23 @@ export function useSortableDrag(
 
       // For same-container drags or clone mode, dispatch update event if position changed
       if (!wasCrossListDrag || isCloneMode) {
-        if (newIndex !== startIndex.value) {
+        if (currentParent && newIndex !== startIndex.value) {
+          // Dispatch update event for same-container reordering
           dispatchEvent('update', {
             item: dragElement,
             oldIndex: startIndex.value,
             newIndex,
+          })
+
+          // Dispatch sort event for same-container reordering
+          dispatchEvent('sort', {
+            item: dragElement,
+            from: currentParent,
+            to: currentParent,
+            oldIndex: startIndex.value,
+            newIndex,
+            clone: state.cloneEl.value || undefined,
+            pullMode: state.lastPutMode.value || undefined,
           })
         }
       }

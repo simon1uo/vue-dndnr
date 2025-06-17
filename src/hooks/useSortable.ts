@@ -436,6 +436,28 @@ export function useSortable(
         options.onEnd(evt)
       }
     },
+    onAdd: (evt) => {
+      // Update items after cross-list addition
+      updateItems()
+      if (options.animation) {
+        animation.animateAll()
+      }
+      // Call original onAdd if provided
+      if (options.onAdd) {
+        options.onAdd(evt)
+      }
+    },
+    onRemove: (evt) => {
+      // Update items after cross-list removal
+      updateItems()
+      if (options.animation) {
+        animation.animateAll()
+      }
+      // Call original onRemove if provided
+      if (options.onRemove) {
+        options.onRemove(evt)
+      }
+    },
     onUpdate: (evt) => {
       // Update items and trigger animation for updates
       updateItems()
@@ -445,6 +467,17 @@ export function useSortable(
       // Call original onUpdate if provided
       if (options.onUpdate) {
         options.onUpdate(evt)
+      }
+    },
+    onSort: (evt) => {
+      // Update items after sort operation
+      updateItems()
+      if (options.animation) {
+        animation.animateAll()
+      }
+      // Call original onSort if provided
+      if (options.onSort) {
+        options.onSort(evt)
       }
     },
     // Animation integration callbacks for drag operations
