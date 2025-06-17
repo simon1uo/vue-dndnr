@@ -1858,8 +1858,11 @@ export function useSortableDrag(
         }
       }
       else {
-        // If drop is not allowed, revert to source container
+        // If drop is not allowed, we still need to handle animation properly
+        // Reset target container to source for animation purposes
         targetContainer = targetElement.value
+        draggableTarget = null
+        isEmptyTarget = false
       }
     }
 
@@ -1935,8 +1938,12 @@ export function useSortableDrag(
       }
     }
 
-    if (!draggableTarget || draggableTarget === state.dragElement.value)
+    if (!draggableTarget || draggableTarget === state.dragElement.value) {
+      if (onAnimationTrigger) {
+        onAnimationTrigger()
+      }
       return
+    }
 
     // Calculate insertion position
     const insertPosition = calculateInsertPosition(
@@ -1963,7 +1970,15 @@ export function useSortableDrag(
 
       // Only perform insertion if move event wasn't cancelled
       if (moveResult !== false) {
-        performCrossListInsertion(draggableTarget, insertPosition, targetContainer)
+        // Check if this is a cross-list operation and verify permissions
+        if (targetContainer && targetContainer !== targetElement.value) {
+          // Cross-list operation - use performCrossListInsertion which has permission checks
+          performCrossListInsertion(draggableTarget, insertPosition, targetContainer)
+        }
+        else {
+          // Same container operation - use performInsertion which handles animation properly
+          performInsertion(draggableTarget, insertPosition)
+        }
       }
     }
   }
@@ -2943,6 +2958,17 @@ export function useSortableDrag(
   const prepareDragStart = (evt: Event, dragElement: HTMLElement) => {
     if (!state._canPerformOperation('startDrag')) {
       return
+    }
+
+    // Check pull permission before starting drag
+    const sourceContainer = targetElement.value
+    if (sourceContainer) {
+      const sourceGroup = globalGroupManager.findTargetGroup(sourceContainer)
+      if (sourceGroup && sourceGroup.pull === false) {
+        // Pull is disabled for this container - prevent drag start
+        console.warn('[useSortableDrag] Drag start blocked: pull permission denied')
+        return
+      }
     }
 
     // Set drag element (this automatically sets parentEl and nextEl in useSortableState)

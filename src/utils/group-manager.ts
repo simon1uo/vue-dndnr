@@ -26,14 +26,14 @@ export interface DropPermissionResult {
   targetGroup?: SortableGroup
   /** Whether to revert clone after cross-list move */
   revertClone?: boolean
+  /** Reason for denial (for debugging) */
+  reason?: string
 }
 
 /**
  * Global group manager for cross-list drag and drop operations.
  * Manages registration of sortable lists and provides utilities for
  * checking drag permissions between different groups.
- *
- * Based on SortableJS group management system.
  */
 class GroupManager {
   /** Global registry of all sortable groups */
@@ -155,7 +155,7 @@ class GroupManager {
 
     // If either group is not registered, deny
     if (!sourceGroup || !targetGroup) {
-      return { allowed: false }
+      return { allowed: false, reason: 'missing_group_config' }
     }
 
     // Check pull permission from source
@@ -168,7 +168,7 @@ class GroupManager {
     )
 
     if (!pullResult.allowed) {
-      return { allowed: false }
+      return { allowed: false, reason: 'pull_denied' }
     }
 
     // Check put permission to target
@@ -181,7 +181,7 @@ class GroupManager {
     )
 
     if (!putAllowed) {
-      return { allowed: false }
+      return { allowed: false, reason: 'put_denied' }
     }
 
     return {
@@ -287,9 +287,20 @@ class GroupManager {
       return true
     }
 
-    if (put === 'same-group') {
-      // Default behavior: only allow same group
+    // Handle undefined/null put value
+    if (put == null) {
+      // Default behavior: allow same group or if source group allows pull
       return sourceGroup ? sourceGroup.name === targetGroup.name : false
+    }
+
+    if (put === 'same-group') {
+      // Only allow same group
+      return sourceGroup ? sourceGroup.name === targetGroup.name : false
+    }
+
+    // String-based put permission (specific group name)
+    if (typeof put === 'string') {
+      return sourceGroup ? sourceGroup.name === put : false
     }
 
     // Array-based put permission (allowed group names)
