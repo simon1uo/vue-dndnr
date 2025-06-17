@@ -9,7 +9,7 @@ import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
 
 /**
- * Get the bounding rectangle of an element (enhanced version following SortableJS pattern)
+ * Get the bounding rectangle of an element
  * @param el - The target element
  * @param relativeToContainingBlock - Whether the rect should be relative to the containing block
  * @param relativeToNonStaticParent - Whether the rect should be relative to the relative parent
@@ -927,7 +927,6 @@ export function useSortableDrag(
 
   /**
    * Check if the ghost element is at the first position in the container
-   * Following SortableJS _ghostIsFirst implementation
    * @param evt - Drag event with coordinates
    * @param vertical - Whether the layout is vertical
    * @param container - Container element
@@ -952,7 +951,6 @@ export function useSortableDrag(
 
   /**
    * Check if the ghost element is at the last position in the container
-   * Following SortableJS _ghostIsLast implementation
    * @param evt - Drag event with coordinates
    * @param vertical - Whether the layout is vertical
    * @param container - Container element
@@ -1079,21 +1077,9 @@ export function useSortableDrag(
     const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
     const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
 
-    // Handle clone mode
-    let elementToInsert = dragElement
-    if (dropResult.pullMode === 'clone') {
-      elementToInsert = dragElement.cloneNode(true) as HTMLElement
-
-      // Dispatch clone event
-      dispatch('clone', {
-        item: elementToInsert,
-        clone: elementToInsert,
-        from: sourceContainer,
-        to: container,
-        oldIndex,
-        oldDraggableIndex,
-      })
-    }
+    // In clone mode, still move the original element during drag
+    // The clone logic will be handled at drag end
+    const elementToInsert = dragElement
 
     // Capture animation state before DOM changes
     if (onAnimationCapture) {
@@ -1119,9 +1105,10 @@ export function useSortableDrag(
     const newIndex = targetItems.indexOf(elementToInsert)
     const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
 
-    // For non-clone mode, dispatch remove event for source container
+    // Don't dispatch events during drag for clone mode - events will be dispatched on drag end
+    // For non-clone mode, dispatch events normally
     if (dropResult.pullMode !== 'clone') {
-      dispatch('remove', {
+      dispatchEvent('remove', {
         item: dragElement,
         from: sourceContainer,
         to: container,
@@ -1130,20 +1117,20 @@ export function useSortableDrag(
         clone: elementToInsert,
         pullMode: dropResult.pullMode,
       })
-    }
 
-    // Dispatch add event for target container
-    dispatch('add', {
-      item: elementToInsert,
-      from: sourceContainer,
-      to: container,
-      oldIndex,
-      newIndex,
-      oldDraggableIndex,
-      newDraggableIndex,
-      clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
-      pullMode: dropResult.pullMode,
-    })
+      // Dispatch add event for target container
+      dispatchEvent('add', {
+        item: elementToInsert,
+        from: sourceContainer,
+        to: container,
+        oldIndex,
+        newIndex,
+        oldDraggableIndex,
+        newDraggableIndex,
+        clone: undefined,
+        pullMode: dropResult.pullMode,
+      })
+    }
 
     // Update current index for the moved/cloned element
     if (dropResult.pullMode !== 'clone') {
@@ -1154,6 +1141,8 @@ export function useSortableDrag(
     if (onItemsUpdate) {
       onItemsUpdate()
     }
+
+    // Clone element management is handled at container boundary detection, not during DOM insertion
 
     // Trigger animation after DOM changes
     if (onAnimationTrigger) {
@@ -1282,21 +1271,9 @@ export function useSortableDrag(
     const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
     const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
 
-    // Handle clone mode
-    let elementToInsert = dragElement
-    if (dropResult.pullMode === 'clone') {
-      elementToInsert = dragElement.cloneNode(true) as HTMLElement
-
-      // Dispatch clone event
-      dispatch('clone', {
-        item: elementToInsert,
-        clone: elementToInsert,
-        from: sourceContainer,
-        to: targetContainer,
-        oldIndex,
-        oldDraggableIndex,
-      })
-    }
+    // In clone mode, still move the original element during drag
+    // The clone logic will be handled at drag end
+    const elementToInsert = dragElement
 
     // Capture animation state before DOM changes
     if (onAnimationCapture) {
@@ -1324,32 +1301,32 @@ export function useSortableDrag(
     const newIndex = targetItems.indexOf(elementToInsert)
     const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
 
-    // For clone mode, original element stays in source
-    if (typeof dropResult.pullMode === 'string') {
-      // Dispatch remove event for source container
-      dispatch('remove', {
+    // Don't dispatch events during drag for clone mode - events will be dispatched on drag end
+    // For non-clone mode, dispatch events normally
+    if (dropResult.pullMode !== 'clone') {
+      dispatchEvent('remove', {
         item: dragElement,
         from: sourceContainer,
         to: targetContainer,
         oldIndex,
         oldDraggableIndex,
-        clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
+        clone: elementToInsert,
+        pullMode: dropResult.pullMode,
+      })
+
+      // Dispatch add event for target container
+      dispatchEvent('add', {
+        item: elementToInsert,
+        from: sourceContainer,
+        to: targetContainer,
+        oldIndex,
+        newIndex,
+        oldDraggableIndex,
+        newDraggableIndex,
+        clone: undefined,
         pullMode: dropResult.pullMode,
       })
     }
-
-    // Dispatch add event for target container
-    dispatch('add', {
-      item: elementToInsert,
-      from: sourceContainer,
-      to: targetContainer,
-      oldIndex,
-      newIndex,
-      oldDraggableIndex,
-      newDraggableIndex,
-      clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
-      pullMode: dropResult.pullMode,
-    })
 
     // Update current index for the moved/cloned element
     if (dropResult.pullMode !== 'clone') {
@@ -1394,21 +1371,9 @@ export function useSortableDrag(
     const sourceItems = Array.from(sourceContainer.children) as HTMLElement[]
     const oldDraggableIndex = sourceItems.filter(el => el.matches(toValue(draggable))).indexOf(dragElement)
 
-    // Handle clone mode
-    let elementToInsert = dragElement
-    if (dropResult.pullMode === 'clone') {
-      elementToInsert = dragElement.cloneNode(true) as HTMLElement
-
-      // Dispatch clone event
-      dispatch('clone', {
-        item: elementToInsert,
-        clone: elementToInsert,
-        from: sourceContainer,
-        to: targetContainer,
-        oldIndex,
-        oldDraggableIndex,
-      })
-    }
+    // In clone mode, still move the original element during drag
+    // The clone logic will be handled at drag end
+    const elementToInsert = dragElement
 
     // Capture animation state before DOM changes
     if (onAnimationCapture) {
@@ -1423,10 +1388,10 @@ export function useSortableDrag(
     const newIndex = targetItems.indexOf(elementToInsert)
     const newDraggableIndex = targetItems.filter(el => el.matches(toValue(draggable))).indexOf(elementToInsert)
 
-    // For clone mode, original element stays in source
+    // Don't dispatch events during drag for clone mode - events will be dispatched on drag end
+    // For non-clone mode, dispatch events normally
     if (dropResult.pullMode !== 'clone') {
-      // Dispatch remove event for source container
-      dispatch('remove', {
+      dispatchEvent('remove', {
         item: dragElement,
         from: sourceContainer,
         to: targetContainer,
@@ -1435,20 +1400,20 @@ export function useSortableDrag(
         clone: elementToInsert,
         pullMode: dropResult.pullMode,
       })
-    }
 
-    // Dispatch add event for target container
-    dispatch('add', {
-      item: elementToInsert,
-      from: sourceContainer,
-      to: targetContainer,
-      oldIndex,
-      newIndex,
-      oldDraggableIndex,
-      newDraggableIndex,
-      clone: dropResult.pullMode === 'clone' ? elementToInsert : undefined,
-      pullMode: dropResult.pullMode,
-    })
+      // Dispatch add event for target container
+      dispatchEvent('add', {
+        item: elementToInsert,
+        from: sourceContainer,
+        to: targetContainer,
+        oldIndex,
+        newIndex,
+        oldDraggableIndex,
+        newDraggableIndex,
+        clone: undefined,
+        pullMode: dropResult.pullMode,
+      })
+    }
 
     // Update current index for the moved/cloned element
     if (dropResult.pullMode !== 'clone') {
@@ -1459,6 +1424,8 @@ export function useSortableDrag(
     if (onItemsUpdate) {
       onItemsUpdate()
     }
+
+    // Clone element management is handled at container boundary detection, not during DOM insertion
 
     // Trigger animation after DOM changes
     if (onAnimationTrigger) {
@@ -1560,11 +1527,20 @@ export function useSortableDrag(
    * Reset drag state to initial values
    */
   const resetDragState = () => {
+    // Clean up clone element
+    if (state.cloneEl.value) {
+      if (state.cloneEl.value.parentNode) {
+        state.cloneEl.value.parentNode.removeChild(state.cloneEl.value)
+      }
+      state._setCloneEl(null)
+      state._setCloneHidden(false)
+    }
+
     state._setDragElement(null)
     state._setCurrentIndex(null)
     state._setIsActive(false)
 
-    // Reset cross-list drag states following SortableJS _nulling pattern (lines 1544-1570)
+    // Reset cross-list drag states
     state._setPutSortable(null)
     state._setActiveGroup(null)
     state._setLastPutMode(null)
@@ -1647,6 +1623,163 @@ export function useSortableDrag(
     evt.preventDefault()
   }
 
+  // Clone state management with debouncing to prevent flickering
+  const cloneStateTimeout = ref<NodeJS.Timeout | null>(null)
+  const lastCloneAction = ref<'show' | 'hide' | null>(null)
+
+  /**
+   * Actually perform the hide clone operation
+   */
+  const performHideClone = (): void => {
+    if (state.cloneEl.value && !state.cloneHidden.value) {
+      state.cloneEl.value.style.display = 'none'
+      state._setCloneHidden(true)
+    }
+  }
+
+  /**
+   * Hide clone element with debouncing to prevent flickering
+   */
+  const hideClone = (): void => {
+    if (!state.cloneEl.value) {
+      return
+    }
+
+    // If clone is already hidden and we're not switching from show action, no need to hide it again
+    if (state.cloneHidden.value && lastCloneAction.value !== 'show') {
+      return
+    }
+
+    // Clear any pending show action
+    if (cloneStateTimeout.value) {
+      clearTimeout(cloneStateTimeout.value)
+      cloneStateTimeout.value = null
+    }
+
+    // Debounce hide action to prevent flickering
+    if (lastCloneAction.value === 'show') {
+      cloneStateTimeout.value = setTimeout(() => {
+        performHideClone()
+        lastCloneAction.value = 'hide'
+        cloneStateTimeout.value = null
+      }, 10) // Small delay to prevent flickering
+    }
+    else {
+      performHideClone()
+      lastCloneAction.value = 'hide'
+    }
+  }
+
+  const performShowClone = (): void => {
+    if (!state.cloneEl.value || state.lastPutMode.value !== 'clone') {
+      return
+    }
+
+    const { dragElement, rootEl, nextEl } = state
+
+    // Get revertClone option from group configuration
+    const currentGroup = toValue(options).group
+    const revertClone = typeof currentGroup === 'object' && currentGroup && 'revertClone' in currentGroup
+      ? currentGroup.revertClone
+      : false
+
+    // First, ensure clone is in the DOM if not already
+    if (!state.cloneEl.value.parentNode) {
+      if (nextEl.value && nextEl.value.parentNode === rootEl.value) {
+        // Place clone at original position using nextEl
+        rootEl.value?.insertBefore(state.cloneEl.value, nextEl.value)
+      }
+      else {
+        // Append to end of original container
+        rootEl.value?.appendChild(state.cloneEl.value)
+      }
+    }
+
+    // Handle revertClone animation if needed
+    if (revertClone && dragElement.value && onAnimationTrigger) {
+      // Trigger animation from dragEl to cloneEl position
+      onAnimationTrigger()
+    }
+
+    // Restore display
+    state.cloneEl.value.style.display = ''
+    state._setCloneHidden(false)
+  }
+
+  /**
+   * Show clone element with debouncing to prevent flickering
+   */
+  const showClone = (): void => {
+    if (!state.cloneEl.value) {
+      return
+    }
+
+    // Only show clone in clone mode
+    if (state.lastPutMode.value !== 'clone') {
+      hideClone()
+      return
+    }
+
+    // If clone is already visible and we're not switching from hide action, no need to show it again
+    if (!state.cloneHidden.value && lastCloneAction.value !== 'hide') {
+      return
+    }
+
+    // Clear any pending hide action
+    if (cloneStateTimeout.value) {
+      clearTimeout(cloneStateTimeout.value)
+      cloneStateTimeout.value = null
+    }
+
+    // Debounce show action to prevent flickering
+    if (lastCloneAction.value === 'hide') {
+      cloneStateTimeout.value = setTimeout(() => {
+        performShowClone()
+        lastCloneAction.value = 'show'
+        cloneStateTimeout.value = null
+      }, 10) // Small delay to prevent flickering
+    }
+    else {
+      performShowClone()
+      lastCloneAction.value = 'show'
+    }
+  }
+
+  /**
+   * Actually perform the show clone operation
+   */
+
+  /**
+   * Handle revert logic when dragging back to original container
+   */
+  const handleRevert = (): boolean => {
+    const { parentEl, rootEl, nextEl, dragElement } = state
+
+    if (!parentEl.value || !rootEl.value || !dragElement.value) {
+      return false
+    }
+
+    // Update parentEl to rootEl
+    state._setParentEl(rootEl.value)
+
+    // Trigger animation capture before DOM changes
+    if (onAnimationCapture) {
+      onAnimationCapture()
+    }
+
+    hideClone()
+
+    // Restore element to original position
+    if (nextEl.value) {
+      rootEl.value.insertBefore(dragElement.value, nextEl.value)
+    }
+    else {
+      rootEl.value.appendChild(dragElement.value)
+    }
+
+    return true
+  }
+
   /**
    * Handle document-level dragover for native mode
    */
@@ -1661,51 +1794,12 @@ export function useSortableDrag(
     if (!target)
       return
 
-    // First try to find draggable in current container
+    // Find the actual container under the cursor first
+    let targetContainer = findSortableContainer(target) || targetElement.value
     let draggableTarget = findDraggableTarget(target)
-    let targetContainer = targetElement.value
     let isEmptyTarget = false
 
-    // If not found in current container, check for cross-list drag
-    if (!draggableTarget) {
-      const crossListContainer = findSortableContainer(target)
-      if (crossListContainer && crossListContainer !== targetElement.value) {
-        // Check if cross-list drop is allowed
-        const dropResult = globalGroupManager.canAcceptDrop(
-          targetElement.value!,
-          crossListContainer,
-          state.dragElement.value,
-          evt,
-        )
-
-        if (dropResult.allowed) {
-          draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
-          targetContainer = crossListContainer
-
-          state._updatePutSortable(crossListContainer)
-
-          let pullMode: boolean | 'clone' | null = null
-          if (dropResult.pullMode === true || dropResult.pullMode === false) {
-            pullMode = dropResult.pullMode
-          }
-          else if (dropResult.pullMode === 'clone') {
-            pullMode = 'clone'
-          }
-          else if (typeof dropResult.pullMode === 'function') {
-            // TODO: For function results, we need to evaluate them, but for now set to true if allowed
-            pullMode = true
-          }
-          state._setLastPutMode(pullMode)
-
-          // If still no draggable target, check for empty container
-          if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
-            isEmptyTarget = true
-            targetContainer = crossListContainer
-          }
-        }
-      }
-    }
-
+    // Determine isOwner and revert states based on the actual target container
     const currentActiveGroup = state.activeGroup.value
     const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
     const isOwner = currentActiveGroup === targetGroup
@@ -1713,6 +1807,73 @@ export function useSortableDrag(
 
     state._setIsOwner(isOwner)
     state._setRevert(revert)
+
+    // Handle revert case first
+    if (isOwner && revert) {
+      const reverted = handleRevert()
+      if (reverted) {
+        // Trigger animation after revert
+        if (onAnimationTrigger) {
+          onAnimationTrigger()
+        }
+        return
+      }
+    }
+
+    // Check for cross-list drag if target container is different from source
+    if (targetContainer && targetContainer !== targetElement.value) {
+      const dropResult = globalGroupManager.canAcceptDrop(
+        targetElement.value!,
+        targetContainer,
+        state.dragElement.value,
+        evt,
+      )
+
+      if (dropResult.allowed) {
+        draggableTarget = findCrossListDraggableTarget(target, targetContainer)
+
+        if (state.putSortable.value !== targetContainer && targetContainer !== state.rootEl.value) {
+          state._setPutSortable(targetContainer)
+        }
+        else if (targetContainer === state.rootEl.value && state.putSortable.value) {
+          state._setPutSortable(null)
+        }
+
+        let pullMode: boolean | 'clone' | null = null
+        if (dropResult.pullMode === true || dropResult.pullMode === false) {
+          pullMode = dropResult.pullMode
+        }
+        else if (dropResult.pullMode === 'clone') {
+          pullMode = 'clone'
+        }
+        else if (typeof dropResult.pullMode === 'function') {
+          // TODO: For function results, we need to evaluate them, but for now set to true if allowed
+          pullMode = true
+        }
+        state._setLastPutMode(pullMode)
+
+        // If still no draggable target, check for empty container
+        if (!draggableTarget && isEmptyContainerTarget(target, targetContainer)) {
+          isEmptyTarget = true
+        }
+      }
+      else {
+        // If drop is not allowed, revert to source container
+        targetContainer = targetElement.value
+      }
+    }
+
+    // Clone element management: if isOwner, hide clone; else show clone
+    if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
+      if (isOwner) {
+        // When in owner container, hide clone
+        hideClone()
+      }
+      else {
+        // When in different container, show clone
+        showClone()
+      }
+    }
 
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
@@ -1808,14 +1969,14 @@ export function useSortableDrag(
   }
 
   /**
-   * Emulate drag over events for fallback mode (following SortableJS pattern)
+   * Emulate drag over events for fallback mode
    */
   const emulateDragOver = (): void => {
     const touch = currentTouchEvent.value
     if (!touch)
       return
 
-    // Hide ghost element temporarily to get accurate elementFromPoint (following SortableJS)
+    // Hide ghost element temporarily to get accurate elementFromPoint
     const ghostElement = state.ghostElement.value
     let ghostDisplay = ''
     if (ghostElement && !supportCssPointerEvents.value) {
@@ -1826,7 +1987,7 @@ export function useSortableDrag(
     // Get target element under current touch position
     let target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
 
-    // Handle shadow DOM (following SortableJS pattern)
+    // Handle shadow DOM
     while (target && target.shadowRoot) {
       const shadowTarget = target.shadowRoot.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement
       if (shadowTarget === target)
@@ -1842,53 +2003,52 @@ export function useSortableDrag(
     if (!target)
       return
 
-    // First try to find draggable in current container
+    // Find the actual container under the cursor first
+    let targetContainer = findSortableContainer(target) || targetElement.value
     let draggableTarget = findDraggableTarget(target)
-    let targetContainer = targetElement.value
     let isEmptyTarget = false
 
-    // If not found in current container, check for cross-list drag
-    if (!draggableTarget) {
-      const crossListContainer = findSortableContainer(target)
-      if (crossListContainer && crossListContainer !== targetElement.value) {
-        // Check if cross-list drop is allowed
-        const dropResult = globalGroupManager.canAcceptDrop(
-          targetElement.value!,
-          crossListContainer,
-          state.dragElement.value!,
-        )
+    // Check for cross-list drag if target container is different from source
+    if (targetContainer && targetContainer !== targetElement.value) {
+      // Check if cross-list drop is allowed
+      const dropResult = globalGroupManager.canAcceptDrop(
+        targetElement.value!,
+        targetContainer,
+        state.dragElement.value!,
+      )
 
-        if (dropResult.allowed) {
-          draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
-          targetContainer = crossListContainer
+      if (dropResult.allowed) {
+        draggableTarget = findCrossListDraggableTarget(target, targetContainer)
 
-          // Update putSortable state following SortableJS logic
-          state._updatePutSortable(crossListContainer)
+        // Update putSortable state
+        state._updatePutSortable(targetContainer)
 
-          // Set lastPutMode from drop result (handle undefined case and normalize function results)
-          let pullMode: boolean | 'clone' | null = null
-          if (dropResult.pullMode === true || dropResult.pullMode === false) {
-            pullMode = dropResult.pullMode
-          }
-          else if (dropResult.pullMode === 'clone') {
-            pullMode = 'clone'
-          }
-          else if (typeof dropResult.pullMode === 'function') {
-            // For function results, we need to evaluate them, but for now set to true if allowed
-            pullMode = true
-          }
-          state._setLastPutMode(pullMode)
-
-          // If still no draggable target, check for empty container
-          if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
-            isEmptyTarget = true
-            targetContainer = crossListContainer
-          }
+        // Set lastPutMode from drop result (handle undefined case and normalize function results)
+        let pullMode: boolean | 'clone' | null = null
+        if (dropResult.pullMode === true || dropResult.pullMode === false) {
+          pullMode = dropResult.pullMode
         }
+        else if (dropResult.pullMode === 'clone') {
+          pullMode = 'clone'
+        }
+        else if (typeof dropResult.pullMode === 'function') {
+          // TODO: For function results, we need to evaluate them, but for now set to true if allowed
+          pullMode = true
+        }
+        state._setLastPutMode(pullMode)
+
+        // If still no draggable target, check for empty container
+        if (!draggableTarget && isEmptyContainerTarget(target, targetContainer)) {
+          isEmptyTarget = true
+        }
+      }
+      else {
+        // If drop is not allowed, revert to source container
+        targetContainer = targetElement.value
       }
     }
 
-    // Set isOwner and revert states following SortableJS _onDragOver logic
+    // Set isOwner and revert states
     const currentActiveGroup = state.activeGroup.value
     const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
     const isOwner = currentActiveGroup === targetGroup
@@ -1896,6 +2056,18 @@ export function useSortableDrag(
 
     state._setIsOwner(isOwner)
     state._setRevert(revert)
+
+    // Clone element management: if isOwner, hide clone; else show clone
+    if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
+      if (isOwner) {
+        // When in owner container, hide clone
+        hideClone()
+      }
+      else {
+        // When in different container, show clone
+        showClone()
+      }
+    }
 
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
@@ -2052,11 +2224,11 @@ export function useSortableDrag(
       currentTouchEvent.value = touch
     }
 
-    // Following SortableJS pattern: check if we need to start dragging when not yet dragging
+    // Check if we need to start dragging when not yet dragging
     if (!state.isDragging.value && state.dragElement.value && !awaitingDragStarted.value) {
       const currentFallbackTolerance = toValue(fallbackTolerance)
 
-      // Check fallback tolerance (similar to SortableJS _onTouchMove)
+      // Check fallback tolerance
       if (currentFallbackTolerance && Math.max(
         Math.abs(touch.clientX - lastX.value),
         Math.abs(touch.clientY - lastY.value),
@@ -2064,7 +2236,6 @@ export function useSortableDrag(
         return
       }
 
-      // Start drag operation (equivalent to SortableJS _onDragStart with fallback=true)
       startDragOperation(evt)
       return
     }
@@ -2092,54 +2263,53 @@ export function useSortableDrag(
     if (!target)
       return
 
-    // First try to find draggable in current container
+    // Find the actual container under the cursor first
+    let targetContainer = findSortableContainer(target) || targetElement.value
     let draggableTarget = findDraggableTarget(target)
-    let targetContainer = targetElement.value
     let isEmptyTarget = false
 
-    // If not found in current container, check for cross-list drag
-    if (!draggableTarget) {
-      const crossListContainer = findSortableContainer(target)
-      if (crossListContainer && crossListContainer !== targetElement.value) {
-        // Check if cross-list drop is allowed
-        const dropResult = globalGroupManager.canAcceptDrop(
-          targetElement.value!,
-          crossListContainer,
-          state.dragElement.value!,
-          evt,
-        )
+    // Check for cross-list drag if target container is different from source
+    if (targetContainer && targetContainer !== targetElement.value) {
+      // Check if cross-list drop is allowed
+      const dropResult = globalGroupManager.canAcceptDrop(
+        targetElement.value!,
+        targetContainer,
+        state.dragElement.value!,
+        evt,
+      )
 
-        if (dropResult.allowed) {
-          draggableTarget = findCrossListDraggableTarget(target, crossListContainer)
-          targetContainer = crossListContainer
+      if (dropResult.allowed) {
+        draggableTarget = findCrossListDraggableTarget(target, targetContainer)
 
-          // Update putSortable state following SortableJS logic
-          state._updatePutSortable(crossListContainer)
+        // Update putSortable state
+        state._updatePutSortable(targetContainer)
 
-          // Set lastPutMode from drop result (handle undefined case and normalize function results)
-          let pullMode: boolean | 'clone' | null = null
-          if (dropResult.pullMode === true || dropResult.pullMode === false) {
-            pullMode = dropResult.pullMode
-          }
-          else if (dropResult.pullMode === 'clone') {
-            pullMode = 'clone'
-          }
-          else if (typeof dropResult.pullMode === 'function') {
-            // For function results, we need to evaluate them, but for now set to true if allowed
-            pullMode = true
-          }
-          state._setLastPutMode(pullMode)
-
-          // If still no draggable target, check for empty container
-          if (!draggableTarget && isEmptyContainerTarget(target, crossListContainer)) {
-            isEmptyTarget = true
-            targetContainer = crossListContainer
-          }
+        // Set lastPutMode from drop result (handle undefined case and normalize function results)
+        let pullMode: boolean | 'clone' | null = null
+        if (dropResult.pullMode === true || dropResult.pullMode === false) {
+          pullMode = dropResult.pullMode
         }
+        else if (dropResult.pullMode === 'clone') {
+          pullMode = 'clone'
+        }
+        else if (typeof dropResult.pullMode === 'function') {
+          // For function results, we need to evaluate them, but for now set to true if allowed
+          pullMode = true
+        }
+        state._setLastPutMode(pullMode)
+
+        // If still no draggable target, check for empty container
+        if (!draggableTarget && isEmptyContainerTarget(target, targetContainer)) {
+          isEmptyTarget = true
+        }
+      }
+      else {
+        // If drop is not allowed, revert to source container
+        targetContainer = targetElement.value
       }
     }
 
-    // Set isOwner and revert states following SortableJS _onDragOver logic
+    // Set isOwner and revert states
     const currentActiveGroup = state.activeGroup.value
     const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
     const isOwner = currentActiveGroup === targetGroup
@@ -2147,6 +2317,18 @@ export function useSortableDrag(
 
     state._setIsOwner(isOwner)
     state._setRevert(revert)
+
+    // Clone element management: if isOwner, hide clone; else show clone
+    if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
+      if (isOwner) {
+        // When in owner container, hide clone
+        hideClone()
+      }
+      else {
+        // When in different container, show clone
+        showClone()
+      }
+    }
 
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
@@ -2255,6 +2437,13 @@ export function useSortableDrag(
 
     const dragElement = state.dragElement.value
 
+    // Clear clone state debouncing timeout
+    if (cloneStateTimeout.value) {
+      clearTimeout(cloneStateTimeout.value)
+      cloneStateTimeout.value = null
+    }
+    lastCloneAction.value = null
+
     state._setDragging(false)
     state._setIsActive(false)
 
@@ -2288,54 +2477,132 @@ export function useSortableDrag(
         dragElement.draggable = false
       }
 
-      // Update parentEl state to reflect final position - following SortableJS _onDrop (line 1386)
-      const finalParentEl = dragElement.parentElement
-      if (finalParentEl) {
-        state._setParentEl(finalParentEl)
+      const originalParent = state.parentEl.value // This was set when drag started
+      const currentParent = dragElement.parentElement // Where element is now
+      const isCloneMode = state.lastPutMode.value === 'clone'
+
+      // Check if this was a cross-list drag by comparing original and current parents
+      const wasCrossListDrag = originalParent !== currentParent && originalParent && currentParent
+
+      // In clone mode, handle the cloning process
+      if (isCloneMode && wasCrossListDrag && originalParent && currentParent) {
+        // Get the position where the original element currently is (this is where the clone should go)
+        const clonePosition = getElementIndex(dragElement)
+
+        // Create the actual clone element
+        const cloneElement = dragElement.cloneNode(true) as HTMLElement
+        cloneElement.removeAttribute('id')
+
+        // Move the original element back to its original position
+        const originalNextSibling = state.nextEl.value
+        if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+          originalParent.insertBefore(dragElement, originalNextSibling)
+        }
+        else {
+          originalParent.appendChild(dragElement)
+        }
+
+        // Insert the clone at the target position
+        const targetChildren = Array.from(currentParent.children) as HTMLElement[]
+        if (clonePosition < targetChildren.length) {
+          currentParent.insertBefore(cloneElement, targetChildren[clonePosition])
+        }
+        else {
+          currentParent.appendChild(cloneElement)
+        }
+
+        // Dispatch clone event
+        dispatchEvent('clone', {
+          item: cloneElement,
+          clone: cloneElement,
+          from: originalParent,
+          to: currentParent,
+          oldIndex: startIndex.value,
+          oldDraggableIndex: startIndex.value,
+        })
+
+        // Dispatch add event for the clone
+        dispatchEvent('add', {
+          item: cloneElement,
+          from: originalParent,
+          to: currentParent,
+          oldIndex: startIndex.value,
+          newIndex: getElementIndex(cloneElement),
+          clone: cloneElement,
+          pullMode: 'clone',
+        })
+
+        // Update parentEl state to reflect the restored position
+        state._setParentEl(originalParent)
+      }
+      else {
+        // For non-clone mode, update parentEl state to reflect final position
+        const finalParentEl = dragElement.parentElement
+        if (finalParentEl) {
+          state._setParentEl(finalParentEl)
+        }
       }
 
-      // Calculate final index
+      // Calculate final index based on current position
       const newIndex = getElementIndex(dragElement)
 
-      // Check if this was a cross-list operation following SortableJS logic (line 1460)
-      const originalParent = state.parentEl.value
-      const currentParent = dragElement.parentElement
-      const wasCrossListDrag = originalParent !== currentParent
-
-      // Dispatch cross-list events if needed
-      if (wasCrossListDrag && newIndex >= 0) {
-        // Dispatch remove event for source container (following SortableJS line 1472)
-        if (originalParent && state.lastPutMode.value !== 'clone') {
-          dispatchEvent('remove', {
-            item: dragElement,
-            from: originalParent,
-            to: currentParent || undefined,
-            oldIndex: startIndex.value,
-            newIndex,
-            pullMode: state.lastPutMode.value || undefined,
-          })
-        }
-
-        // Dispatch add event for target container (following SortableJS line 1463)
-        if (currentParent) {
-          dispatchEvent('add', {
-            item: dragElement,
-            from: originalParent || undefined,
-            to: currentParent,
-            oldIndex: startIndex.value,
-            newIndex,
-            pullMode: state.lastPutMode.value || undefined,
-          })
-        }
-      }
-
-      // Dispatch appropriate events
-      if (newIndex !== startIndex.value) {
-        dispatchEvent('update', {
+      // Dispatch cross-list events if needed (but not for clone mode since original element didn't move)
+      if (wasCrossListDrag && newIndex >= 0 && !isCloneMode) {
+        // Dispatch add event for target container first
+        dispatchEvent('add', {
           item: dragElement,
+          from: originalParent,
+          to: currentParent,
           oldIndex: startIndex.value,
           newIndex,
+          clone: state.cloneEl.value || undefined,
+          pullMode: state.lastPutMode.value || undefined,
         })
+
+        // Dispatch remove event for source container
+        dispatchEvent('remove', {
+          item: dragElement,
+          from: originalParent,
+          to: currentParent,
+          oldIndex: startIndex.value,
+          newIndex: -1, // Element removed from source
+          clone: state.cloneEl.value || undefined,
+          pullMode: state.lastPutMode.value || undefined,
+        })
+
+        // Dispatch sort events for both containers
+        // Target container sort event
+        dispatchEvent('sort', {
+          item: dragElement,
+          from: originalParent,
+          to: currentParent,
+          oldIndex: startIndex.value,
+          newIndex,
+          clone: state.cloneEl.value || undefined,
+          pullMode: state.lastPutMode.value || undefined,
+        })
+
+        // Source container sort event
+        dispatchEvent('sort', {
+          item: dragElement,
+          from: originalParent,
+          to: currentParent,
+          oldIndex: startIndex.value,
+          newIndex: -1,
+          clone: state.cloneEl.value || undefined,
+          pullMode: state.lastPutMode.value || undefined,
+        })
+      }
+
+      // For same-container drags or clone mode, dispatch update event if position changed
+      if (!wasCrossListDrag || isCloneMode) {
+        if (newIndex !== startIndex.value) {
+          dispatchEvent('update', {
+            item: dragElement,
+            oldIndex: startIndex.value,
+            newIndex,
+          })
+        }
       }
 
       dispatchEvent('end', {
@@ -2506,7 +2773,7 @@ export function useSortableDrag(
     isFallbackActive.value = true
     state._setFallbackActive(true)
 
-    // Start periodic drag over emulation (following SortableJS pattern)
+    // Start periodic drag over emulation
     loopTimer.value = setInterval(emulateDragOver, 50)
   }
 
@@ -2545,7 +2812,7 @@ export function useSortableDrag(
     ghostElement.style.zIndex = '100000'
 
     // Set transform-origin based on tap distance (where user clicked)
-    // This ensures the ghost rotates/scales around the click point, following SortableJS behavior
+    // This ensures the ghost rotates/scales around the click point
     if (rect.width > 0 && rect.height > 0) {
       const originX = Math.max(0, Math.min(100, (tapDistance.left / rect.width * 100)))
       const originY = Math.max(0, Math.min(100, (tapDistance.top / rect.height * 100)))
@@ -2628,9 +2895,46 @@ export function useSortableDrag(
       Math.abs(touch.clientY - lastY.value),
     ) >= threshold) {
       // When threshold is exceeded, cancel the delayed drag
-      // Following SortableJS pattern: just disable delayed drag, don't start drag here
       disableDelayedDrag(false)
     }
+  }
+
+  /**
+   * Create clone element
+   * @param dragElement - The element to clone
+   */
+  const createCloneElement = (dragElement: HTMLElement) => {
+    const cloneElement = dragElement.cloneNode(true) as HTMLElement
+
+    cloneElement.removeAttribute('id')
+    cloneElement.draggable = false
+    cloneElement.style.willChange = ''
+
+    // Set clone element in state
+    state._setCloneEl(cloneElement)
+
+    hideClone()
+
+    const currentChosenClass = toValue(chosenClass)
+    if (currentChosenClass) {
+      cloneElement.classList.remove(currentChosenClass)
+    }
+
+    // Insert clone into DOM but keep it hidden
+    setTimeout(() => {
+      const rootEl = state.rootEl.value
+      const nextEl = state.nextEl.value
+      if (rootEl && cloneElement && state.lastPutMode.value === 'clone') {
+        // Insert clone at original position using nextEl, not current dragElement position
+        if (nextEl && nextEl.parentNode === rootEl) {
+          rootEl.insertBefore(cloneElement, nextEl)
+        }
+        else {
+          rootEl.appendChild(cloneElement)
+        }
+        hideClone() // Ensure it stays hidden
+      }
+    }, 0)
   }
 
   /**
@@ -2645,32 +2949,57 @@ export function useSortableDrag(
     state._setDragElement(dragElement)
     startIndex.value = getElementIndex(dragElement)
 
-    // Set root element (current sortable container) - following SortableJS _prepareDragStart
+    // Set root element (current sortable container)
     state._setRootEl(targetElement.value)
 
-    // Set active group from options - following SortableJS pattern
+    // Set active group from options and determine initial lastPutMode
     const currentGroup = toValue(options).group
     if (typeof currentGroup === 'string') {
       state._setActiveGroup(currentGroup)
+      // For string groups, default pull mode is true
+      state._setLastPutMode(true)
     }
     else if (currentGroup && typeof currentGroup === 'object') {
       // Handle both direct SortableGroup object and Ref<SortableGroup>
       const groupValue = toValue(currentGroup)
       if (typeof groupValue === 'string') {
         state._setActiveGroup(groupValue)
+        state._setLastPutMode(true)
       }
       else if (groupValue && typeof groupValue === 'object' && 'name' in groupValue) {
         state._setActiveGroup(groupValue.name || null)
+        // Set lastPutMode based on pull configuration
+        const pullMode = groupValue.pull
+        if (pullMode === 'clone') {
+          state._setLastPutMode('clone')
+        }
+        else if (pullMode === true || pullMode === false) {
+          state._setLastPutMode(pullMode)
+        }
+        else if (typeof pullMode === 'function') {
+          // For function pull modes, we'll evaluate them later during cross-list operations
+          state._setLastPutMode(true) // Default to true for now
+        }
+        else {
+          state._setLastPutMode(true) // Default
+        }
       }
     }
+    else {
+      // No group specified, default to true
+      state._setLastPutMode(true)
+    }
 
-    // Mark this sortable instance as active - following SortableJS pattern (line 756)
+    // Mark this sortable instance as active
     state._setIsActive(true)
 
     // Set initial isOwner to true (dragging within same container initially)
     state._setIsOwner(true)
 
-    // Record initial tap/click position for fallback mode (enhanced following SortableJS)
+    // Create clone element
+    createCloneElement(dragElement)
+
+    // Record initial tap/click position for fallback mode
     if (evt instanceof MouseEvent) {
       tapEvt.value = { clientX: evt.clientX, clientY: evt.clientY }
       lastX.value = evt.clientX
