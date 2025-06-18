@@ -21,6 +21,7 @@ export type SortableEventType =
   | 'spill'
   | 'select'
   | 'deselect'
+  | 'revert'
 
 /**
  * Sortable-specific data interface

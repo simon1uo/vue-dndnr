@@ -252,7 +252,16 @@ export interface UseSortableOptions extends SortableEventCallbacks {
    * @default { x: 0, y: 0 }
    */
   fallbackOffset?: MaybeRefOrGetter<{ x: number, y: number }>
-
+  /**
+   * Revert dragged element to original position when spilled (dropped outside valid containers)
+   * @default false
+   */
+  revertOnSpill?: MaybeRefOrGetter<boolean>
+  /**
+   * Remove dragged element from DOM when spilled (dropped outside valid containers)
+   * @default false
+   */
+  removeOnSpill?: MaybeRefOrGetter<boolean>
   /**
    * Whether to return controls
    * @default false

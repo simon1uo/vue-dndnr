@@ -13,7 +13,7 @@ import { useEventDispatcher } from './useEventDispatcher'
  * @param el - The target element
  * @param relativeToContainingBlock - Whether the rect should be relative to the containing block
  * @param relativeToNonStaticParent - Whether the rect should be relative to the relative parent
- * @param undoScale - Whether the container's scale should be undone
+ * @param _undoScale - Whether the container's scale should be undone
  * @param container - The parent the element will be placed in
  * @returns The bounding client rect with specified adjustments
  */
@@ -67,7 +67,8 @@ function getRect(
  * @param el - The parent element
  * @param childNum - The index of the child
  * @param options - Options object containing draggable selector
- * @param includeDragEl - Whether to include the currently dragged element
+ * @param options.draggable - Selector for draggable elements.
+ * @param _includeDragEl - Whether to include the currently dragged element
  * @returns The child at index childNum, or null if not found
  */
 function getChild(
@@ -121,10 +122,11 @@ function lastChild(el: HTMLElement, selector?: string): HTMLElement | null {
  * Get the containing rectangle from all draggable children of an element
  * @param container - The container element
  * @param options - Options object containing draggable selector
+ * @param {string} [options.draggable] - Selector for draggable elements.
  * @param ghostEl - The ghost element to exclude
  * @returns The containing rectangle of all children
  */
-function getChildContainingRectFromElement(
+function _getChildContainingRectFromElement(
   container: HTMLElement,
   options: { draggable?: string },
   ghostEl?: HTMLElement | null,
@@ -318,6 +320,8 @@ export function useSortableDrag(
     onAnimationCapture,
     onAnimationTrigger,
     setData,
+    revertOnSpill = false,
+    removeOnSpill = false,
   } = toValue(options)
 
   // Computed properties for reactive options
@@ -744,11 +748,11 @@ export function useSortableDrag(
   /**
    * Dispatch a sortable event with proper callback handling using unified event dispatcher
    */
-  const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEventData> = {}) => {
+  const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEventData> = {}): boolean => {
     const el = targetElement.value
     const dragElement = state.dragElement.value
     if (!el || !dragElement)
-      return
+      return false
 
     // Extract only the properties that are compatible with SortableEventData
     const compatibleData: Partial<SortableEventData> = {
@@ -826,8 +830,8 @@ export function useSortableDrag(
         break
     }
 
-    // Dispatch event using unified event dispatcher
-    dispatch(eventType, eventData, callback)
+    // Dispatch event using unified event dispatcher and return the result
+    return dispatch(eventType, eventData, callback)
   }
 
   /**
@@ -940,11 +944,13 @@ export function useSortableDrag(
   /**
    * Check if the ghost element is at the first position in the container
    * @param evt - Drag event with coordinates
+   * @param {number} evt.clientX - The X coordinate of the pointer.
+   * @param {number} evt.clientY - The Y coordinate of the pointer.
    * @param vertical - Whether the layout is vertical
    * @param container - Container element
    * @returns Whether the ghost is at the first position
    */
-  const _ghostIsFirst = (evt: { clientX: number, clientY: number }, vertical: boolean, container: HTMLElement): boolean => {
+  const isGhostElementFirst = (evt: { clientX: number, clientY: number }, vertical: boolean, container: HTMLElement): boolean => {
     const draggableSelector = toValue(draggable)
     const firstEl = getChild(container, 0, { draggable: draggableSelector }, true)
 
@@ -953,22 +959,32 @@ export function useSortableDrag(
     }
 
     const firstElRect = getRect(firstEl)
-    const childContainingRect = getChildContainingRectFromElement(container, { draggable: draggableSelector }, state.ghostElement.value)
-    const spacer = 10
+    const containerRect = container.getBoundingClientRect()
+
+    // Make sure the pointer is within the container bounds in the non-primary axis
+    const isWithinContainerBounds = vertical
+      ? (evt.clientX >= containerRect.left && evt.clientX <= containerRect.right)
+      : (evt.clientY >= containerRect.top && evt.clientY <= containerRect.bottom)
+
+    if (!isWithinContainerBounds) {
+      return false
+    }
 
     return vertical
-      ? (evt.clientX < childContainingRect.left - spacer || (evt.clientY < firstElRect.top && evt.clientX < firstElRect.right))
-      : (evt.clientY < childContainingRect.top - spacer || (evt.clientY < firstElRect.bottom && evt.clientX < firstElRect.left))
+      ? (evt.clientY < firstElRect.top + (firstElRect.height / 3)) // Top third of first element
+      : (evt.clientX < firstElRect.left + (firstElRect.width / 3)) // Left third of first element
   }
 
   /**
    * Check if the ghost element is at the last position in the container
    * @param evt - Drag event with coordinates
+   * @param {number} evt.clientX - The X coordinate of the pointer.
+   * @param {number} evt.clientY - The Y coordinate of the pointer.
    * @param vertical - Whether the layout is vertical
    * @param container - Container element
    * @returns Whether the ghost is at the last position
    */
-  const _ghostIsLast = (evt: { clientX: number, clientY: number }, vertical: boolean, container: HTMLElement): boolean => {
+  const isGhostElementLast = (evt: { clientX: number, clientY: number }, vertical: boolean, container: HTMLElement): boolean => {
     const draggableSelector = toValue(draggable)
     const lastEl = lastChild(container, draggableSelector)
 
@@ -977,17 +993,27 @@ export function useSortableDrag(
     }
 
     const lastElRect = getRect(lastEl)
-    const childContainingRect = getChildContainingRectFromElement(container, { draggable: draggableSelector }, state.ghostElement.value)
-    const spacer = 10
+    const containerRect = container.getBoundingClientRect()
+
+    // Make sure the pointer is within the container bounds in the non-primary axis
+    const isWithinContainerBounds = vertical
+      ? (evt.clientX >= containerRect.left && evt.clientX <= containerRect.right)
+      : (evt.clientY >= containerRect.top && evt.clientY <= containerRect.bottom)
+
+    if (!isWithinContainerBounds) {
+      return false
+    }
 
     return vertical
-      ? (evt.clientX > childContainingRect.right + spacer || (evt.clientY > lastElRect.bottom && evt.clientX > lastElRect.left))
-      : (evt.clientY > childContainingRect.bottom + spacer || (evt.clientX > lastElRect.right && evt.clientY > lastElRect.top))
+      ? (evt.clientY > lastElRect.bottom - (lastElRect.height / 3)) // Bottom third of last element
+      : (evt.clientX > lastElRect.right - (lastElRect.width / 3)) // Right third of last element
   }
 
   /**
    * Detect if the cursor is in a gap between elements or at container boundaries
    * @param evt - Drag event with coordinates
+   * @param {number} evt.clientX - The X coordinate of the pointer.
+   * @param {number} evt.clientY - The Y coordinate of the pointer.
    * @param container - Container element
    * @returns Object with insertion info or null
    */
@@ -998,13 +1024,13 @@ export function useSortableDrag(
     const vertical = detectDirection() === 'vertical'
 
     // Check if at first position
-    const isAtFirst = _ghostIsFirst(evt, vertical, container)
+    const isAtFirst = isGhostElementFirst(evt, vertical, container)
     if (isAtFirst) {
       return { insertAtEnd: false, insertAtStart: true }
     }
 
     // Check if at last position
-    const isAtLast = _ghostIsLast(evt, vertical, container)
+    const isAtLast = isGhostElementLast(evt, vertical, container)
     if (isAtLast) {
       return { insertAtEnd: true, insertAtStart: false }
     }
@@ -1131,11 +1157,11 @@ export function useSortableDrag(
 
   /**
    * Calculate insertion position based on mouse position and target element
-   * @param pointer - Pointer object containing clientX and clientY coordinates
-   * @param {number} pointer.clientX - The X coordinate of the pointer
-   * @param {number} pointer.clientY - The Y coordinate of the pointer
-   * @param target - Target element
-   * @returns Insertion position or null if no position is found
+   * @param {object} pointer - Pointer object containing clientX and clientY coordinates.
+   * @param {number} pointer.clientX - The X coordinate of the pointer.
+   * @param {number} pointer.clientY - The Y coordinate of the pointer.
+   * @param {HTMLElement} target - Target element.
+   * @returns {number | null} Insertion position or null if no position is found.
    */
   const calculateInsertPosition = (
     pointer: { clientX: number, clientY: number },
@@ -1716,20 +1742,33 @@ export function useSortableDrag(
     const currentActiveGroup = state.activeGroup.value
     const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
     const isOwner = currentActiveGroup === targetGroup
-    const revert = state.parentEl.value !== state.rootEl.value
+    const revert = targetContainer === state.rootEl.value && !!state.putSortable.value
 
     state._setIsOwner(isOwner)
     state._setRevert(revert)
 
     // Handle revert case first
-    if (isOwner && revert) {
+    if (revert) {
       const reverted = handleRevert()
       if (reverted) {
+        state._setPutSortable(null)
         // Trigger animation after revert
         if (onAnimationTrigger) {
           onAnimationTrigger()
         }
         return
+      }
+    }
+
+    // Clone element management: if isOwner, hide clone; else show clone
+    if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
+      if (isOwner) {
+        // When in owner container, hide clone
+        hideClone()
+      }
+      else {
+        // When in different container, show clone
+        showClone()
       }
     }
 
@@ -1779,18 +1818,6 @@ export function useSortableDrag(
       }
     }
 
-    // Clone element management: if isOwner, hide clone; else show clone
-    if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
-      if (isOwner) {
-        // When in owner container, hide clone
-        hideClone()
-      }
-      else {
-        // When in different container, show clone
-        showClone()
-      }
-    }
-
     // Handle empty container insertion
     if (isEmptyTarget && targetContainer) {
       // Dispatch move event for empty container
@@ -1816,38 +1843,50 @@ export function useSortableDrag(
     }
 
     // Check for boundary insertion when no specific draggable target is found
+    // But ONLY if the pointer is within the container bounds
     if (!draggableTarget && targetContainer) {
-      const boundaryInsertion = detectContainerBoundaryInsertion(
-        { clientX: evt.clientX, clientY: evt.clientY },
-        targetContainer,
+      // First check if the pointer is actually within the container bounds
+      const containerRect = targetContainer.getBoundingClientRect()
+      const isWithinContainer = (
+        evt.clientX >= containerRect.left
+        && evt.clientX <= containerRect.right
+        && evt.clientY >= containerRect.top
+        && evt.clientY <= containerRect.bottom
       )
 
-      if (boundaryInsertion) {
-        // Dispatch move event for boundary insertion
-        const containerRect = targetContainer.getBoundingClientRect()
-        const dragRect = state.dragElement.value?.getBoundingClientRect()
+      // Only handle boundary insertion if pointer is within container bounds
+      if (isWithinContainer) {
+        const boundaryInsertion = detectContainerBoundaryInsertion(
+          { clientX: evt.clientX, clientY: evt.clientY },
+          targetContainer,
+        )
 
-        const moveResult = dispatchMoveEvent({
-          to: targetContainer || undefined,
-          from: targetElement.value || undefined,
-          item: state.dragElement.value || undefined,
-          dragged: state.dragElement.value || undefined,
-          draggedRect: dragRect,
-          related: targetContainer,
-          relatedRect: containerRect,
-          willInsertAfter: boundaryInsertion.insertAtEnd,
-          originalEvent: evt,
-        }, evt)
+        if (boundaryInsertion) {
+          // Dispatch move event for boundary insertion
+          const dragRect = state.dragElement.value?.getBoundingClientRect()
 
-        if (moveResult !== false) {
-          if (targetContainer === targetElement.value) {
-            performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          const moveResult = dispatchMoveEvent({
+            to: targetContainer || undefined,
+            from: targetElement.value || undefined,
+            item: state.dragElement.value || undefined,
+            dragged: state.dragElement.value || undefined,
+            draggedRect: dragRect,
+            related: targetContainer,
+            relatedRect: containerRect,
+            willInsertAfter: boundaryInsertion.insertAtEnd,
+            originalEvent: evt,
+          }, evt)
+
+          if (moveResult !== false) {
+            if (targetContainer === targetElement.value) {
+              performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+            }
+            else {
+              performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+            }
           }
-          else {
-            performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
-          }
+          return
         }
-        return
       }
     }
 
@@ -1980,10 +2019,22 @@ export function useSortableDrag(
     const currentActiveGroup = state.activeGroup.value
     const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
     const isOwner = currentActiveGroup === targetGroup
-    const revert = state.parentEl.value !== state.rootEl.value
+    const revert = targetContainer === state.rootEl.value && !!state.putSortable.value
 
     state._setIsOwner(isOwner)
     state._setRevert(revert)
+
+    // Handle revert case first
+    if (revert) {
+      const reverted = handleRevert()
+      if (reverted) {
+        state._setPutSortable(null)
+        if (onAnimationTrigger) {
+          onAnimationTrigger()
+        }
+        return
+      }
+    }
 
     // Clone element management: if isOwner, hide clone; else show clone
     if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
@@ -2022,38 +2073,50 @@ export function useSortableDrag(
     }
 
     // Check for boundary insertion when no specific draggable target is found
+    // But ONLY if the pointer is within the container bounds
     if (!draggableTarget && targetContainer) {
-      const boundaryInsertion = detectContainerBoundaryInsertion(
-        { clientX: touch.clientX, clientY: touch.clientY },
-        targetContainer,
+      // First check if the pointer is actually within the container bounds
+      const containerRect = targetContainer.getBoundingClientRect()
+      const isWithinContainer = (
+        touch.clientX >= containerRect.left
+        && touch.clientX <= containerRect.right
+        && touch.clientY >= containerRect.top
+        && touch.clientY <= containerRect.bottom
       )
 
-      if (boundaryInsertion) {
-        // Dispatch move event for boundary insertion
-        const containerRect = targetContainer.getBoundingClientRect()
-        const dragRect = state.dragElement.value?.getBoundingClientRect()
+      // Only handle boundary insertion if pointer is within container bounds
+      if (isWithinContainer) {
+        const boundaryInsertion = detectContainerBoundaryInsertion(
+          { clientX: touch.clientX, clientY: touch.clientY },
+          targetContainer,
+        )
 
-        const moveResult = dispatchMoveEvent({
-          to: targetContainer || undefined,
-          from: targetElement.value || undefined,
-          item: state.dragElement.value || undefined,
-          dragged: state.dragElement.value || undefined,
-          draggedRect: dragRect,
-          related: targetContainer,
-          relatedRect: containerRect,
-          willInsertAfter: boundaryInsertion.insertAtEnd,
-          originalEvent: undefined,
-        })
+        if (boundaryInsertion) {
+          // Dispatch move event for boundary insertion
+          const dragRect = state.dragElement.value?.getBoundingClientRect()
 
-        if (moveResult !== false) {
-          if (targetContainer === targetElement.value) {
-            performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          const moveResult = dispatchMoveEvent({
+            to: targetContainer || undefined,
+            from: targetElement.value || undefined,
+            item: state.dragElement.value || undefined,
+            dragged: state.dragElement.value || undefined,
+            draggedRect: dragRect,
+            related: targetContainer,
+            relatedRect: containerRect,
+            willInsertAfter: boundaryInsertion.insertAtEnd,
+            originalEvent: undefined,
+          })
+
+          if (moveResult !== false) {
+            if (targetContainer === targetElement.value) {
+              performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+            }
+            else {
+              performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+            }
           }
-          else {
-            performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
-          }
+          return
         }
-        return
       }
     }
 
@@ -2241,10 +2304,22 @@ export function useSortableDrag(
     const currentActiveGroup = state.activeGroup.value
     const targetGroup = targetContainer?.getAttribute('data-sortable-group') || null
     const isOwner = currentActiveGroup === targetGroup
-    const revert = state.parentEl.value !== state.rootEl.value
+    const revert = targetContainer === state.rootEl.value && !!state.putSortable.value
 
     state._setIsOwner(isOwner)
     state._setRevert(revert)
+
+    // Handle revert case first
+    if (revert) {
+      const reverted = handleRevert()
+      if (reverted) {
+        state._setPutSortable(null)
+        if (onAnimationTrigger) {
+          onAnimationTrigger()
+        }
+        return
+      }
+    }
 
     // Clone element management: if isOwner, hide clone; else show clone
     if (state.lastPutMode.value === 'clone' && state.cloneEl.value) {
@@ -2283,38 +2358,50 @@ export function useSortableDrag(
     }
 
     // Check for boundary insertion when no specific draggable target is found
+    // But ONLY if the pointer is within the container bounds
     if (!draggableTarget && targetContainer) {
-      const boundaryInsertion = detectContainerBoundaryInsertion(
-        { clientX, clientY },
-        targetContainer,
+      // First check if the pointer is actually within the container bounds
+      const containerRect = targetContainer.getBoundingClientRect()
+      const isWithinContainer = (
+        clientX >= containerRect.left
+        && clientX <= containerRect.right
+        && clientY >= containerRect.top
+        && clientY <= containerRect.bottom
       )
 
-      if (boundaryInsertion) {
-        // Dispatch move event for boundary insertion
-        const containerRect = targetContainer.getBoundingClientRect()
-        const dragRect = state.dragElement.value?.getBoundingClientRect()
+      // Only handle boundary insertion if pointer is within container bounds
+      if (isWithinContainer) {
+        const boundaryInsertion = detectContainerBoundaryInsertion(
+          { clientX, clientY },
+          targetContainer,
+        )
 
-        const moveResult = dispatchMoveEvent({
-          to: targetContainer || undefined,
-          from: targetElement.value || undefined,
-          item: state.dragElement.value || undefined,
-          dragged: state.dragElement.value || undefined,
-          draggedRect: dragRect,
-          related: targetContainer,
-          relatedRect: containerRect,
-          willInsertAfter: boundaryInsertion.insertAtEnd,
-          originalEvent: evt,
-        }, evt)
+        if (boundaryInsertion) {
+          // Dispatch move event for boundary insertion
+          const dragRect = state.dragElement.value?.getBoundingClientRect()
 
-        if (moveResult !== false) {
-          if (targetContainer === targetElement.value) {
-            performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+          const moveResult = dispatchMoveEvent({
+            to: targetContainer || undefined,
+            from: targetElement.value || undefined,
+            item: state.dragElement.value || undefined,
+            dragged: state.dragElement.value || undefined,
+            draggedRect: dragRect,
+            related: targetContainer,
+            relatedRect: containerRect,
+            willInsertAfter: boundaryInsertion.insertAtEnd,
+            originalEvent: evt,
+          }, evt)
+
+          if (moveResult !== false) {
+            if (targetContainer === targetElement.value) {
+              performBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+            }
+            else {
+              performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
+            }
           }
-          else {
-            performCrossListBoundaryInsertion(targetContainer, boundaryInsertion.insertAtEnd, boundaryInsertion.insertAtStart)
-          }
+          return
         }
-        return
       }
     }
 
@@ -2357,9 +2444,145 @@ export function useSortableDrag(
   }
 
   /**
+   * Detect if element was spilled (dropped outside valid containers)
+   * Based on SortableJS OnSpill plugin logic
+   */
+  function detectSpill(evt: MouseEvent | TouchEvent | DragEvent, _dragElement: HTMLElement): boolean {
+    if (!evt)
+      return false
+
+    // Get the touch/mouse position from the event
+    const touch = 'changedTouches' in evt && evt.changedTouches && evt.changedTouches.length
+      ? evt.changedTouches[0]
+      : evt as MouseEvent
+
+    if (!touch || typeof touch.clientX !== 'number' || typeof touch.clientY !== 'number') {
+      return false
+    }
+
+    // Temporarily hide ghost element to get accurate elementFromPoint result
+    // This follows SortableJS hideGhostForTarget() logic
+    const ghost = state.ghostElement.value
+    let ghostDisplay: string | undefined
+    if (ghost && !supportCssPointerEvents.value) {
+      ghostDisplay = ghost.style.display
+      ghost.style.display = 'none'
+    }
+
+    // Get element at the drop position
+    const target = document.elementFromPoint(touch.clientX, touch.clientY)
+
+    // Restore ghost element visibility (unhideGhostForTarget)
+    if (ghost && !supportCssPointerEvents.value && ghostDisplay !== undefined) {
+      ghost.style.display = ghostDisplay
+    }
+
+    if (!target) {
+      return true // No target found, consider it spilled
+    }
+
+    // Check if target is within any valid sortable container
+    // This follows SortableJS logic exactly: toSortable && !toSortable.el.contains(target)
+    const targetSortable = state.putSortable.value || targetElement.value
+
+    // Only consider it spilled if the target is not within the active sortable container
+    if (!targetSortable || !targetSortable.contains(target)) {
+      return true // Target is not within a valid container - spilled
+    }
+
+    return false // Target is within a valid container - not spilled
+  }
+
+  /**
+   * Handle spill event - revert or remove element based on options
+   * Based on SortableJS OnSpill plugin logic
+   */
+  function handleSpill(evt: MouseEvent | TouchEvent | DragEvent, dragElement: HTMLElement): boolean {
+    const currentRevertOnSpill = toValue(revertOnSpill)
+    const currentRemoveOnSpill = toValue(removeOnSpill)
+
+    // Skip if neither option is enabled
+    if (!currentRevertOnSpill && !currentRemoveOnSpill) {
+      return false
+    }
+
+    // Handle revert on spill (prioritized in SortableJS)
+    if (currentRevertOnSpill) {
+      const originalParent = state.parentEl.value
+      const originalNextSibling = state.nextEl.value
+
+      if (originalParent) {
+        // Capture animation state before reverting
+        if (onAnimationCapture) {
+          onAnimationCapture()
+        }
+
+        // Revert element to original position
+        if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+          originalParent.insertBefore(dragElement, originalNextSibling)
+        }
+        else {
+          originalParent.appendChild(dragElement)
+        }
+
+        // Trigger animation after reverting
+        if (onAnimationTrigger) {
+          onAnimationTrigger()
+        }
+
+        // Dispatch revert event (added to match SortableJS)
+        dispatchEvent('revert', {
+          item: dragElement,
+          oldIndex: startIndex.value,
+          newIndex: getElementIndex(dragElement),
+          from: state.putSortable.value || originalParent,
+          to: originalParent,
+          originalEvent: evt,
+        })
+
+        return true // Spill was handled by reverting
+      }
+    }
+    // Handle remove on spill (only if revert isn't enabled)
+    else if (currentRemoveOnSpill) {
+      const parentElement = dragElement.parentElement
+      if (parentElement) {
+        // Capture animation state before removing
+        if (onAnimationCapture) {
+          onAnimationCapture()
+        }
+
+        // Get final index before removal for event
+        const finalIndex = getElementIndex(dragElement)
+
+        // Remove element from DOM
+        parentElement.removeChild(dragElement)
+
+        // Trigger animation after removing
+        if (onAnimationTrigger) {
+          onAnimationTrigger()
+        }
+
+        // Dispatch remove event (added to match SortableJS)
+        dispatchEvent('remove', {
+          item: dragElement,
+          oldIndex: startIndex.value,
+          newIndex: finalIndex,
+          from: parentElement,
+          originalEvent: evt,
+        })
+
+        return true // Spill was handled by removing
+      }
+    }
+
+    return false // Spill was not handled
+  }
+
+  /**
    * Handle drag end events
    */
-  function handleDragEnd(_evt: MouseEvent | TouchEvent | DragEvent) {
+  function handleDragEnd(evt: MouseEvent | TouchEvent | DragEvent) {
     if (!state.isDragging.value && !state.dragElement.value)
       return
 
@@ -2473,6 +2696,28 @@ export function useSortableDrag(
 
       // Calculate final index based on current position
       const newIndex = getElementIndex(dragElement)
+
+      // Check for spill before dispatching events - only at drop time, not during drag
+      // This exactly matches SortableJS behavior which only checks for spill on drop
+      const isSpilled = detectSpill(evt, dragElement)
+      if (isSpilled) {
+        // Dispatch spill event before handling
+        dispatchEvent('spill', {
+          item: dragElement,
+          oldIndex: startIndex.value,
+          newIndex: -1, // Element was spilled
+          originalEvent: evt,
+        })
+
+        const spillHandled = handleSpill(evt, dragElement)
+        if (spillHandled) {
+          // Spill was handled (element reverted or removed), skip normal event dispatching
+          // Remove ghost and reset state
+          removeGhost()
+          resetDragState()
+          return
+        }
+      }
 
       // Dispatch cross-list events if needed (but not for clone mode since original element didn't move)
       if (wasCrossListDrag && newIndex >= 0 && !isCloneMode) {

@@ -287,4 +287,14 @@ export interface SortableOptions {
    * @default 'data-id'
    */
   dataIdAttr?: string
+  /**
+   * Revert dragged element to original position when spilled (dropped outside valid containers)
+   * @default false
+   */
+  revertOnSpill?: boolean
+  /**
+   * Remove dragged element from DOM when spilled (dropped outside valid containers)
+   * @default false
+   */
+  removeOnSpill?: boolean
 }
