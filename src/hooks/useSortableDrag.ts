@@ -1,4 +1,4 @@
-import type { SortableEvent, SortableEventData, SortableEventType } from '@/types'
+import type { SortableData, SortableEventData, SortableEventType } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { UseSortableOptions } from './useSortable'
 import type { SortableStateInternal } from './useSortableState'
@@ -693,7 +693,7 @@ export function useSortableDrag(
   /**
    * Dispatch a move event with special handling for onMove callback signature
    */
-  const dispatchMoveEvent = (data: Partial<SortableEvent> = {}, originalEvent?: Event): boolean => {
+  const dispatchMoveEvent = (data: Partial<SortableEventData> = {}, originalEvent?: Event): boolean => {
     const el = targetElement.value
     const dragElement = state.dragElement.value
     if (!el || !dragElement)
@@ -730,10 +730,10 @@ export function useSortableDrag(
     }
 
     // Dispatch event using unified event dispatcher
-    const result = dispatch('move', eventData, (evt) => {
-      // Call onMove callback with special signature if provided
-      if (onMove && originalEvent) {
-        return onMove(evt, originalEvent)
+    const result = dispatch('move', eventData, (nativeEvent, sortableData) => {
+      // Call onMove callback with new two-parameter signature if provided
+      if (onMove) {
+        return onMove(nativeEvent, sortableData)
       }
       return true
     })
@@ -744,7 +744,7 @@ export function useSortableDrag(
   /**
    * Dispatch a sortable event with proper callback handling using unified event dispatcher
    */
-  const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEvent> = {}) => {
+  const dispatchEvent = (eventType: SortableEventType, data: Partial<SortableEventData> = {}) => {
     const el = targetElement.value
     const dragElement = state.dragElement.value
     if (!el || !dragElement)
@@ -780,7 +780,7 @@ export function useSortableDrag(
     }
 
     // Get appropriate callback based on event type
-    let callback: ((evt: SortableEvent) => void) | undefined
+    let callback: ((event: PointerEvent | DragEvent, sortableData: SortableData) => void | boolean) | undefined
     switch (eventType) {
       case 'start':
         callback = onStart

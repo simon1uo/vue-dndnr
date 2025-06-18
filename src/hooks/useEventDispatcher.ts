@@ -1,6 +1,6 @@
 import type {
   AnimationEvent,
-  SortableEvent,
+  SortableData,
   SortableEventData,
   SortableEventListener,
   SortableEventType,
@@ -33,79 +33,110 @@ const isCustomEventSupported = (() => {
 
 /**
  * Create a sortable event with cross-browser compatibility.
+ * This function creates DOM events for backward compatibility while working with the new separated event structure.
+ *
+ * For modern browsers, it uses CustomEvent with sortable data in the detail property.
+ * For older browsers, it falls back to creating a basic Event with properties attached.
  *
  * @param eventType - The type of event to create
- * @param eventData - The data to include in the event
+ * @param nativeEvent - The original native DOM event
+ * @param sortableData - The sortable-specific data
  * @param target - The target element for the event
- * @returns A properly formatted SortableEvent
+ * @returns A properly formatted CustomEvent for DOM dispatching
  */
 function createSortableEvent(
   eventType: SortableEventType,
-  eventData: SortableEventData,
+  nativeEvent: PointerEvent | DragEvent,
+  sortableData: SortableData,
   target?: HTMLElement,
-): SortableEvent {
-  let event: Event
-
+): CustomEvent<SortableData> | Event {
   // Create event with browser compatibility
   if (isCustomEventSupported && !IE) {
     // Modern browsers with full CustomEvent support
-    event = new CustomEvent(eventType, {
+    // Store sortable data in detail property for clean separation
+    return new CustomEvent<SortableData>(eventType, {
       bubbles: true,
       cancelable: true,
-      detail: eventData,
+      detail: {
+        // Ensure all required properties have defaults
+        to: sortableData.to || target || document.body,
+        from: sortableData.from || target || document.body,
+        item: sortableData.item || target || document.body,
+        ...sortableData,
+      },
     })
   }
   else {
-    // Fallback for older browsers
-    event = document.createEvent('Event')
-    event.initEvent(eventType, true, true)
-  }
+    // Fallback for older browsers - use modern Event constructor instead of deprecated initEvent
+    let event: Event
 
-  // Cast to SortableEvent and add properties
-  const sortableEvent = event as SortableEvent
-
-  // Add standard sortable properties
-  sortableEvent.to = eventData.to || target || document.body
-  sortableEvent.from = eventData.from || target || document.body
-  sortableEvent.item = eventData.item || target || document.body
-  sortableEvent.clone = eventData.clone
-  sortableEvent.oldIndex = eventData.oldIndex
-  sortableEvent.newIndex = eventData.newIndex
-  sortableEvent.oldDraggableIndex = eventData.oldDraggableIndex
-  sortableEvent.newDraggableIndex = eventData.newDraggableIndex
-  sortableEvent.originalEvent = eventData.originalEvent
-  sortableEvent.pullMode = eventData.pullMode
-  sortableEvent.related = eventData.related
-  sortableEvent.willInsertAfter = eventData.willInsertAfter
-
-  // Add any additional custom properties
-  for (const key in eventData) {
-    if (key !== 'type' && !(key in sortableEvent)) {
-      ; (sortableEvent as any)[key] = eventData[key]
+    try {
+      // Try modern Event constructor first
+      event = new Event(eventType, {
+        bubbles: true,
+        cancelable: true,
+      })
     }
-  }
+    catch {
+      // Ultimate fallback for very old browsers that don't support Event constructor
+      event = document.createEvent('Event')
+      // Only use initEvent as last resort for IE11 and older
+      if (typeof event.initEvent === 'function') {
+        event.initEvent(eventType, true, true)
+      }
+    }
 
-  return sortableEvent
+    // For older browsers, attach sortable data as properties for backward compatibility
+    // This maintains the old behavior while the modern path uses detail
+    const eventWithProps = event as any
+
+    // Add sortable-specific properties
+    eventWithProps.to = sortableData.to || target || document.body
+    eventWithProps.from = sortableData.from || target || document.body
+    eventWithProps.item = sortableData.item || target || document.body
+    eventWithProps.clone = sortableData.clone
+    eventWithProps.oldIndex = sortableData.oldIndex
+    eventWithProps.newIndex = sortableData.newIndex
+    eventWithProps.oldDraggableIndex = sortableData.oldDraggableIndex
+    eventWithProps.newDraggableIndex = sortableData.newDraggableIndex
+    eventWithProps.originalEvent = nativeEvent
+    eventWithProps.pullMode = sortableData.pullMode
+    eventWithProps.related = sortableData.related
+    eventWithProps.relatedRect = sortableData.relatedRect
+    eventWithProps.draggedRect = sortableData.draggedRect
+    eventWithProps.willInsertAfter = sortableData.willInsertAfter
+
+    // Add any additional custom properties
+    for (const key in sortableData) {
+      if (!(key in eventWithProps)) {
+        eventWithProps[key] = sortableData[key]
+      }
+    }
+
+    return event
+  }
 }
 
 /**
  * Dispatch a sortable event on a target element.
- * Handles both DOM event dispatching and callback execution.
+ * Handles both DOM event dispatching and callback execution with new two-parameter signature.
  *
  * @param target - The target element to dispatch the event on
  * @param eventType - The type of event to dispatch
- * @param eventData - The data to include in the event
+ * @param nativeEvent - The native DOM event
+ * @param sortableData - Sortable-specific data
  * @param callback - Optional callback function to execute
  * @returns Whether the event was not cancelled
  */
 function dispatchSortableEvent(
   target: HTMLElement,
   eventType: SortableEventType,
-  eventData: SortableEventData,
-  callback?: (event: SortableEvent) => void | boolean,
+  nativeEvent: PointerEvent | DragEvent,
+  sortableData: SortableData,
+  callback?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void | boolean,
 ): boolean {
-  // Create the event
-  const event = createSortableEvent(eventType, eventData, target)
+  // Create the event for DOM dispatching with the new signature
+  const event = createSortableEvent(eventType, nativeEvent, sortableData, target)
 
   // Dispatch DOM event
   let domEventResult = true
@@ -116,11 +147,11 @@ function dispatchSortableEvent(
     console.error(`Error dispatching DOM event ${eventType}:`, error)
   }
 
-  // Execute callback if provided
+  // Execute callback if provided with new two-parameter signature
   let callbackResult = true
   if (callback) {
     try {
-      const result = callback(event)
+      const result = callback(nativeEvent, sortableData)
       if (result === false) {
         callbackResult = false
       }
@@ -135,21 +166,18 @@ function dispatchSortableEvent(
 }
 
 /**
- * Normalize event data to ensure all required properties are present.
+ * Normalize sortable data to ensure all required properties are present.
  * Provides default values for missing properties.
  *
- * @param eventType - The type of event
- * @param data - The raw event data
+ * @param data - The raw sortable data
  * @param defaults - Default values to use
- * @returns Normalized event data
+ * @returns Normalized sortable data
  */
-function normalizeEventData(
-  eventType: SortableEventType,
-  data: Partial<SortableEventData>,
-  defaults: Partial<SortableEventData> = {},
-): SortableEventData {
+function normalizeSortableData(
+  data: Partial<SortableData>,
+  defaults: Partial<SortableData> = {},
+): SortableData {
   return {
-    type: eventType,
     to: data.to || defaults.to,
     from: data.from || defaults.from,
     item: data.item || defaults.item,
@@ -158,9 +186,10 @@ function normalizeEventData(
     newIndex: data.newIndex ?? defaults.newIndex,
     oldDraggableIndex: data.oldDraggableIndex ?? defaults.oldDraggableIndex,
     newDraggableIndex: data.newDraggableIndex ?? defaults.newDraggableIndex,
-    originalEvent: data.originalEvent || defaults.originalEvent,
     pullMode: data.pullMode || defaults.pullMode,
     related: data.related || defaults.related,
+    relatedRect: data.relatedRect || defaults.relatedRect,
+    draggedRect: data.draggedRect || defaults.draggedRect,
     willInsertAfter: data.willInsertAfter ?? defaults.willInsertAfter ?? false,
     ...data, // Include any additional custom properties
   }
@@ -203,7 +232,7 @@ export interface UseEventDispatcherReturn {
   /** Remove an event listener */
   off: (eventType: SortableEventType, listener: SortableEventListener) => void
   /** Dispatch a sortable event */
-  dispatch: (eventType: SortableEventType, data: Partial<SortableEventData>, callback?: (event: SortableEvent) => void | boolean) => boolean
+  dispatch: (eventType: SortableEventType, data: Partial<SortableEventData>, callback?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void | boolean) => boolean
   /** Dispatch an animation event */
   dispatchAnimation: (type: 'start' | 'end' | 'cancel', target: HTMLElement, duration?: number, easing?: string, callback?: (event: AnimationEvent) => void) => void
   /** Check if there are listeners for an event type */
@@ -337,7 +366,7 @@ export function useEventDispatcher(
   /**
    * Execute listeners for an event type
    */
-  const executeListeners = (eventType: SortableEventType, event: SortableEvent): boolean => {
+  const executeListeners = (eventType: SortableEventType, nativeEvent: PointerEvent | DragEvent, sortableData: SortableData): boolean => {
     let cancelled = false
 
     // Execute regular listeners
@@ -345,7 +374,7 @@ export function useEventDispatcher(
     if (eventListeners) {
       for (const listener of eventListeners) {
         try {
-          const result = listener(event)
+          const result = listener(nativeEvent, sortableData)
           if (result === false) {
             cancelled = true
           }
@@ -367,7 +396,7 @@ export function useEventDispatcher(
 
       for (const listener of listenersToExecute) {
         try {
-          const result = listener(event)
+          const result = listener(nativeEvent, sortableData)
           if (result === false) {
             cancelled = true
           }
@@ -382,41 +411,46 @@ export function useEventDispatcher(
   }
 
   /**
-   * Dispatch a sortable event
+   * Dispatch a sortable event with new two-parameter signature
    */
   const dispatch = (
     eventType: SortableEventType,
     data: Partial<SortableEventData>,
-    callback?: (event: SortableEvent) => void | boolean,
+    callback?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void | boolean,
   ): boolean => {
     const el = targetElement.value
     if (!el) {
       return false
     }
 
-    // Normalize event data with defaults
-    const eventData = normalizeEventData(eventType, {
-      to: el,
-      from: el,
-      ...data,
+    // Extract native event from data or create a synthetic one
+    const nativeEvent: PointerEvent | DragEvent = (data.originalEvent as PointerEvent | DragEvent) || new PointerEvent(eventType, {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
     })
 
-    // Create the sortable event
-    const event = createSortableEvent(eventType, eventData, el)
+    // Normalize sortable data with defaults (excluding originalEvent and type)
+    const { originalEvent, type, ...rawSortableData } = data
+    const sortableData = normalizeSortableData(rawSortableData, {
+      to: el,
+      from: el,
+    })
 
     // Execute programmatic listeners first
-    const listenerResult = executeListeners(eventType, event)
+    const listenerResult = executeListeners(eventType, nativeEvent, sortableData)
 
     // Dispatch DOM event if enabled
     let domEventResult = true
     const opts = resolvedOptions.value
     if (opts.dispatchDOMEvents) {
-      domEventResult = dispatchSortableEvent(el, eventType, eventData, callback)
+      domEventResult = dispatchSortableEvent(el, eventType, nativeEvent, sortableData, callback)
     }
     else if (callback) {
       // Execute callback even if DOM events are disabled
       try {
-        const result = callback(event)
+        const result = callback(nativeEvent, sortableData)
         if (result === false) {
           domEventResult = false
         }

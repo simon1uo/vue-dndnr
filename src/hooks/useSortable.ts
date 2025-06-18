@@ -416,27 +416,27 @@ export function useSortable(
     ...options,
     state,
     // Integrate animation with drag events
-    onStart: (evt) => {
+    onStart: (event, sortableData) => {
       // Capture animation state before drag starts
       if (options.animation) {
         animation.captureAnimationState()
       }
       // Call original onStart if provided
       if (options.onStart) {
-        options.onStart(evt)
+        options.onStart(event, sortableData)
       }
     },
-    onEnd: (evt) => {
+    onEnd: (event, sortableData) => {
       // Trigger animation after drag ends
       if (options.animation) {
         animation.animateAll()
       }
       // Call original onEnd if provided
       if (options.onEnd) {
-        options.onEnd(evt)
+        options.onEnd(event, sortableData)
       }
     },
-    onAdd: (evt) => {
+    onAdd: (event, sortableData) => {
       // Update items after cross-list addition
       updateItems()
       if (options.animation) {
@@ -444,10 +444,10 @@ export function useSortable(
       }
       // Call original onAdd if provided
       if (options.onAdd) {
-        options.onAdd(evt)
+        options.onAdd(event, sortableData)
       }
     },
-    onRemove: (evt) => {
+    onRemove: (event, sortableData) => {
       // Update items after cross-list removal
       updateItems()
       if (options.animation) {
@@ -455,10 +455,10 @@ export function useSortable(
       }
       // Call original onRemove if provided
       if (options.onRemove) {
-        options.onRemove(evt)
+        options.onRemove(event, sortableData)
       }
     },
-    onUpdate: (evt) => {
+    onUpdate: (event, sortableData) => {
       // Update items and trigger animation for updates
       updateItems()
       if (options.animation) {
@@ -466,10 +466,10 @@ export function useSortable(
       }
       // Call original onUpdate if provided
       if (options.onUpdate) {
-        options.onUpdate(evt)
+        options.onUpdate(event, sortableData)
       }
     },
-    onSort: (evt) => {
+    onSort: (event, sortableData) => {
       // Update items after sort operation
       updateItems()
       if (options.animation) {
@@ -477,7 +477,7 @@ export function useSortable(
       }
       // Call original onSort if provided
       if (options.onSort) {
-        options.onSort(evt)
+        options.onSort(event, sortableData)
       }
     },
     // Animation integration callbacks for drag operations

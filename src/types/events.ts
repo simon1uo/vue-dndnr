@@ -23,18 +23,17 @@ export type SortableEventType =
   | 'deselect'
 
 /**
- * Sortable event interface
- * Standard drag and drop event interface based on SortableJS.
- * Contains information about the drag operation, including source and target elements,
- * positions, and related DOM elements.
+ * Sortable-specific data interface
+ * Contains all sortable-specific information separated from native DOM events.
+ * This provides better type safety and clearer separation of concerns.
  */
-export interface SortableEvent extends Event {
+export interface SortableData {
   /** Target container element where the dragged item will be placed */
-  to: HTMLElement
+  to?: HTMLElement
   /** Source container element where the dragged item originated from */
-  from: HTMLElement
+  from?: HTMLElement
   /** The element being dragged */
-  item: HTMLElement
+  item?: HTMLElement
   /** The element being dragged (used in onMove events) */
   dragged?: HTMLElement
   /** Rectangle information of the dragged element (used in onMove events) */
@@ -49,8 +48,6 @@ export interface SortableEvent extends Event {
   oldDraggableIndex?: number
   /** New index among draggable elements only */
   newDraggableIndex?: number
-  /** Original DOM event that triggered this sortable event */
-  originalEvent?: Event
   /**
    * Pull mode when cross-list dragging
    * @default undefined
@@ -65,6 +62,8 @@ export interface SortableEvent extends Event {
    * @default false
    */
   willInsertAfter?: boolean
+  /** Additional custom data properties */
+  [key: string]: any
 }
 
 /**
@@ -72,97 +71,115 @@ export interface SortableEvent extends Event {
  * Complete set of callback functions for drag and drop events.
  * These callbacks can be provided in options to respond to various stages
  * of the sorting operation.
+ *
+ * All callbacks now use a two-parameter signature:
+ * - First parameter: Native DOM event (PointerEvent, DragEvent, etc.)
+ * - Second parameter: Sortable-specific data (SortableData)
  */
 export interface SortableEventCallbacks {
   /**
    * Triggered when dragging starts
-   * @param event The sortable event object containing drag information
+   * @param event The native event that initiated the drag (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onStart?: (event: SortableEvent) => void
+  onStart?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when dragging ends
-   * @param event The sortable event object containing drag information
+   * @param event The native event that ended the drag (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onEnd?: (event: SortableEvent) => void
+  onEnd?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when element is added to list from another list
-   * @param event The sortable event object containing drag information
+   * @param event The native event that triggered the add operation
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onAdd?: (event: SortableEvent) => void
+  onAdd?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when element is removed from list and added to another list
-   * @param event The sortable event object containing drag information
+   * @param event The native event that triggered the remove operation
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onRemove?: (event: SortableEvent) => void
+  onRemove?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when element position changes within the same list
-   * @param event The sortable event object containing drag information
+   * @param event The native event that triggered the update operation
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onUpdate?: (event: SortableEvent) => void
+  onUpdate?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when any sorting operation occurs (add, update, or remove)
-   * @param event The sortable event object containing drag information
+   * @param event The native event that triggered the sort operation
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onSort?: (event: SortableEvent) => void
+  onSort?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when element is filtered out (prevented from dragging)
-   * @param event The sortable event object containing drag information
+   * @param event The native event that was filtered (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onFilter?: (event: SortableEvent) => void
+  onFilter?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when element is being moved
-   * @param event The sortable event object containing drag information
-   * @param originalEvent The original DOM event
+   * @param event The native event during the move (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    * @returns Return false to cancel the move operation
    */
-  onMove?: (event: SortableEvent, originalEvent: Event) => boolean | void
+  onMove?: (event: PointerEvent | DragEvent, sortableData: SortableData) => boolean | void
   /**
    * Triggered when element is cloned
-   * @param event The sortable event object containing drag information
+   * @param event The native event that triggered the clone operation
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onClone?: (event: SortableEvent) => void
+  onClone?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when position changes (during drag)
-   * @param event The sortable event object containing drag information
+   * @param event The native event during position change (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onChange?: (event: SortableEvent) => void
+  onChange?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
-   * Triggered when element is chosen (mousedown/touchstart)
-   * @param event The sortable event object containing drag information
+   * Triggered when element is chosen (pointerdown)
+   * @param event The native event that chose the element (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onChoose?: (event: SortableEvent) => void
+  onChoose?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
-   * Triggered when element is unchosen (mouseup/touchend)
-   * @param event The sortable event object containing drag information
+   * Triggered when element is unchosen (pointerup)
+   * @param event The native event that unchose the element (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onUnchoose?: (event: SortableEvent) => void
+  onUnchoose?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when element is dropped outside valid containers
-   * @param event The sortable event object containing drag information
+   * @param event The native event when element was dropped outside
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onSpill?: (event: SortableEvent) => void
+  onSpill?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when elements are selected (multi-drag feature)
-   * @param event The sortable event object containing drag information
+   * @param event The native event that selected elements (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onSelect?: (event: SortableEvent) => void
+  onSelect?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
   /**
    * Triggered when elements are deselected (multi-drag feature)
-   * @param event The sortable event object containing drag information
+   * @param event The native event that deselected elements (PointerEvent or DragEvent)
+   * @param sortableData Sortable-specific data containing drag information
    */
-  onDeselect?: (event: SortableEvent) => void
+  onDeselect?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
 }
 
 /**
  * Event listener function type
- * Generic event listener that can handle any sortable event and
- * optionally return a boolean to control event flow.
+ * Generic event listener that can handle any sortable event using the new two-parameter signature.
+ * Optionally returns a boolean to control event flow.
  *
- * @param event The sortable event object
- * @param args Additional arguments that might be passed
+ * @param event The native DOM event (PointerEvent, DragEvent, etc.)
+ * @param sortableData Sortable-specific data containing drag information
  * @returns Optional boolean to control event flow (e.g., false to cancel)
  */
-export type SortableEventListener = (event: SortableEvent, ...args: any[]) => void | boolean
+export type SortableEventListener = (event: PointerEvent | DragEvent, sortableData: SortableData) => void | boolean
 
 /**
  * Event handler map
@@ -177,45 +194,13 @@ export type SortableEventHandlerMap = {
  * Custom event data interface
  * For creating custom sortable events with specific data.
  * Used when dispatching events programmatically.
+ * Extends SortableData with event type information.
  */
-export interface SortableEventData {
+export interface SortableEventData extends SortableData {
   /** Event type identifier */
   type: SortableEventType
-  /** Target container element */
-  to?: HTMLElement
-  /** Source container element */
-  from?: HTMLElement
-  /** Dragged item element */
-  item?: HTMLElement
-  /** The element being dragged (used in onMove events) */
-  dragged?: HTMLElement
-  /** Rectangle information of the dragged element (used in onMove events) */
-  draggedRect?: DOMRect
-  /** Clone element if cloning is enabled */
-  clone?: HTMLElement
-  /** Original index position */
-  oldIndex?: number
-  /** New index position */
-  newIndex?: number
-  /** Original draggable index position */
-  oldDraggableIndex?: number
-  /** New draggable index position */
-  newDraggableIndex?: number
-  /** Original DOM event that triggered this */
-  originalEvent?: Event
-  /** Pull mode when cross-list dragging */
-  pullMode?: boolean | 'clone' | SortablePullFunction
-  /** Related element for move events */
-  related?: HTMLElement
-  /** Rectangle information of the related element (used in onMove events) */
-  relatedRect?: DOMRect
-  /** Whether the item will be inserted after the related element */
-  willInsertAfter?: boolean
-  /**
-   * Additional custom data properties
-   * Allows for extending the event with custom data
-   */
-  [key: string]: any
+  /** Original DOM event that triggered this sortable event */
+  originalEvent?: PointerEvent | DragEvent | Event
 }
 
 /**
