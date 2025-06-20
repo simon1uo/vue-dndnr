@@ -1,10 +1,9 @@
 import type { EasingFunction, SortableDirectionFunction, SortableEventCallbacks, SortableFilterFunction, SortableGroup, SortDirection } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
-import type { ref, shallowRef } from 'vue'
+import type { Ref, ShallowRef } from 'vue'
 import { globalGroupManager } from '@/utils/group-manager'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
-import { useEventDispatcher } from './useEventDispatcher'
 import useSortableAnimation from './useSortableAnimation'
 import useSortableDrag from './useSortableDrag'
 import useSortableState from './useSortableState'
@@ -280,51 +279,51 @@ export interface UseSortableOptions extends SortableEventCallbacks {
  */
 export interface UseSortableReturn {
   /** Reactive array of sortable items */
-  items: ReturnType<typeof shallowRef<HTMLElement[]>>
+  items: ShallowRef<HTMLElement[]>
   /** Whether dragging is currently active */
-  isDragging: ReturnType<typeof ref<boolean>>
+  isDragging: Ref<boolean>
   /** Whether this sortable instance is currently active (Sortable.active equivalent) */
-  isActive: ReturnType<typeof ref<boolean>>
+  isActive: Ref<boolean>
   /** Currently dragged element */
-  dragElement: ReturnType<typeof shallowRef<HTMLElement | null>>
+  dragElement: ShallowRef<HTMLElement | null>
   /** Ghost element for visual feedback */
-  ghostElement: ReturnType<typeof shallowRef<HTMLElement | null>>
+  ghostElement: ShallowRef<HTMLElement | null>
   /** Current index of dragged element */
-  currentIndex: ReturnType<typeof ref<number | null>>
+  currentIndex: Ref<number | null>
   /** Whether animations are currently running */
-  isAnimating: ReturnType<typeof ref<boolean>>
+  isAnimating: Ref<boolean>
   /** Elements currently being animated */
-  animatingElements: ReturnType<typeof shallowRef<HTMLElement[]>>
+  animatingElements: ShallowRef<HTMLElement[]>
   /** Whether the sortable is supported in current environment */
   isSupported: boolean
   /** Whether fallback mode is currently active during drag */
-  isFallbackActive: ReturnType<typeof ref<boolean>>
+  isFallbackActive: Ref<boolean>
   /** Whether native draggable is being used (false means fallback mode) */
-  nativeDraggable: ReturnType<typeof ref<boolean>>
+  nativeDraggable: Ref<boolean>
   /** Whether the sortable is currently paused */
-  isPaused: ReturnType<typeof ref<boolean>>
+  isPaused: Ref<boolean>
   /** Whether the sortable is currently disabled */
-  isDisabled: ReturnType<typeof ref<boolean>>
+  isDisabled: Ref<boolean>
   /** Current target container for cross-list dragging (putSortable equivalent) */
-  putSortable: ReturnType<typeof ref<HTMLElement | null>>
+  putSortable: Ref<HTMLElement | null>
   /** Active group name for cross-list operations */
-  activeGroup: ReturnType<typeof ref<string | null>>
+  activeGroup: Ref<string | null>
   /** Last put mode used in cross-list operations */
-  lastPutMode: ReturnType<typeof ref<'clone' | boolean | null>>
+  lastPutMode: Ref<'clone' | boolean | null>
   /** Original parent container of the dragged element (parentEl equivalent) */
-  parentEl: ReturnType<typeof ref<HTMLElement | null>>
+  parentEl: Ref<HTMLElement | null>
   /** Root container element for current drag operation (rootEl equivalent) */
-  rootEl: ReturnType<typeof ref<HTMLElement | null>>
+  rootEl: Ref<HTMLElement | null>
   /** Next sibling element of the dragged element for position restoration (nextEl equivalent) */
-  nextEl: ReturnType<typeof ref<HTMLElement | null>>
+  nextEl: Ref<HTMLElement | null>
   /** Clone element for clone mode operations (cloneEl equivalent) */
-  cloneEl: ReturnType<typeof ref<HTMLElement | null>>
+  cloneEl: Ref<HTMLElement | null>
   /** Whether the clone element is currently hidden (cloneHidden equivalent) */
-  cloneHidden: ReturnType<typeof ref<boolean>>
+  cloneHidden: Ref<boolean>
   /** Whether current operation is within the same container (isOwner equivalent) */
-  isOwner: ReturnType<typeof ref<boolean>>
+  isOwner: Ref<boolean>
   /** Whether the drag should revert to original position (revert equivalent) */
-  revert: ReturnType<typeof ref<boolean>>
+  revert: Ref<boolean>
   /** Start dragging programmatically */
   start: (element: HTMLElement) => void
   /** Stop dragging programmatically */
@@ -339,8 +338,6 @@ export interface UseSortableReturn {
   updateItems: () => void
   /** Destroy the sortable instance */
   destroy: () => void
-  /** Unified event dispatcher for programmatic event handling */
-  eventDispatcher: ReturnType<typeof useEventDispatcher>
 }
 
 /**
@@ -377,12 +374,12 @@ export function useSortable(
 export function useSortable(
   target: MaybeRefOrGetter<HTMLElement | string | null>,
   options?: UseSortableOptions & { controls?: false }
-): ReturnType<typeof shallowRef<HTMLElement[]>>
+): ShallowRef<HTMLElement[]>
 
 export function useSortable(
   target: MaybeRefOrGetter<HTMLElement | string | null>,
   options: UseSortableOptions = {},
-): UseSortableReturn | ReturnType<typeof shallowRef<HTMLElement[]>> {
+): UseSortableReturn | ShallowRef<HTMLElement[]> {
   const {
     controls = false,
     immediate = true,
@@ -400,9 +397,6 @@ export function useSortable(
   })
 
   const state = useSortableState(options)
-
-  // Initialize unified event dispatcher
-  const eventDispatcher = useEventDispatcher(targetElement)
 
   // Initialize animation composable first
   const animation = useSortableAnimation(targetElement, options)
@@ -684,7 +678,6 @@ export function useSortable(
       sort,
       updateItems,
       destroy: enhancedDestroy,
-      eventDispatcher,
     }
   }
 

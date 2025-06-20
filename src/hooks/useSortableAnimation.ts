@@ -1,5 +1,6 @@
 import type { AnimationEvent, AnimationEventCallbacks, EasingFunction, Rect } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
+import type { Ref, ShallowRef } from 'vue'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, shallowRef, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
@@ -69,9 +70,9 @@ export interface UseSortableAnimationOptions extends AnimationEventCallbacks {
  */
 export interface UseSortableAnimationReturn {
   /** Whether animations are currently running */
-  isAnimating: ReturnType<typeof ref<boolean>>
+  isAnimating: Ref<boolean>
   /** Elements currently being animated */
-  animatingElements: ReturnType<typeof shallowRef<HTMLElement[]>>
+  animatingElements: ShallowRef<HTMLElement[]>
   /** Capture current state of all elements for animation */
   captureAnimationState: () => void
   /** Animate all elements to their new positions */
