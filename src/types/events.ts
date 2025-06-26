@@ -169,6 +169,13 @@ export interface SortableEventCallbacks {
    * @param sortableData Sortable-specific data containing drag information
    */
   onDeselect?: (event: PointerEvent | DragEvent, sortableData: SortableData) => void
+  /**
+   * Triggered when the list data needs to be updated after a sort operation
+   * When provided, manual update mode is used instead of automatic updates
+   * @param newList The new list data after sorting
+   * @param oldList The original list data before sorting
+   */
+  onListUpdate?: <T>(newList: T[], oldList: T[]) => void
 }
 
 /**

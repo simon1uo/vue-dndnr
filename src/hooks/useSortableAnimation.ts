@@ -1,6 +1,7 @@
 import type { AnimationEvent, AnimationEventCallbacks, EasingFunction, Rect } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { Ref, ShallowRef } from 'vue'
+import { getElementMatrix, getElementRect, getElementStyleValue, setElementStyleValue } from '@/utils'
 import { tryOnUnmounted } from '@vueuse/core'
 import { computed, ref, shallowRef, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
@@ -141,56 +142,6 @@ export function useSortableAnimation(
   })
 
   /**
-   * Get computed style value for an element
-   */
-  const getComputedStyle = (element: HTMLElement, property: string): string => {
-    return window.getComputedStyle(element).getPropertyValue(property)
-  }
-
-  /**
-   * Get element's bounding rectangle
-   */
-  const getElementRect = (element: HTMLElement): Rect => {
-    const rect = element.getBoundingClientRect()
-    return {
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    }
-  }
-
-  /**
-   * Get CSS transform matrix for an element
-   */
-  const getTransformMatrix = (element: HTMLElement): DOMMatrix | null => {
-    const transform = getComputedStyle(element, 'transform')
-    if (transform === 'none')
-      return null
-
-    try {
-      return new DOMMatrix(transform)
-    }
-    catch {
-      return null
-    }
-  }
-
-  /**
-   * Set CSS style property on an element with !important to override any CSS classes
-   */
-  const setElementStyle = (element: HTMLElement, property: string, value: string): void => {
-    if (value === '') {
-      // Remove the property entirely
-      element.style.removeProperty(property)
-    }
-    else {
-      // Set with !important to override CSS classes like transition-all
-      element.style.setProperty(property, value, 'important')
-    }
-  }
-
-  /**
    * Force a repaint of an element
    */
   const forceRepaint = (element: HTMLElement): number => {
@@ -300,7 +251,7 @@ export function useSortableAnimation(
 
     children.forEach((child) => {
       // Skip hidden elements and ghost elements
-      if (getComputedStyle(child, 'display') === 'none'
+      if (getElementStyleValue(child, 'display') as string === 'none'
         || child.classList.contains('sortable-ghost')) {
         return
       }
@@ -308,17 +259,17 @@ export function useSortableAnimation(
       const rect = getElementRect(child)
       animationStates.value.push({
         target: child,
-        rect: { ...rect },
+        rect: { ...rect! },
       })
 
-      const fromRect = { ...rect }
+      const fromRect = { ...rect! }
 
       // If element is currently animating, compensate for current animation
       if (child.thisAnimationDuration) {
-        const matrix = getTransformMatrix(child)
+        const matrix = getElementMatrix(child, true)
         if (matrix) {
-          fromRect.top -= matrix.f
-          fromRect.left -= matrix.e
+          fromRect!.top -= matrix.f
+          fromRect!.left -= matrix.e
         }
       }
 
@@ -338,11 +289,11 @@ export function useSortableAnimation(
       return
 
     // Clear existing transitions and transforms completely
-    setElementStyle(target, 'transition', '')
-    setElementStyle(target, 'transition-property', '')
-    setElementStyle(target, 'transition-duration', '')
-    setElementStyle(target, 'transition-timing-function', '')
-    setElementStyle(target, 'transform', '')
+    setElementStyleValue(target, 'transition', '')
+    setElementStyleValue(target, 'transition-property', '')
+    setElementStyleValue(target, 'transition-duration', '')
+    setElementStyleValue(target, 'transition-timing-function', '')
+    setElementStyleValue(target, 'transform', '')
 
     // Get container matrix for scaling calculations
     const containerElement = targetElement.value
@@ -350,7 +301,7 @@ export function useSortableAnimation(
     let scaleY = 1
 
     if (containerElement) {
-      const containerMatrix = getTransformMatrix(containerElement)
+      const containerMatrix = getElementMatrix(containerElement)
       if (containerMatrix) {
         scaleX = containerMatrix.a || 1
         scaleY = containerMatrix.d || 1
@@ -367,7 +318,7 @@ export function useSortableAnimation(
 
     // Apply initial transform to move element to starting position
     const initialTransform = `translate3d(${translateX}px, ${translateY}px, 0)`
-    setElementStyle(target, 'transform', initialTransform)
+    setElementStyleValue(target, 'transform', initialTransform)
 
     // Force repaint to ensure transform is applied
     forceRepaint(target)
@@ -380,8 +331,8 @@ export function useSortableAnimation(
       // Apply transition and animate to final position
       const easing = opts.easing || 'ease'
       const transition = `transform ${animationDuration}ms ${easing}`
-      setElementStyle(target, 'transition', transition)
-      setElementStyle(target, 'transform', 'translate3d(0, 0, 0)')
+      setElementStyleValue(target, 'transition', transition)
+      setElementStyleValue(target, 'transform', 'translate3d(0, 0, 0)')
 
       // Dispatch animation start event
       dispatchAnimationEvent('start', target, animationDuration, easing)
@@ -391,8 +342,8 @@ export function useSortableAnimation(
         clearTimeout(target.animated)
       }
       target.animated = setTimeout(() => {
-        setElementStyle(target, 'transition', '')
-        setElementStyle(target, 'transform', '')
+        setElementStyleValue(target, 'transition', '')
+        setElementStyleValue(target, 'transform', '')
         target.animated = false
         target.animatingX = false
         target.animatingY = false
@@ -437,10 +388,10 @@ export function useSortableAnimation(
       const animatingRect = state.rect
 
       // Compensate for current transform if element has matrix
-      const targetMatrix = getTransformMatrix(target)
+      const targetMatrix = getElementMatrix(target, true)
       if (targetMatrix) {
-        toRect.top -= targetMatrix.f
-        toRect.left -= targetMatrix.e
+        toRect!.top -= targetMatrix.f
+        toRect!.left -= targetMatrix.e
       }
 
       target.toRect = toRect
@@ -449,7 +400,7 @@ export function useSortableAnimation(
       if (target.thisAnimationDuration) {
         if (isRectEqual(prevFromRect, toRect)
           && !isRectEqual(fromRect, toRect)
-          && isOnSameLine(animatingRect, toRect, fromRect)) {
+          && isOnSameLine(animatingRect!, toRect!, fromRect!)) {
           // Calculate real time for smooth transition
           time = calculateRealTime(animatingRect, prevFromRect, prevToRect, opts.animation)
         }
@@ -464,7 +415,7 @@ export function useSortableAnimation(
           time = opts.animation || 150
         }
 
-        animate(target, animatingRect, toRect, time)
+        animate(target, animatingRect!, toRect!, time)
         elementsToAnimate.push(target)
       }
 
@@ -539,8 +490,8 @@ export function useSortableAnimation(
       }
 
       // Clear styles using utility method
-      setElementStyle(element, 'transition', '')
-      setElementStyle(element, 'transform', '')
+      setElementStyleValue(element, 'transition', '')
+      setElementStyleValue(element, 'transform', '')
 
       // Reset animation properties
       element.animated = false

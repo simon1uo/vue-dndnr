@@ -37,6 +37,25 @@ export interface Size {
 export type PositionType = 'absolute' | 'relative'
 
 /**
+ * Represents a rectangular area with position and dimensions
+ * Compatible with DOMRect and getBoundingClientRect() return values
+ */
+export interface Rect {
+  /** The top coordinate (distance from top edge) */
+  top: number
+  /** The left coordinate (distance from left edge) */
+  left: number
+  /** The right coordinate (distance from right edge) */
+  right: number
+  /** The bottom coordinate (distance from bottom edge) */
+  bottom: number
+  /** The width of the rectangle */
+  width: number
+  /** The height of the rectangle */
+  height: number
+}
+
+/**
  * Drag state enumeration
  * Represents different states during drag operation
  */
@@ -74,21 +93,6 @@ export type EasingFunction =
   | 'ease-out'
   | 'ease-in-out'
   | 'cubic-bezier(n,n,n,n)'
-
-/**
- * Represents a rectangular area with position and dimensions
- * Compatible with DOMRect and getBoundingClientRect() return values
- */
-export interface Rect {
-  /** The top coordinate (distance from top edge) */
-  top: number
-  /** The left coordinate (distance from left edge) */
-  left: number
-  /** The width of the rectangle */
-  width: number
-  /** The height of the rectangle */
-  height: number
-}
 
 /**
  * Enhanced ghost element options supporting both native and fallback modes
