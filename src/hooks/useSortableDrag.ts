@@ -555,8 +555,7 @@ export function useSortableDrag(
   const getElementIndex = (element: HTMLElement): number => {
     let index = 0
 
-    const parent = element.parentNode
-    if (!parent)
+    if (!element || !element.parentNode)
       return -1
 
     const draggableSelector = toValue(draggable)
@@ -2548,16 +2547,6 @@ export function useSortableDrag(
           currentParent.appendChild(cloneElement)
         }
 
-        // Dispatch clone event
-        dispatchEvent('clone', {
-          item: cloneElement,
-          clone: cloneElement,
-          from: originalParent,
-          to: currentParent,
-          oldIndex: startIndex.value,
-          oldDraggableIndex: startIndex.value,
-        })
-
         // Dispatch add event for the clone
         dispatchEvent('add', {
           item: cloneElement,
@@ -2567,6 +2556,16 @@ export function useSortableDrag(
           newIndex: getElementIndex(cloneElement),
           clone: cloneElement,
           pullMode: 'clone',
+        })
+
+        // Dispatch clone event
+        dispatchEvent('clone', {
+          item: cloneElement,
+          clone: cloneElement,
+          from: originalParent,
+          to: currentParent,
+          oldIndex: startIndex.value,
+          oldDraggableIndex: startIndex.value,
         })
 
         // Update parentEl state to reflect the restored position

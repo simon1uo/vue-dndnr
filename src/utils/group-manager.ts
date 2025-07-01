@@ -1,3 +1,4 @@
+import type { SortableStateInternal } from '@/hooks/useSortableState'
 import type { SortableGroup, SortablePullFunction } from '@/types'
 
 /**
@@ -10,6 +11,8 @@ interface GroupRegistryEntry {
   group: SortableGroup
   /** Timestamp when the list was registered */
   registeredAt: number
+  /** Reference to the sortable state for cross-list data synchronization */
+  state?: SortableStateInternal
 }
 
 /**
@@ -46,8 +49,9 @@ class GroupManager {
    * Register a sortable list with a group configuration
    * @param element - The sortable container element
    * @param group - Group configuration (string or SortableGroup object)
+   * @param state - Reference to the sortable state (optional)
    */
-  registerList(element: HTMLElement, group: string | SortableGroup): void {
+  registerList(element: HTMLElement, group: string | SortableGroup, state?: SortableStateInternal): void {
     if (!element) {
       throw new Error('Element is required for group registration')
     }
@@ -60,6 +64,7 @@ class GroupManager {
       element,
       group: parsedGroup,
       registeredAt: Date.now(),
+      state,
     }
 
     // Remove existing registration if present
@@ -353,6 +358,16 @@ class GroupManager {
         registeredAt: new Date(entry.registeredAt).toISOString(),
       })),
     }
+  }
+
+  /**
+   * Get the sortable instance associated with an element
+   * @param element - The sortable container element
+   * @returns Associated sortable instance or undefined
+   */
+  getState(element: HTMLElement): SortableStateInternal | undefined {
+    const entry = this.registry.get(element)
+    return entry?.state
   }
 }
 

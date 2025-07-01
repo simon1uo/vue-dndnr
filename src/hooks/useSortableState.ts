@@ -2,12 +2,14 @@ import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import type { UseSortableOptions } from './useSortable'
 import { ChromeForAndroid, IOS } from '@/utils'
 import { isClient } from '@vueuse/core'
-import { computed, ref, shallowRef, toValue } from 'vue'
+import { computed, ref, shallowRef, toRaw, toValue } from 'vue'
 
 /**
  * Sortable state interface defining all reactive state properties
  */
 export interface SortableState {
+  /** Reactive array of sortable node references */
+  nodeList: ShallowRef<HTMLElement[]>
   /** Whether the sortable is supported in current environment */
   isSupported: boolean
   /** Whether dragging is currently active */
@@ -20,8 +22,6 @@ export interface SortableState {
   ghostElement: ShallowRef<HTMLElement | null>
   /** Current index of dragged element */
   currentIndex: Ref<number | null>
-  /** Reactive array of sortable items */
-  items: ShallowRef<HTMLElement[]>
   /** Whether animations are currently running */
   isAnimating: Ref<boolean>
   /** Elements currently being animated */
@@ -59,7 +59,29 @@ export interface SortableState {
 /**
  * Internal state management interface with mutation methods
  */
-export interface SortableStateInternal extends SortableState {
+export interface SortableStateInternal<T = any> extends SortableState {
+  /**
+   * Get the index of an item by itemKey
+   * @param item - The item to get the index of
+   * @returns The index of the item
+   */
+  _getItemIndex: (item: T) => number | undefined
+
+  /**
+   * Get the key of an item by itemKey
+   * @param item - The item to get the key of
+   * @returns The key of the item
+   */
+  _getItemKey: (item: T) => string | number | undefined
+
+  /**
+   * Get an item by itemKey
+   * @param key - The key of the item to get
+   * @returns The item
+   */
+  _getItemByKey: (key: string | number) => T | undefined
+  /** Set node reference list */
+  _setNodeList: (refs: HTMLElement[]) => void
   /** Set dragging state */
   _setDragging: (value: boolean) => void
   /** Set drag element */
@@ -68,8 +90,6 @@ export interface SortableStateInternal extends SortableState {
   _setGhostElement: (element: HTMLElement | null) => void
   /** Set current index */
   _setCurrentIndex: (index: number | null) => void
-  /** Set items array */
-  _setItems: (items: HTMLElement[]) => void
   /** Set animation state */
   _setAnimating: (value: boolean) => void
   /** Set animating elements */
@@ -110,6 +130,59 @@ export interface SortableStateInternal extends SortableState {
   _validateState: () => boolean
   /** Check if operation is allowed in current state */
   _canPerformOperation: (operation: string) => boolean
+  /** Update node to model map */
+  _updateModelMap: () => void
+  /** Get model context for a node */
+  _getModelContext: (node: HTMLElement) => SortableContext<T> | undefined
+  /**
+   * Update position of an item in the list
+   * @param oldIndex - The original index of the item
+   * @param newIndex - The new index for the item
+   * @returns The updated list
+   */
+  _updatePosition: (oldIndex: number, newIndex: number) => T[]
+  /**
+   * Remove an item from the list
+   * @param index - The index of the item to remove
+   * @returns The removed item
+   */
+  _removeItem: (index: number) => T[]
+  /**
+   * Insert an item into the list
+   * @param index - The index at which to insert the item
+   * @param item - The item to insert
+   * @returns The updated list
+   */
+  _insertItem: (index: number, item: T) => T[]
+  /**
+   * Clone an item
+   * @param item - The item to clone
+   * @returns The cloned item
+   */
+  _cloneItem: (index: number, item: T) => T[]
+  /**
+   * Find an item by its DOM node
+   * @param node - The DOM node to find the item for
+   * @returns The associated item and its index, or undefined if not found
+   */
+  _findItemByNode: (node: HTMLElement) => SortableContext<T> | undefined
+
+  /**
+   * Find a DOM node by item key
+   * @param key - The key of the item to find
+   * @returns The associated DOM node, or undefined if not found
+   */
+  _findNodeByKey: (key: string | number) => HTMLElement | undefined
+}
+
+/**
+ * context for map of DOM elements to list items
+ */
+interface SortableContext<T = any> {
+  /** The item in the list */
+  item: T
+  /** The index of the item in the list */
+  index: number
 }
 
 /**
@@ -129,12 +202,16 @@ export interface SortableStateInternal extends SortableState {
  * @param options - Configuration options for state initialization
  * @returns State object with reactive state and internal mutation methods
  */
-export function useSortableState(
+export function useSortableState<T>(
   options: UseSortableOptions = {},
-): SortableStateInternal {
+  list: Ref<T[]>,
+): SortableStateInternal<T> {
   const {
+    itemKey,
     disabled,
     forceFallback,
+    cloneItem,
+    onListUpdate,
   } = options
 
   const isDraggableSupported = computed(() => isClient && !(ChromeForAndroid) && !(IOS) && 'draggable' in document.createElement('div'))
@@ -147,7 +224,10 @@ export function useSortableState(
   const currentIndex = ref<number | null>(null)
 
   // Items management
-  const items = shallowRef<HTMLElement[]>([])
+  const nodeList = shallowRef<HTMLElement[]>([])
+
+  // Map of DOM elements to list items
+  const modelMap = new WeakMap<HTMLElement, SortableContext<T>>()
 
   // Animation state
   const isAnimating = ref(false)
@@ -180,6 +260,106 @@ export function useSortableState(
 
   // Native draggable detection with auto-detection
   const nativeDraggable = computed(() => isClient && !toValue(forceFallback) && isDraggableSupported.value)
+
+  const _getItemIndex = (item: T) => {
+    if (list.value && list.value.length > 0) {
+      return list.value.indexOf(item)
+    }
+    return undefined
+  }
+
+  const _getItemKey = (item: T): string | number | undefined => {
+    const itemKeyValue = toValue(itemKey)
+
+    // Handle function type for itemKey
+    if (itemKeyValue && typeof itemKeyValue === 'function') {
+      const keyFn = itemKeyValue as (item: T) => string | number
+      return keyFn(item)
+    }
+
+    // Handle string type for itemKey
+    if (itemKeyValue && typeof itemKeyValue === 'string') {
+      const key = itemKeyValue as keyof T
+      const value = item[key]
+      if (value !== undefined && (typeof value === 'string' || typeof value === 'number')) {
+        return value
+      }
+    }
+
+    return undefined
+  }
+
+  const _getItemByKey = (key: string | number): T | undefined => {
+    if (list.value && list.value.length > 0) {
+      return list.value.find(item => _getItemKey(item) === key)
+    }
+    return undefined
+  }
+
+  const _setNodeList = (nodes: HTMLElement[]) => {
+    nodeList.value = nodes
+  }
+
+  const _afterModifyList = (newList: T[]) => {
+    // list.value = newList
+
+    if (onListUpdate) {
+      onListUpdate(list.value, newList)
+    }
+    else {
+      list.value = newList
+    }
+  }
+
+  const _updatePosition = (oldIndex: number, newIndex: number) => {
+    const newList = [...list.value]
+    const movedItem = newList.splice(oldIndex, 1)[0]
+    newList.splice(newIndex, 0, movedItem)
+
+    _afterModifyList(newList)
+    return newList
+  }
+
+  const _removeItem = (index: number) => {
+    const newList = [...list.value]
+    newList.splice(index, 1)
+    _afterModifyList(newList)
+    return newList
+  }
+
+  const _insertItem = (index: number, item: T) => {
+    const newList = [...list.value]
+    newList.splice(index, 0, item)
+    _afterModifyList(newList)
+    return newList
+  }
+
+  const _cloneDeep = (item: T) => {
+    if (cloneItem) {
+      return cloneItem(item)
+    }
+
+    if (typeof window.structuredClone === 'function') {
+      try {
+        return window.structuredClone(toRaw(item))
+      }
+      catch (e) {
+        // DataCloneError fallback
+        console.warn('[useSortableState] structuredClone failed, falling back to JSON clone:', e)
+        return JSON.parse(JSON.stringify(item))
+      }
+    }
+
+    return JSON.parse(JSON.stringify(item))
+  }
+
+  const _cloneItem = (index: number, item: T) => {
+    const newList = [...list.value]
+    const clonedItem = _cloneDeep(item)
+    newList.splice(index, 0, clonedItem)
+    _afterModifyList(newList)
+    return newList
+  }
 
   // State validation and operation control
   const _validateState = (): boolean => {
@@ -272,10 +452,6 @@ export function useSortableState(
 
   const _setCurrentIndex = (index: number | null) => {
     currentIndex.value = index
-  }
-
-  const _setItems = (newItems: HTMLElement[]) => {
-    items.value = newItems
   }
 
   const _setAnimating = (value: boolean) => {
@@ -395,7 +571,7 @@ export function useSortableState(
     dragElement.value = null
     ghostElement.value = null
     currentIndex.value = null
-    items.value = []
+    nodeList.value = []
     isAnimating.value = false
     animatingElements.value = []
     isFallbackActive.value = false
@@ -414,15 +590,52 @@ export function useSortableState(
     isActive.value = false
   }
 
+  const _getModelContext = (node: HTMLElement): SortableContext<T> | undefined => {
+    return modelMap.get(node)
+  }
+
+  const _findItemByNode = (node: HTMLElement): SortableContext<T> | undefined => {
+    return modelMap.get(node)
+  }
+
+  const _findNodeByKey = (key: string | number): HTMLElement | undefined => {
+    // Find the item by key first
+    const item = _getItemByKey(key)
+    if (!item)
+      return undefined
+
+    // WeakMap doesn't have entries() method, so we need to iterate through nodeList
+    // and check each node individually
+    for (const node of nodeList.value) {
+      const context = modelMap.get(node)
+      if (context && context.item === item) {
+        return node
+      }
+    }
+
+    return undefined
+  }
+
+  const _updateModelMap = (): void => {
+    const currentNodeList = nodeList.value
+    const currentList = list.value
+
+    currentNodeList.forEach((node, index) => {
+      if (node && index < currentList.length) {
+        const item = currentList[index]
+        modelMap.set(node, { item, index })
+      }
+    })
+  }
+
   return {
-    // Reactive state
     isSupported: isClient,
     isDragging,
     isActive,
     dragElement,
     ghostElement,
     currentIndex,
-    items,
+    nodeList,
     isAnimating,
     animatingElements,
     isFallbackActive,
@@ -439,13 +652,14 @@ export function useSortableState(
     cloneHidden,
     isOwner,
     revert,
-
-    // Internal mutation methods
+    _setNodeList,
+    _getItemIndex,
+    _getItemKey,
+    _getItemByKey,
     _setDragging,
     _setDragElement,
     _setGhostElement,
     _setCurrentIndex,
-    _setItems,
     _setAnimating,
     _setAnimatingElements,
     _setFallbackActive,
@@ -466,6 +680,14 @@ export function useSortableState(
     _resetState,
     _validateState,
     _canPerformOperation,
+    _updateModelMap,
+    _getModelContext,
+    _updatePosition,
+    _removeItem,
+    _insertItem,
+    _cloneItem,
+    _findItemByNode,
+    _findNodeByKey,
   }
 }
 

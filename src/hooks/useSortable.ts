@@ -1,84 +1,25 @@
-import type { EasingFunction, SortableDirectionFunction, SortableEventCallbacks, SortableFilterFunction, SortableGroup, SortDirection } from '@/types'
+import type { CloneItemFn, EasingFunction, SortableDirectionFunction, SortableEventCallbacks, SortableFilterFunction, SortableGroup, SortDirection } from '@/types'
 import type { MaybeRefOrGetter } from '@vueuse/core'
 import type { Ref, ShallowRef } from 'vue'
+import { findClosestElementBySelector, getElementStyleValue } from '@/utils'
 import { globalGroupManager } from '@/utils/group-manager'
-import { tryOnUnmounted } from '@vueuse/core'
+import { tryOnMounted, tryOnUnmounted } from '@vueuse/core'
 import { computed, nextTick, toValue, watch } from 'vue'
 import useSortableAnimation from './useSortableAnimation'
 import useSortableDrag from './useSortableDrag'
 import useSortableState from './useSortableState'
 
 /**
- * Check if element matches selector with cross-browser support
- * Based on SortableJS matches function
- * @param el - The element to check
- * @param selector - The selector to check
- * @returns Whether the element matches the selector
- */
-function matchesSelector(el: HTMLElement, selector: string): boolean {
-  if (!selector)
-    return true
-
-  // Handle child selector
-  if (selector.startsWith('>')) {
-    selector = selector.substring(1).trim()
-  }
-
-  if (!el)
-    return false
-
-  try {
-    if (el.matches) {
-      return el.matches(selector)
-    }
-    else if ((el as any).msMatchesSelector) {
-      return (el as any).msMatchesSelector(selector)
-    }
-    else if ((el as any).webkitMatchesSelector) {
-      return (el as any).webkitMatchesSelector(selector)
-    }
-  }
-  catch {
-    return false
-  }
-
-  return false
-}
-/**
- * Get all draggable children from container
- * Based on SortableJS getChild logic
- * @param container - The parent container
- * @param selector - Selector for draggable elements (default: '> *')
- * @returns Array of draggable child elements
- */
-export function getDraggableChildren(
-  container: HTMLElement,
-  selector = '> *',
-): HTMLElement[] {
-  if (!container)
-    return []
-
-  const children = Array.from(container.children) as HTMLElement[]
-
-  return children.filter((child) => {
-    // Skip hidden elements and templates
-    if (
-      child.style.display === 'none'
-      || child.nodeName.toUpperCase() === 'TEMPLATE'
-    ) {
-      return false
-    }
-
-    // Apply selector filter
-    return matchesSelector(child, selector)
-  })
-}
-
-/**
  * Options for useSortable composable.
  * Extends SortableOptions with Vue3-specific configurations.
  */
-export interface UseSortableOptions extends SortableEventCallbacks {
+export interface UseSortableOptions<T = any> extends SortableEventCallbacks {
+  /**
+   * Item key with reactive support
+   * @default 'id'
+   */
+  itemKey?: MaybeRefOrGetter<string | ((item: T) => string | number)>
+
   /**
    * Group configuration with reactive support
    * @default undefined
@@ -262,24 +203,28 @@ export interface UseSortableOptions extends SortableEventCallbacks {
    */
   removeOnSpill?: MaybeRefOrGetter<boolean>
   /**
+   * Custom function to clone items when using pull: 'clone'
+   * By default structuredClone or JSON.parse(JSON.stringify()) will be used
+   * Provide this function for better control over the cloning process
+   * @param item - The item to clone
+   * @returns A deep copy of the item
+   * @default undefined
+   */
+  cloneItem?: CloneItemFn<T>
+  /**
    * Whether to return controls
    * @default false
    */
   controls?: boolean
-  /**
-   * Whether to update items immediately
-   * @default true
-   */
-  immediate?: boolean
 }
 
 /**
- * Return type for useSortable when controls is true.
- * Advanced usage returns full control object.
+ * Return type for useSortable composable when controls option is true.
+ * Provides full access to sortable state and methods.
  */
-export interface UseSortableReturn {
+export interface UseSortableReturn<T> {
   /** Reactive array of sortable items */
-  items: ShallowRef<HTMLElement[]>
+  items: Ref<T[]>
   /** Whether dragging is currently active */
   isDragging: Ref<boolean>
   /** Whether this sortable instance is currently active (Sortable.active equivalent) */
@@ -334,58 +279,57 @@ export interface UseSortableReturn {
   resume: () => void
   /** Sort items programmatically */
   sort: (order: string[], useAnimation?: boolean) => void
-  /** Update items list manually */
-  updateItems: () => void
   /** Destroy the sortable instance */
   destroy: () => void
 }
 
 /**
  * Vue3 composable for sortable drag and drop functionality.
- * Based on SortableJS with Vue3 reactivity and @vueuse/core patterns.
+ * Data-driven implementation based on SortableJS with Vue3 reactivity.
  *
  * @param target - Target container element or selector
+ * @param list - Reactive array of sortable items
  * @param options - Sortable configuration options
  * @returns Reactive sortable state and controls
  *
  * @example
  * Simple usage:
  * ```ts
- * const items = useSortable(containerRef)
+ * const items = ref([{ id: 1, text: 'Item 1' }, { id: 2, text: 'Item 2' }])
+ * useSortable(containerRef, items)
  * ```
  * Advanced usage with controls:
  * ```ts
- * const { items, isDragging, isFallbackActive, nativeDraggable, start, stop } = useSortable(containerRef, {
+ * const items = ref([{ id: 1, text: 'Item 1' }, { id: 2, text: 'Item 2' }])
+ * const { isDragging, isFallbackActive, start, stop } = useSortable(containerRef, items, {
  *   controls: true,
  *   group: 'shared',
  *   animation: 150,
- *   forceFallback: false,
- *   fallbackClass: 'my-fallback-ghost',
- *   fallbackOnBody: true,
- *   fallbackOffset: { x: 10, y: 10 }
  * })
  * ```
  */
-export function useSortable(
-  target: MaybeRefOrGetter<HTMLElement | string | null>,
+export function useSortable<T>(
+  target: MaybeRefOrGetter<HTMLElement | null>,
+  list: Ref<T[]>,
   options: UseSortableOptions & { controls: true }
-): UseSortableReturn
+): UseSortableReturn<T>
 
-export function useSortable(
-  target: MaybeRefOrGetter<HTMLElement | string | null>,
+export function useSortable<T>(
+  target: MaybeRefOrGetter<HTMLElement | null>,
+  list: Ref<T[]>,
   options?: UseSortableOptions & { controls?: false }
-): ShallowRef<HTMLElement[]>
+): Ref<T[]>
 
-export function useSortable(
-  target: MaybeRefOrGetter<HTMLElement | string | null>,
+export function useSortable<T>(
+  target: MaybeRefOrGetter<HTMLElement | null>,
+  list: Ref<T[]>,
   options: UseSortableOptions = {},
-): UseSortableReturn | ShallowRef<HTMLElement[]> {
+): UseSortableReturn<T> | Ref<T[]> {
   const {
     controls = false,
-    immediate = true,
-    dataIdAttr = 'data-id',
-    draggable,
     group,
+    dataIdAttr = 'data-id',
+    draggable = '>*',
   } = options
 
   // Resolve target element
@@ -393,25 +337,50 @@ export function useSortable(
     const el = toValue(target)
     if (!el)
       return null
-    return typeof el === 'string' ? document.querySelector(el) as HTMLElement : el
+    return typeof el === 'string' ? document.querySelector(el) as HTMLElement | null : el
   })
 
-  const state = useSortableState(options)
+  // Initialize state
+  const state = useSortableState<T>(options, list)
 
   // Initialize animation composable first
   const animation = useSortableAnimation(targetElement, options)
 
-  // Items management
-  const updateItems = () => {
+  function getDraggableChildren(
+    container: HTMLElement,
+    selector: string,
+  ): HTMLElement[] {
+    if (!container)
+      return []
+
+    const children = Array.from(container.children) as HTMLElement[]
+
+    return children.filter((child) => {
+      // Skip hidden elements and templates
+      if (
+        getElementStyleValue(child, 'display') === 'none'
+        || child === state.ghostElement.value
+        || child.nodeName.toUpperCase() === 'TEMPLATE'
+      ) {
+        return false
+      }
+
+      // Apply selector filter
+      return findClosestElementBySelector(child, selector)
+    })
+  }
+
+  function updateNodeList() {
     const el = toValue(targetElement)
     if (!el) {
-      state._setItems([])
+      state._setNodeList([])
       return
     }
 
-    const selector = toValue(draggable) || '> *'
-    const items = getDraggableChildren(el, selector)
-    state._setItems(items)
+    // update node list
+    const draggableSelector = toValue(draggable)
+    const items = getDraggableChildren(el, draggableSelector)
+    state._setNodeList(items)
   }
 
   // Initialize core composable - sortableDrag provides unified state management
@@ -440,44 +409,87 @@ export function useSortable(
       }
     },
     onAdd: (event, sortableData) => {
-      // Update items after cross-list addition
-      updateItems()
       if (options.animation) {
-        animation.animateAll()
+        animation.captureAnimationState()
       }
-      // Call original onAdd if provided
+
+      const { to, oldIndex, newIndex, item, pullMode } = sortableData
+      const ifCrossList = to && to !== targetElement.value
+      if (ifCrossList && to && item) {
+        const targetState = globalGroupManager.getState(to)
+        if (targetState) {
+          const sourceItem = oldIndex !== undefined && oldIndex >= 0 && oldIndex < list.value.length
+            ? list.value[oldIndex]
+            : undefined
+
+          if (sourceItem && newIndex !== undefined) {
+            if (typeof pullMode === 'string' && pullMode === 'clone') {
+              targetState._cloneItem(newIndex, sourceItem)
+            }
+            else {
+              targetState._insertItem(newIndex, sourceItem)
+            }
+          }
+        }
+      }
+
+      if (options.animation) {
+        nextTick(() => {
+          animation.animateAll()
+        })
+      }
+
       if (options.onAdd) {
         options.onAdd(event, sortableData)
       }
     },
+    onClone: (event, sortableData) => {
+      const { clone } = sortableData
+      if (clone && clone.parentNode) {
+        clone.parentNode.removeChild(clone)
+      }
+
+      if (options.onClone) {
+        options.onClone(event, sortableData)
+      }
+    },
     onRemove: (event, sortableData) => {
-      // Update items after cross-list removal
-      updateItems()
+      const { oldIndex } = sortableData
+
+      // Handle removal from source list (original behavior)
+      if (oldIndex !== undefined) {
+        state._removeItem(oldIndex)
+      }
+
       if (options.animation) {
         animation.animateAll()
       }
+
       // Call original onRemove if provided
       if (options.onRemove) {
         options.onRemove(event, sortableData)
       }
     },
     onUpdate: (event, sortableData) => {
-      // Update items and trigger animation for updates
-      updateItems()
       if (options.animation) {
         animation.animateAll()
       }
+
+      const { oldIndex, newIndex } = sortableData
+      if (oldIndex !== undefined && newIndex !== undefined) {
+        state._updatePosition(oldIndex, newIndex)
+      }
+
       // Call original onUpdate if provided
       if (options.onUpdate) {
         options.onUpdate(event, sortableData)
       }
     },
     onSort: (event, sortableData) => {
-      // Update items after sort operation
-      updateItems()
       if (options.animation) {
         animation.animateAll()
       }
+
       // Call original onSort if provided
       if (options.onSort) {
         options.onSort(event, sortableData)
@@ -522,29 +534,22 @@ export function useSortable(
       // Register new target with group manager if group is specified
       const groupValue = toValue(group)
       if (groupValue) {
-        globalGroupManager.registerList(newTarget, groupValue)
+        globalGroupManager.registerList(newTarget, groupValue, state)
       }
 
       await nextTick()
-      updateItems()
-    }
-    else {
-      state._setItems([])
     }
   }, { immediate: true })
 
-  const draggableValue = computed(() => draggable)
-  const groupValue = computed(() => toValue(options.group))
-
-  // Watch for options changes that affect items
-  watch(draggableValue, () => {
+  // Watch for data changes and update DOM
+  watch(() => [list, targetElement, draggable, dataIdAttr], () => {
     if (targetElement.value) {
-      updateItems()
+      updateNodeList()
     }
-  })
+  }, { deep: true, flush: 'post' })
 
   // Watch for group changes and re-register
-  watch(groupValue, (newGroup, oldGroup) => {
+  watch(() => toValue(group), (newGroup, oldGroup) => {
     const el = targetElement.value
     if (!el)
       return
@@ -559,18 +564,13 @@ export function useSortable(
 
     if (newGroupName !== oldGroupName) {
       if (newGroupValue) {
-        globalGroupManager.registerList(el, newGroupValue)
+        globalGroupManager.registerList(el, newGroupValue, state)
       }
       else {
         globalGroupManager.unregisterList(el)
       }
     }
   }, { flush: 'sync' })
-
-  // Initialize items immediately if target is available
-  if (immediate && state.isSupported && targetElement.value) {
-    updateItems()
-  }
 
   // Control methods
   const start = (element: HTMLElement) => {
@@ -597,7 +597,7 @@ export function useSortable(
 
     // Create mapping of IDs to elements
     const items: Record<string, HTMLElement> = {}
-    state.items.value?.forEach((item) => {
+    state.nodeList.value?.forEach((item) => {
       const id = item.getAttribute(dataIdAttrValue)
       if (id) {
         items[id] = item
@@ -617,8 +617,7 @@ export function useSortable(
       }
     })
 
-    // Update items after reordering
-    updateItems()
+    updateNodeList()
 
     // Trigger animation after DOM changes
     if (useAnimation && options.animation) {
@@ -640,6 +639,13 @@ export function useSortable(
     destroy()
   }
 
+  tryOnMounted(() => {
+    // Initialize items immediately if target is available
+    if (state.isSupported && targetElement.value) {
+      updateNodeList()
+    }
+  })
+
   // Cleanup on unmount
   tryOnUnmounted(() => {
     enhancedDestroy()
@@ -648,7 +654,7 @@ export function useSortable(
   // Return based on controls option
   if (controls) {
     return {
-      items: state.items,
+      items: list,
       isDragging: state.isDragging,
       isActive: state.isActive,
       dragElement: state.dragElement,
@@ -676,13 +682,12 @@ export function useSortable(
       pause,
       resume,
       sort,
-      updateItems,
       destroy: enhancedDestroy,
     }
   }
 
   // Simple usage - return only items
-  return state.items
+  return list
 }
 
 export default useSortable

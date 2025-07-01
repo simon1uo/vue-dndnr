@@ -98,6 +98,16 @@ export type SortableDirectionFunction = (
 ) => SortDirection
 
 /**
+ * Function type for cloning items during cross-list drag and drop operations.
+ * Used when pull: 'clone' is set to create deep copies instead of references.
+ *
+ * @template T - The type of the item to clone
+ * @param item - The original item to clone
+ * @returns A deep copy of the original item
+ */
+export type CloneItemFn<T = any> = (item: T) => T
+
+/**
  * Core sortable options interface.
  * Contains all configuration options for sortable behavior.
  */
@@ -297,4 +307,14 @@ export interface SortableOptions {
    * @default false
    */
   removeOnSpill?: boolean
+
+  /**
+   * Custom function to clone items when using pull: 'clone'
+   * By default structuredClone or JSON.parse(JSON.stringify()) will be used
+   * Provide this function for better control over the cloning process
+   * @param item - The item to clone
+   * @returns A deep copy of the item
+   * @default undefined
+   */
+  cloneItem?: CloneItemFn
 }
