@@ -9,3 +9,4 @@ The library is built around the core `useDnR` hook, which provides the foundatio
 ### Available APIs
 
 - [useDnR](/api/use-dnr) - Core hook that combines dragging and resizing functionality, also includes documentation for the DnR component
+- [useSortable](/api/use-sortable) - Hook for creating sortable lists with drag-and-drop functionality
