@@ -50,7 +50,7 @@ export type SortablePullFunction = (
   to: HTMLElement,
   from: HTMLElement,
   dragEl: HTMLElement,
-  evt: Event
+  evt?: Event
 ) => boolean | 'clone'
 
 /**
@@ -66,7 +66,7 @@ export type SortablePutFunction = (
   to: HTMLElement,
   from: HTMLElement,
   dragEl: HTMLElement,
-  evt: Event
+  evt?: Event
 ) => boolean
 
 /**

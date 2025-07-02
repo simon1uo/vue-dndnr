@@ -1855,8 +1855,12 @@ export function useSortableDrag(
           pullMode = 'clone'
         }
         else if (typeof dropResult.pullMode === 'function') {
-          // TODO: For function results, we need to evaluate them, but for now set to true if allowed
-          pullMode = true
+          pullMode = dropResult.pullMode(
+            targetContainer,
+            targetElement.value!,
+            state.dragElement.value!,
+            evt,
+          )
         }
         state._setLastPutMode(pullMode)
 
@@ -2070,7 +2074,6 @@ export function useSortableDrag(
         // Update putSortable state
         state._updatePutSortable(targetContainer)
 
-        // Set lastPutMode from drop result (handle undefined case and normalize function results)
         let pullMode: boolean | 'clone' | null = null
         if (dropResult.pullMode === true || dropResult.pullMode === false) {
           pullMode = dropResult.pullMode
@@ -2079,8 +2082,12 @@ export function useSortableDrag(
           pullMode = 'clone'
         }
         else if (typeof dropResult.pullMode === 'function') {
-          // TODO: For function results, we need to evaluate them, but for now set to true if allowed
-          pullMode = true
+          pullMode = dropResult.pullMode(
+            targetContainer,
+            targetElement.value!,
+            state.dragElement.value!,
+            undefined,
+          )
         }
         state._setLastPutMode(pullMode)
 
@@ -2380,7 +2387,6 @@ export function useSortableDrag(
         // Update putSortable state
         state._updatePutSortable(targetContainer)
 
-        // Set lastPutMode from drop result (handle undefined case and normalize function results)
         let pullMode: boolean | 'clone' | null = null
         if (dropResult.pullMode === true || dropResult.pullMode === false) {
           pullMode = dropResult.pullMode
@@ -2389,8 +2395,12 @@ export function useSortableDrag(
           pullMode = 'clone'
         }
         else if (typeof dropResult.pullMode === 'function') {
-          // For function results, we need to evaluate them, but for now set to true if allowed
-          pullMode = true
+          pullMode = dropResult.pullMode(
+            targetContainer,
+            targetElement.value!,
+            state.dragElement.value!,
+            evt,
+          )
         }
         state._setLastPutMode(pullMode)
 
