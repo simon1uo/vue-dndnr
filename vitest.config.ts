@@ -1,13 +1,7 @@
 import { resolve } from 'node:path'
-import vue from '@vitejs/plugin-vue'
-import vueJsx from '@vitejs/plugin-vue-jsx'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueJsx(),
-  ],
   test: {
     globals: true,
     environment: 'happy-dom',
@@ -18,7 +12,7 @@ export default defineConfig({
       include: ['src/hooks/**/*.ts'],
       exclude: ['src/hooks/index.ts', 'src/hooks/**/*.d.ts', 'src/hooks/__tests__/**/*'],
     },
-    exclude: ['react-beautiful-dnd', 'node_modules'],
+    exclude: ['node_modules'],
   },
   resolve: {
     alias: {
