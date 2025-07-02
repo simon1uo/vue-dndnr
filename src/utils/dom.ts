@@ -235,6 +235,64 @@ export function getElementMatrix(element: HTMLElement | string, selfOnly?: boole
 }
 
 /**
+ * Gets the window scrolling element.
+ * @returns The window scrolling element.
+ */
+export function getWindowScrollingElement(): HTMLElement {
+  const scrollingElement = document.scrollingElement
+  if (scrollingElement)
+    return scrollingElement as HTMLElement
+
+  return document.documentElement
+}
+
+/**
+ * Scrolls a given element by the specified amount.
+ * @param el - The element to scroll.
+ * @param x - The horizontal scroll amount.
+ * @param y - The vertical scroll amount.
+ */
+export function scrollBy(el: HTMLElement, x: number, y: number) {
+  el.scrollLeft += x
+  el.scrollTop += y
+}
+
+/**
+ * Finds the closest scrollable parent of an element.
+ * @param el - The element to find the scrollable parent for.
+ * @param includeSelf - Whether to include the element itself in the search.
+ * @returns The scrollable parent element, or the window scrolling element if none is found.
+ */
+export function getParentAutoScrollElement(el: HTMLElement, includeSelf = false): HTMLElement {
+  if (!el || !el.getBoundingClientRect)
+    return getWindowScrollingElement()
+
+  let elem = el
+  let gotSelf = false
+  do {
+    // Check if the element is overflowing
+    if (elem.clientWidth < elem.scrollWidth || elem.clientHeight < elem.scrollHeight) {
+      const style = window.getComputedStyle(elem)
+      if (
+        (elem.clientWidth < elem.scrollWidth
+          && (style.overflowX === 'auto' || style.overflowX === 'scroll'))
+        || (elem.clientHeight < elem.scrollHeight
+          && (style.overflowY === 'auto' || style.overflowY === 'scroll'))
+      ) {
+        if (!elem.getBoundingClientRect || elem === document.body)
+          return getWindowScrollingElement()
+        if (gotSelf || includeSelf)
+          return elem
+        gotSelf = true
+      }
+    }
+    elem = elem.parentNode as HTMLElement
+  } while (elem)
+
+  return getWindowScrollingElement()
+}
+
+/**
  * Get the bounding rectangle coordinates of an element
  * @param element - The target HTML or SVG element
  * @param relativeToContainingBlock - Whether to get the rectangle relative to the containing block

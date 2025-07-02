@@ -7,6 +7,7 @@ import { globalGroupManager } from '@/utils/group-manager'
 import { isClient, tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, ref, toValue, watch } from 'vue'
 import { useEventDispatcher } from './useEventDispatcher'
+import { useSortableAutoScroll } from './useSortableAutoScroll'
 
 export interface UseSortableDragOptions extends UseSortableOptions {
   state: SortableStateInternal
@@ -81,6 +82,8 @@ export function useSortableDrag(
 ): UseSortableDragReturn {
   // Initialize unified event dispatcher
   const { dispatch } = useEventDispatcher(target)
+
+  const { handleAutoScroll, stop: stopAutoScroll } = useSortableAutoScroll(toValue(options))
 
   // Core Internal State
   const startIndex = ref(-1)
@@ -1801,8 +1804,10 @@ export function useSortableDrag(
    * Handle document-level dragover for native mode
    */
   const handleDocumentDragOver = (evt: DragEvent) => {
-    if (!state.isDragging.value || !state.dragElement.value)
+    if (!state.isDragging.value || !state.dragElement.value || state.isPaused.value)
       return
+
+    handleAutoScroll(evt)
 
     evt.preventDefault()
 
@@ -2059,6 +2064,8 @@ export function useSortableDrag(
 
     // Get target element under current touch position
     let target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
+
+    handleAutoScroll(touch as MouseEvent)
 
     // Handle shadow DOM
     while (target && target.shadowRoot) {
@@ -2723,6 +2730,8 @@ export function useSortableDrag(
    * Handle drag end events
    */
   function handleDragEnd(evt: MouseEvent | TouchEvent | DragEvent) {
+    stopAutoScroll()
+
     if (!state.isDragging.value && !state.dragElement.value)
       return
 
@@ -3622,6 +3631,8 @@ export function useSortableDrag(
    * Destroy and cleanup all resources
    */
   const destroy = () => {
+    stopAutoScroll()
+
     // Clean up all event listeners (both base and drag-specific)
     cleanupFunctions.value.forEach(cleanup => cleanup())
     cleanupFunctions.value = []
