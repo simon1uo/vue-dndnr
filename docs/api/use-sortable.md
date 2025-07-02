@@ -1,6 +1,5 @@
 # useSortable
 
- 
 ## Demo
 
 <script setup>
@@ -8,11 +7,6 @@ import { ref, onMounted } from 'vue'
 import { useSortable } from 'vue-dndnr'
 
 const containerRef = ref(null)
-const { isDragging, currentIndex } = useSortable(containerRef, {
-  draggable: '.sortable-item',
-  onStart: (evt) => console.log('Drag started:', evt),
-  onEnd: (evt) => console.log('Drag ended:', evt)
-})
 
 const demoItems = ref([
   { id: 'item-1', text: '📝 Task 1' },
@@ -20,6 +14,13 @@ const demoItems = ref([
   { id: 'item-3', text: '🚀 Task 3' },
   { id: 'item-4', text: '✨ Task 4' }
 ])
+
+const { isDragging, currentIndex } = useSortable(containerRef, demoItems, {
+  animation: 50,
+  onStart: (evt) => console.log('Drag started:', evt),
+  onEnd: (evt) => console.log('Drag ended:', evt)
+})
+
 </script>
 
 <DemoContainer>
@@ -27,7 +28,7 @@ const demoItems = ref([
     <div
       v-for="item in demoItems"
       :key="item.id"
-      class="sortable-item p-3 mb-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md cursor-move transition-all duration-200 select-none  hover:bg-gray-50 dark:hover:bg-gray-600"
+      class="sortable-item p-3 mb-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md cursor-move select-none hover:bg-gray-50 dark:hover:bg-gray-600"
     >
       {{ item.text }}
     </div>
