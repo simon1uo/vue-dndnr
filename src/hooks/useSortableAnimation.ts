@@ -14,10 +14,10 @@ declare global {
     prevFromRect?: Rect | null
     prevToRect?: Rect | null
     thisAnimationDuration?: number | null
-    animationResetTimer?: NodeJS.Timeout
+    animationResetTimer?: ReturnType<typeof setTimeout>
     animatingX?: boolean
     animatingY?: boolean
-    animated?: NodeJS.Timeout | false
+    animated?: ReturnType<typeof setTimeout> | false
     animationTime?: number
   }
 }
@@ -42,13 +42,13 @@ interface AnimationState {
   /** Current animation duration */
   thisAnimationDuration?: number
   /** Animation reset timer ID */
-  animationResetTimer?: number
+  animationResetTimer?: ReturnType<typeof setTimeout>
   /** Whether element is animating on X axis */
   animatingX?: boolean
   /** Whether element is animating on Y axis */
   animatingY?: boolean
   /** Animation completion timer ID */
-  animated?: NodeJS.Timeout | false
+  animated?: ReturnType<typeof setTimeout> | false
   /** Animation time for calculations */
   animationTime?: number
 }
@@ -118,7 +118,7 @@ export function useSortableAnimation(
 
   // Internal state
   const animationStates = ref<AnimationState[]>([])
-  const animationCallbackTimer = ref<NodeJS.Timeout | null>(null)
+  const animationCallbackTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
   // Computed target element
   const targetElement = computed(() => toValue(target))

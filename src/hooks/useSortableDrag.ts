@@ -92,7 +92,7 @@ export function useSortableDrag(
   // Fallback drag state
   const tapEvt = ref<{ clientX: number, clientY: number } | undefined>()
   const isFallbackActive = ref(false)
-  const loopTimer = ref<NodeJS.Timeout | undefined>()
+  const loopTimer = ref<ReturnType<typeof setTimeout> | undefined>()
   const ghostMatrix = ref<DOMMatrix | undefined>()
   const lastDx = ref(0)
   const lastDy = ref(0)
@@ -103,7 +103,7 @@ export function useSortableDrag(
   const positionGhostAbsolutely = computed(() => IOS)
 
   // Drag Delay management
-  const delayTimer = ref<NodeJS.Timeout | undefined>()
+  const delayTimer = ref<ReturnType<typeof setTimeout> | undefined>()
   const awaitingDragStarted = ref(false)
   const delayedDragEvents = ref<Array<() => void>>([])
 
@@ -1636,7 +1636,7 @@ export function useSortableDrag(
   }
 
   // Clone state management with debouncing to prevent flickering
-  const cloneStateTimeout = ref<NodeJS.Timeout | null>(null)
+  const cloneStateTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
   const lastCloneAction = ref<'show' | 'hide' | null>(null)
 
   /**
