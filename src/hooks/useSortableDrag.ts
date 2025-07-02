@@ -241,6 +241,30 @@ export function useSortableDrag(
     return null
   }
 
+  function getDraggableChildren(
+    container: HTMLElement,
+    selector: string,
+  ): HTMLElement[] {
+    if (!container)
+      return []
+
+    const children = Array.from(container.children) as HTMLElement[]
+
+    return children.filter((child) => {
+      // Skip hidden elements and templates
+      if (
+        getElementStyleValue(child, 'display') === 'none'
+        || child === state.ghostElement.value
+        || child.nodeName.toUpperCase() === 'TEMPLATE'
+      ) {
+        return false
+      }
+
+      // Apply selector filter
+      return findClosestElementBySelector(child, selector)
+    })
+  }
+
   /**
    * Parse scale transform when DOMMatrix is not available
    * Handles simple scale() transforms for test environments
@@ -470,6 +494,47 @@ export function useSortableDrag(
       current = current.parentElement
     }
 
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const isWithinContainer = (
+      targetRect.left >= containerRect.left
+      && targetRect.right <= containerRect.right
+      && targetRect.top >= containerRect.top
+      && targetRect.bottom <= containerRect.bottom
+    )
+
+    if (isWithinContainer || target === container) {
+      const pointerX = targetRect.left + targetRect.width / 2
+      const pointerY = targetRect.top + targetRect.height / 2
+
+      const draggableElements = getDraggableChildren(container, draggableSelector)
+
+      if (draggableElements.length > 0) {
+        let nearestElement: HTMLElement | null = null
+        let minDistance = Infinity
+
+        for (const element of draggableElements) {
+          const rect = element.getBoundingClientRect()
+          const elementCenterX = rect.left + rect.width / 2
+          const elementCenterY = rect.top + rect.height / 2
+
+          // 计算欧几里得距离（平方）
+          const dx = pointerX - elementCenterX
+          const dy = pointerY - elementCenterY
+          const distance = dx * dx + dy * dy
+
+          if (distance < minDistance) {
+            minDistance = distance
+            nearestElement = element
+          }
+        }
+
+        if (nearestElement) {
+          return nearestElement
+        }
+      }
+    }
+
     return null
   }
 
@@ -569,6 +634,105 @@ export function useSortableDrag(
     }
 
     return index
+  }
+
+  /**
+   * Detect layout direction (vertical or horizontal)
+   * @returns 'vertical' | 'horizontal'
+   */
+  const detectDirection = (): 'vertical' | 'horizontal' => {
+    const containerEl = targetElement.value
+    if (!containerEl)
+      return 'vertical'
+
+    const draggableSelector = toValue(draggable)
+
+    const firstChild = getElementChild(containerEl, 0, draggableSelector)
+    const secondChild = getElementChild(containerEl, 1, draggableSelector)
+
+    const firstChildCss = firstChild ? getElementStyleValue(firstChild) as CSSStyleDeclaration : null
+    const secondChildCss = secondChild ? getElementStyleValue(secondChild) as CSSStyleDeclaration : null
+
+    const containerStyle = getElementStyleValue(containerEl) as CSSStyleDeclaration
+    if (containerStyle.display === 'flex') {
+      return containerStyle.flexDirection === 'column' || containerStyle.flexDirection === 'column-reverse' ? 'vertical' : 'horizontal'
+    }
+    else if (containerStyle.display === 'grid') {
+      return containerStyle.gridTemplateColumns.split(' ').length <= 1 ? 'vertical' : 'horizontal'
+    }
+
+    if (firstChild) {
+      if (firstChildCss && firstChildCss.float && firstChildCss.float !== 'none') {
+        const touchingSideChild2 = firstChildCss.float === 'left' ? 'left' : 'right'
+
+        return (secondChildCss && (secondChildCss.clear === 'both' || secondChildCss.clear === touchingSideChild2))
+          ? 'vertical'
+          : 'horizontal'
+      }
+    }
+
+    return (firstChild
+      && (
+        (firstChildCss && (firstChildCss.display === 'block'
+          || firstChildCss.display === 'flex'
+          || firstChildCss.display === 'table'
+          || firstChildCss.display === 'grid'))
+        || (firstChildCss && firstChildCss.width >= containerStyle.width
+          && containerStyle.float === 'none')
+        || (secondChild && firstChildCss && secondChildCss
+          && containerStyle.float === 'none'
+          && firstChildCss.width + secondChildCss.width > containerStyle.width))
+      ? 'vertical'
+      : 'horizontal'
+    )
+  }
+
+  /**
+   * Find the nearest draggable element to a point
+   * @param pointer - Pointer object containing clientX and clientY coordinates.
+   * @param container - Container element
+   * @returns Nearest element and relative position or null
+   */
+  const findNearestElement = (
+    pointer: { clientX: number, clientY: number },
+    container: HTMLElement,
+  ): { element: HTMLElement, position: number } | null => {
+    const vertical = detectDirection() === 'vertical'
+    const draggableSelector = toValue(draggable)
+    const pointerPos = vertical ? pointer.clientY : pointer.clientX
+
+    const draggableElements = getDraggableChildren(container, draggableSelector)
+
+    if (draggableElements.length === 0) {
+      return null
+    }
+
+    // Calculate distance and find the nearest element
+    let nearestElement: HTMLElement | null = null
+    let minDistance = Infinity
+    let position = 0
+
+    for (const element of draggableElements) {
+      const rect = element.getBoundingClientRect()
+      const elementPos = vertical
+        ? (rect.top + rect.height / 2)
+        : (rect.left + rect.width / 2)
+
+      const distance = Math.abs(pointerPos - elementPos)
+
+      if (distance < minDistance) {
+        minDistance = distance
+        nearestElement = element
+        position = pointerPos > elementPos ? 1 : -1
+      }
+    }
+
+    // If we found a nearest element, return it with the position
+    if (nearestElement) {
+      return { element: nearestElement, position }
+    }
+
+    return null
   }
 
   /**
@@ -774,57 +938,6 @@ export function useSortableDrag(
   }
 
   /**
-   * Detect layout direction (vertical or horizontal)
-   * @returns 'vertical' | 'horizontal'
-   */
-  const detectDirection = (): 'vertical' | 'horizontal' => {
-    const containerEl = targetElement.value
-    if (!containerEl)
-      return 'vertical'
-
-    const draggableSelector = toValue(draggable)
-
-    const firstChild = getElementChild(containerEl, 0, draggableSelector)
-    const secondChild = getElementChild(containerEl, 1, draggableSelector)
-
-    const firstChildCss = firstChild ? getElementStyleValue(firstChild) as CSSStyleDeclaration : null
-    const secondChildCss = secondChild ? getElementStyleValue(secondChild) as CSSStyleDeclaration : null
-
-    const containerStyle = getElementStyleValue(containerEl) as CSSStyleDeclaration
-    if (containerStyle.display === 'flex') {
-      return containerStyle.flexDirection === 'column' || containerStyle.flexDirection === 'column-reverse' ? 'vertical' : 'horizontal'
-    }
-    else if (containerStyle.display === 'grid') {
-      return containerStyle.gridTemplateColumns.split(' ').length <= 1 ? 'vertical' : 'horizontal'
-    }
-
-    if (firstChild) {
-      if (firstChildCss && firstChildCss.float && firstChildCss.float !== 'none') {
-        const touchingSideChild2 = firstChildCss.float === 'left' ? 'left' : 'right'
-
-        return (secondChildCss && (secondChildCss.clear === 'both' || secondChildCss.clear === touchingSideChild2))
-          ? 'vertical'
-          : 'horizontal'
-      }
-    }
-
-    return (firstChild
-      && (
-        (firstChildCss && (firstChildCss.display === 'block'
-          || firstChildCss.display === 'flex'
-          || firstChildCss.display === 'table'
-          || firstChildCss.display === 'grid'))
-        || (firstChildCss && firstChildCss.width >= containerStyle.width
-          && containerStyle.float === 'none')
-        || (secondChild && firstChildCss && secondChildCss
-          && containerStyle.float === 'none'
-          && firstChildCss.width + secondChildCss.width > containerStyle.width))
-      ? 'vertical'
-      : 'horizontal'
-    )
-  }
-
-  /**
    * Check if the ghost element is at the first position in the container
    * @param evt - Drag event with coordinates
    * @param {number} evt.clientX - The X coordinate of the pointer.
@@ -903,7 +1016,7 @@ export function useSortableDrag(
   const detectContainerBoundaryInsertion = (
     evt: { clientX: number, clientY: number },
     container: HTMLElement,
-  ): { insertAtEnd: boolean, insertAtStart: boolean } | null => {
+  ): { insertAtEnd: boolean, insertAtStart: boolean, nearestElement?: HTMLElement, position?: number } | null => {
     const vertical = detectDirection() === 'vertical'
 
     // Check if at first position
@@ -916,6 +1029,26 @@ export function useSortableDrag(
     const isAtLast = isGhostElementLast(evt, vertical, container)
     if (isAtLast) {
       return { insertAtEnd: true, insertAtStart: false }
+    }
+
+    const containerRect = container.getBoundingClientRect()
+    const isWithinContainer = (
+      evt.clientX >= containerRect.left
+      && evt.clientX <= containerRect.right
+      && evt.clientY >= containerRect.top
+      && evt.clientY <= containerRect.bottom
+    )
+
+    if (isWithinContainer) {
+      const nearestResult = findNearestElement(evt, container)
+      if (nearestResult) {
+        return {
+          insertAtEnd: nearestResult.position > 0,
+          insertAtStart: nearestResult.position < 0,
+          nearestElement: nearestResult.element,
+          position: nearestResult.position,
+        }
+      }
     }
 
     return null
@@ -1044,11 +1177,13 @@ export function useSortableDrag(
    * @param {number} pointer.clientX - The X coordinate of the pointer.
    * @param {number} pointer.clientY - The Y coordinate of the pointer.
    * @param {HTMLElement} target - Target element.
+   * @param {HTMLElement} [container] - Optional container element for context.
    * @returns {number | null} Insertion position or null if no position is found.
    */
   const calculateInsertPosition = (
     pointer: { clientX: number, clientY: number },
     target: HTMLElement,
+    container?: HTMLElement,
   ): number | null => {
     const targetRect = target.getBoundingClientRect()
     const vertical = detectDirection() === 'vertical'
@@ -1061,7 +1196,8 @@ export function useSortableDrag(
 
     // For full threshold (1), always allow swapping
     if (currentSwapThreshold >= 1) {
-      return mouseOnAxis > targetCenter ? 1 : -1
+      const result = mouseOnAxis > targetCenter ? 1 : -1
+      return result
     }
 
     // For partial threshold, create dead zone in the middle
@@ -1071,12 +1207,49 @@ export function useSortableDrag(
 
     // Check if mouse is in the middle area (no swap)
     if (mouseOnAxis > deadZoneStart && mouseOnAxis < deadZoneEnd) {
+      if (container) {
+        const draggableSelector = toValue(draggable)
+        const draggableElements = getDraggableChildren(container, draggableSelector)
+
+        const currentIndex = getElementIndex(target)
+
+        if (currentIndex >= 0) {
+          const prevElement = currentIndex > 0 ? draggableElements[currentIndex - 1] : null
+          const nextElement = currentIndex < draggableElements.length - 1 ? draggableElements[currentIndex + 1] : null
+
+          if (prevElement && nextElement) {
+            const prevRect = prevElement.getBoundingClientRect()
+            const nextRect = nextElement.getBoundingClientRect()
+
+            const prevCenter = vertical
+              ? (prevRect.top + prevRect.height / 2)
+              : (prevRect.left + prevRect.width / 2)
+
+            const nextCenter = vertical
+              ? (nextRect.top + nextRect.height / 2)
+              : (nextRect.left + nextRect.width / 2)
+
+            const distToPrev = Math.abs(mouseOnAxis - prevCenter)
+            const distToNext = Math.abs(mouseOnAxis - nextCenter)
+
+            if (distToPrev < distToNext) {
+              return -1
+            }
+            else {
+              return 1
+            }
+          }
+        }
+      }
+
       return null
     }
 
     // Determine direction: 1 for after, -1 for before
-    return mouseOnAxis > targetCenter ? 1 : -1
+    const result = mouseOnAxis > targetCenter ? 1 : -1
+    return result
   }
+
   /**
    * Perform the actual DOM insertion
    * @param target - Target element
@@ -1745,7 +1918,30 @@ export function useSortableDrag(
         )
 
         if (boundaryInsertion) {
-          // Dispatch move event for boundary insertion
+          if (boundaryInsertion.nearestElement && boundaryInsertion.position !== undefined) {
+            const moveResult = dispatchMoveEvent({
+              to: targetContainer || undefined,
+              from: targetElement.value || undefined,
+              item: state.dragElement.value || undefined,
+              dragged: state.dragElement.value || undefined,
+              draggedRect: state.dragElement.value?.getBoundingClientRect(),
+              related: boundaryInsertion.nearestElement,
+              relatedRect: boundaryInsertion.nearestElement.getBoundingClientRect(),
+              willInsertAfter: boundaryInsertion.position > 0,
+              originalEvent: evt,
+            }, evt)
+
+            if (moveResult !== false) {
+              if (targetContainer === targetElement.value) {
+                performInsertion(boundaryInsertion.nearestElement, boundaryInsertion.position)
+              }
+              else {
+                performCrossListInsertion(boundaryInsertion.nearestElement, boundaryInsertion.position, targetContainer)
+              }
+            }
+            return
+          }
+
           const dragRect = state.dragElement.value?.getBoundingClientRect()
 
           const moveResult = dispatchMoveEvent({
@@ -1784,6 +1980,7 @@ export function useSortableDrag(
     const insertPosition = calculateInsertPosition(
       { clientX: evt.clientX, clientY: evt.clientY },
       draggableTarget,
+      targetContainer || undefined,
     )
 
     if (insertPosition !== null) {
@@ -1975,7 +2172,30 @@ export function useSortableDrag(
         )
 
         if (boundaryInsertion) {
-          // Dispatch move event for boundary insertion
+          if (boundaryInsertion.nearestElement && boundaryInsertion.position !== undefined) {
+            const moveResult = dispatchMoveEvent({
+              to: targetContainer || undefined,
+              from: targetElement.value || undefined,
+              item: state.dragElement.value || undefined,
+              dragged: state.dragElement.value || undefined,
+              draggedRect: state.dragElement.value?.getBoundingClientRect(),
+              related: boundaryInsertion.nearestElement,
+              relatedRect: boundaryInsertion.nearestElement.getBoundingClientRect(),
+              willInsertAfter: boundaryInsertion.position > 0,
+              originalEvent: undefined,
+            })
+
+            if (moveResult !== false) {
+              if (targetContainer === targetElement.value) {
+                performInsertion(boundaryInsertion.nearestElement, boundaryInsertion.position)
+              }
+              else {
+                performCrossListInsertion(boundaryInsertion.nearestElement, boundaryInsertion.position, targetContainer)
+              }
+            }
+            return
+          }
+
           const dragRect = state.dragElement.value?.getBoundingClientRect()
 
           const moveResult = dispatchMoveEvent({
@@ -2003,13 +2223,15 @@ export function useSortableDrag(
       }
     }
 
-    if (!draggableTarget || draggableTarget === state.dragElement.value)
+    if (!draggableTarget || draggableTarget === state.dragElement.value) {
       return
+    }
 
     // Calculate insertion position
     const insertPosition = calculateInsertPosition(
       { clientX: touch.clientX, clientY: touch.clientY },
       draggableTarget,
+      targetContainer || undefined,
     )
 
     if (insertPosition !== null) {
@@ -2295,6 +2517,7 @@ export function useSortableDrag(
     const insertPosition = calculateInsertPosition(
       { clientX, clientY },
       draggableTarget,
+      targetContainer || undefined,
     )
 
     if (insertPosition !== null) {
@@ -2737,8 +2960,7 @@ export function useSortableDrag(
     })
 
     // Set up document-level dragover listener for native mode
-    const onDocumentDragOver = handleDocumentDragOver
-    const cleanup = useEventListener(document, 'dragover', onDocumentDragOver)
+    const cleanup = useEventListener(document, 'dragover', handleDocumentDragOver)
 
     dragCleanupFunctions.value.push(cleanup)
   }
@@ -3021,7 +3243,6 @@ export function useSortableDrag(
       const sourceGroup = globalGroupManager.findTargetGroup(sourceContainer)
       if (sourceGroup && sourceGroup.pull === false) {
         // Pull is disabled for this container - prevent drag start
-        console.warn('[useSortableDrag] Drag start blocked: pull permission denied')
         return
       }
     }
