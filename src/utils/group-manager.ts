@@ -1,10 +1,11 @@
+import type { UseSortableAnimationReturn } from '@/hooks/useSortableAnimation'
 import type { SortableStateInternal } from '@/hooks/useSortableState'
 import type { SortableGroup, SortablePullFunction } from '@/types'
 
 /**
  * Registry entry for a sortable list in a group
  */
-interface GroupRegistryEntry {
+export interface GroupRegistryEntry {
   /** The sortable container element */
   element: HTMLElement
   /** Parsed group configuration */
@@ -13,6 +14,8 @@ interface GroupRegistryEntry {
   registeredAt: number
   /** Reference to the sortable state for cross-list data synchronization */
   state?: SortableStateInternal
+  /** Reference to the animation controller for cross-list animations */
+  animation?: UseSortableAnimationReturn
 }
 
 /**
@@ -50,8 +53,14 @@ class GroupManager {
    * @param element - The sortable container element
    * @param group - Group configuration (string or SortableGroup object)
    * @param state - Reference to the sortable state (optional)
+   * @param animation - Reference to the animation controller (optional)
    */
-  registerList(element: HTMLElement, group: string | SortableGroup, state?: SortableStateInternal): void {
+  registerList(
+    element: HTMLElement,
+    group: string | SortableGroup,
+    state?: SortableStateInternal,
+    animation?: UseSortableAnimationReturn,
+  ): void {
     if (!element) {
       throw new Error('Element is required for group registration')
     }
@@ -65,6 +74,7 @@ class GroupManager {
       group: parsedGroup,
       registeredAt: Date.now(),
       state,
+      animation,
     }
 
     // Remove existing registration if present
@@ -366,8 +376,25 @@ class GroupManager {
    * @returns Associated sortable instance or undefined
    */
   getState(element: HTMLElement): SortableStateInternal | undefined {
-    const entry = this.registry.get(element)
-    return entry?.state
+    return this.registry.get(element)?.state
+  }
+
+  /**
+   * Get the animation controller for a specific sortable list
+   * @param element - The sortable container element
+   * @returns The animation controller or undefined if not found
+   */
+  getAnimation(element: HTMLElement): UseSortableAnimationReturn | undefined {
+    return this.registry.get(element)?.animation
+  }
+
+  /**
+   * Get the full context (state, animation, etc.) for a specific sortable list
+   * @param element - The sortable container element
+   * @returns The group registry entry or undefined if not found
+   */
+  getSortableContext(element: HTMLElement): GroupRegistryEntry | undefined {
+    return this.registry.get(element)
   }
 }
 

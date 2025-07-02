@@ -534,7 +534,7 @@ export function useSortable<T>(
       // Register new target with group manager if group is specified
       const groupValue = toValue(group)
       if (groupValue) {
-        globalGroupManager.registerList(newTarget, groupValue, state)
+        globalGroupManager.registerList(newTarget, groupValue, state, animation)
       }
 
       await nextTick()
@@ -564,7 +564,7 @@ export function useSortable<T>(
 
     if (newGroupName !== oldGroupName) {
       if (newGroupValue) {
-        globalGroupManager.registerList(el, newGroupValue, state)
+        globalGroupManager.registerList(el, newGroupValue, state, animation)
       }
       else {
         globalGroupManager.unregisterList(el)

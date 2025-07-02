@@ -1129,10 +1129,14 @@ export function useSortableDrag(
     // In clone mode, still move the original element during drag
     // The clone logic will be handled at drag end
     const elementToInsert = dragElement
+    const targetAnimation = globalGroupManager.getAnimation(container)
 
-    // Capture animation state before DOM changes
+    // Capture animation state on both lists before DOM changes
     if (onAnimationCapture) {
       onAnimationCapture()
+    }
+    if (targetAnimation) {
+      targetAnimation.captureAnimationState()
     }
 
     // Perform the insertion
@@ -1163,11 +1167,12 @@ export function useSortableDrag(
       onItemsUpdate()
     }
 
-    // Clone element management is handled at container boundary detection, not during DOM insertion
-
-    // Trigger animation after DOM changes
+    // Trigger animation on both lists after DOM changes
     if (onAnimationTrigger) {
       onAnimationTrigger()
+    }
+    if (targetAnimation) {
+      targetAnimation.animateAll()
     }
   }
 
@@ -1330,10 +1335,14 @@ export function useSortableDrag(
     // In clone mode, still move the original element during drag
     // The clone logic will be handled at drag end
     const elementToInsert = dragElement
+    const targetAnimation = globalGroupManager.getAnimation(targetContainer)
 
-    // Capture animation state before DOM changes
+    // Capture animation state on both lists before DOM changes
     if (onAnimationCapture) {
       onAnimationCapture()
+    }
+    if (targetAnimation) {
+      targetAnimation.captureAnimationState()
     }
 
     // Perform the actual insertion
@@ -1366,9 +1375,12 @@ export function useSortableDrag(
       onItemsUpdate()
     }
 
-    // Trigger animation after DOM changes
+    // Trigger animation on both lists after DOM changes
     if (onAnimationTrigger) {
       onAnimationTrigger()
+    }
+    if (targetAnimation) {
+      targetAnimation.animateAll()
     }
   }
 
@@ -1397,10 +1409,14 @@ export function useSortableDrag(
     // In clone mode, still move the original element during drag
     // The clone logic will be handled at drag end
     const elementToInsert = dragElement
+    const targetAnimation = globalGroupManager.getAnimation(targetContainer)
 
-    // Capture animation state before DOM changes
+    // Capture animation state on both lists before DOM changes
     if (onAnimationCapture) {
       onAnimationCapture()
+    }
+    if (targetAnimation) {
+      targetAnimation.captureAnimationState()
     }
 
     // Insert into empty container (append to end)
@@ -1420,11 +1436,12 @@ export function useSortableDrag(
       onItemsUpdate()
     }
 
-    // Clone element management is handled at container boundary detection, not during DOM insertion
-
-    // Trigger animation after DOM changes
+    // Trigger animation on both lists after DOM changes
     if (onAnimationTrigger) {
       onAnimationTrigger()
+    }
+    if (targetAnimation) {
+      targetAnimation.animateAll()
     }
   }
   /**
@@ -1770,6 +1787,11 @@ export function useSortableDrag(
     }
     else {
       rootEl.value.appendChild(dragElement.value)
+    }
+
+    // Trigger animation after DOM changes
+    if (onAnimationTrigger) {
+      onAnimationTrigger()
     }
 
     return true
