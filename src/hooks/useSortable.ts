@@ -211,11 +211,6 @@ export interface UseSortableOptions<T = any> extends SortableEventCallbacks {
    * @default undefined
    */
   cloneItem?: CloneItemFn<T>
-  /**
-   * Whether to return controls
-   * @default false
-   */
-  controls?: boolean
 }
 
 /**
@@ -311,22 +306,9 @@ export interface UseSortableReturn<T> {
 export function useSortable<T>(
   target: MaybeRefOrGetter<HTMLElement | null>,
   list: Ref<T[]>,
-  options: UseSortableOptions & { controls: true }
-): UseSortableReturn<T>
-
-export function useSortable<T>(
-  target: MaybeRefOrGetter<HTMLElement | null>,
-  list: Ref<T[]>,
-  options?: UseSortableOptions & { controls?: false }
-): Ref<T[]>
-
-export function useSortable<T>(
-  target: MaybeRefOrGetter<HTMLElement | null>,
-  list: Ref<T[]>,
   options: UseSortableOptions = {},
-): UseSortableReturn<T> | Ref<T[]> {
+): UseSortableReturn<T> {
   const {
-    controls = false,
     group,
     dataIdAttr = 'data-id',
     draggable = '>*',
@@ -652,42 +634,37 @@ export function useSortable<T>(
   })
 
   // Return based on controls option
-  if (controls) {
-    return {
-      items: list,
-      isDragging: state.isDragging,
-      isActive: state.isActive,
-      dragElement: state.dragElement,
-      ghostElement: state.ghostElement,
-      currentIndex: state.currentIndex,
-      isAnimating: state.isAnimating,
-      animatingElements: state.animatingElements,
-      isSupported: state.isSupported,
-      isFallbackActive: state.isFallbackActive,
-      nativeDraggable: state.nativeDraggable,
-      isPaused: state.isPaused,
-      isDisabled: state.isDisabled,
-      putSortable: state.putSortable,
-      activeGroup: state.activeGroup,
-      lastPutMode: state.lastPutMode,
-      parentEl: state.parentEl,
-      rootEl: state.rootEl,
-      nextEl: state.nextEl,
-      cloneEl: state.cloneEl,
-      cloneHidden: state.cloneHidden,
-      isOwner: state.isOwner,
-      revert: state.revert,
-      start,
-      stop,
-      pause,
-      resume,
-      sort,
-      destroy: enhancedDestroy,
-    }
+  return {
+    items: list,
+    isDragging: state.isDragging,
+    isActive: state.isActive,
+    dragElement: state.dragElement,
+    ghostElement: state.ghostElement,
+    currentIndex: state.currentIndex,
+    isAnimating: state.isAnimating,
+    animatingElements: state.animatingElements,
+    isSupported: state.isSupported,
+    isFallbackActive: state.isFallbackActive,
+    nativeDraggable: state.nativeDraggable,
+    isPaused: state.isPaused,
+    isDisabled: state.isDisabled,
+    putSortable: state.putSortable,
+    activeGroup: state.activeGroup,
+    lastPutMode: state.lastPutMode,
+    parentEl: state.parentEl,
+    rootEl: state.rootEl,
+    nextEl: state.nextEl,
+    cloneEl: state.cloneEl,
+    cloneHidden: state.cloneHidden,
+    isOwner: state.isOwner,
+    revert: state.revert,
+    start,
+    stop,
+    pause,
+    resume,
+    sort,
+    destroy: enhancedDestroy,
   }
-
-  // Simple usage - return only items
-  return list
 }
 
 export default useSortable
