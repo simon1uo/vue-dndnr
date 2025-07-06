@@ -139,6 +139,8 @@ export function useSortableDrag(
     fallbackOffset = { x: 0, y: 0 },
     fallbackTolerance = 0,
     swapThreshold = 1,
+    invertSwap = false,
+    invertedSwapThreshold,
     preventOnFilter = true,
     onStart,
     onEnd,
@@ -1185,77 +1187,47 @@ export function useSortableDrag(
    * @param {number} pointer.clientX - The X coordinate of the pointer.
    * @param {number} pointer.clientY - The Y coordinate of the pointer.
    * @param {HTMLElement} target - Target element.
-   * @param {HTMLElement} [container] - Optional container element for context.
    * @returns {number | null} Insertion position or null if no position is found.
    */
   const calculateInsertPosition = (
     pointer: { clientX: number, clientY: number },
     target: HTMLElement,
-    container?: HTMLElement,
-  ): number | null => {
+  ): number => {
     const targetRect = target.getBoundingClientRect()
     const vertical = detectDirection() === 'vertical'
     const mouseOnAxis = vertical ? pointer.clientY : pointer.clientX
     const targetLength = vertical ? targetRect.height : targetRect.width
     const targetStart = vertical ? targetRect.top : targetRect.left
-    const targetCenter = targetStart + targetLength / 2
+    const targetEnd = vertical ? targetRect.bottom : targetRect.right
 
+    const currentInvertSwap = toValue(invertSwap)
     const currentSwapThreshold = toValue(swapThreshold)
+    const currentInvertedSwapThreshold = toValue(invertedSwapThreshold) ?? currentSwapThreshold
 
-    // For full threshold (1), always allow swapping
-    if (currentSwapThreshold >= 1) {
-      const result = mouseOnAxis > targetCenter ? 1 : -1
-      return result
-    }
-
-    // For partial threshold, create dead zone in the middle
-    const threshold = targetLength * (1 - currentSwapThreshold) / 2
-    const deadZoneStart = targetStart + threshold
-    const deadZoneEnd = targetStart + targetLength - threshold
-
-    // Check if mouse is in the middle area (no swap)
-    if (mouseOnAxis > deadZoneStart && mouseOnAxis < deadZoneEnd) {
-      if (container) {
-        const draggableSelector = toValue(draggable)
-        const draggableElements = getDraggableChildren(container, draggableSelector)
-
-        const currentIndex = getElementIndex(target)
-
-        if (currentIndex >= 0) {
-          const prevElement = currentIndex > 0 ? draggableElements[currentIndex - 1] : null
-          const nextElement = currentIndex < draggableElements.length - 1 ? draggableElements[currentIndex + 1] : null
-
-          if (prevElement && nextElement) {
-            const prevRect = prevElement.getBoundingClientRect()
-            const nextRect = nextElement.getBoundingClientRect()
-
-            const prevCenter = vertical
-              ? (prevRect.top + prevRect.height / 2)
-              : (prevRect.left + prevRect.width / 2)
-
-            const nextCenter = vertical
-              ? (nextRect.top + nextRect.height / 2)
-              : (nextRect.left + nextRect.width / 2)
-
-            const distToPrev = Math.abs(mouseOnAxis - prevCenter)
-            const distToNext = Math.abs(mouseOnAxis - nextCenter)
-
-            if (distToPrev < distToNext) {
-              return -1
-            }
-            else {
-              return 1
-            }
-          }
-        }
+    if (currentInvertSwap) {
+      if (
+        mouseOnAxis < targetStart + (targetLength * currentInvertedSwapThreshold / 2)
+        || mouseOnAxis > targetEnd - (targetLength * currentInvertedSwapThreshold / 2)
+      ) {
+        return mouseOnAxis > targetStart + targetLength / 2 ? 1 : -1
       }
+    }
+    else {
+      const deadZoneStart = targetStart + (targetLength * (1 - currentSwapThreshold) / 2)
+      const deadZoneEnd = targetEnd - (targetLength * (1 - currentSwapThreshold) / 2)
 
-      return null
+      if (mouseOnAxis > deadZoneStart && mouseOnAxis < deadZoneEnd) {
+        const dragElement = state.dragElement.value
+        if (!dragElement)
+          return 0
+        const dragIndex = getElementIndex(dragElement)
+        const targetIndex = getElementIndex(target)
+
+        return dragIndex < targetIndex ? 1 : -1
+      }
     }
 
-    // Determine direction: 1 for after, -1 for before
-    const result = mouseOnAxis > targetCenter ? 1 : -1
-    return result
+    return 0
   }
 
   /**
@@ -2011,10 +1983,9 @@ export function useSortableDrag(
     const insertPosition = calculateInsertPosition(
       { clientX: evt.clientX, clientY: evt.clientY },
       draggableTarget,
-      targetContainer || undefined,
     )
 
-    if (insertPosition !== null) {
+    if (insertPosition !== 0) {
       // Dispatch move event before performing insertion
       const targetRect = draggableTarget.getBoundingClientRect()
       const dragRect = state.dragElement.value?.getBoundingClientRect()
@@ -2267,10 +2238,9 @@ export function useSortableDrag(
     const insertPosition = calculateInsertPosition(
       { clientX: touch.clientX, clientY: touch.clientY },
       draggableTarget,
-      targetContainer || undefined,
     )
 
-    if (insertPosition !== null) {
+    if (insertPosition !== 0) {
       // Dispatch move event before performing insertion
       const targetRect = draggableTarget.getBoundingClientRect()
       const dragRect = state.dragElement.value?.getBoundingClientRect()
@@ -2556,10 +2526,9 @@ export function useSortableDrag(
     const insertPosition = calculateInsertPosition(
       { clientX, clientY },
       draggableTarget,
-      targetContainer || undefined,
     )
 
-    if (insertPosition !== null) {
+    if (insertPosition !== 0) {
       // Dispatch move event before performing insertion
       const targetRect = draggableTarget.getBoundingClientRect()
       const dragRect = state.dragElement.value?.getBoundingClientRect()
@@ -2593,7 +2562,6 @@ export function useSortableDrag(
 
   /**
    * Detect if element was spilled (dropped outside valid containers)
-   * Based on SortableJS OnSpill plugin logic
    */
   function detectSpill(evt: MouseEvent | TouchEvent | DragEvent, _dragElement: HTMLElement): boolean {
     if (!evt)
@@ -2609,7 +2577,6 @@ export function useSortableDrag(
     }
 
     // Temporarily hide ghost element to get accurate elementFromPoint result
-    // This follows SortableJS hideGhostForTarget() logic
     const ghost = state.ghostElement.value
     let ghostDisplay: string | undefined
     if (ghost && !supportCssPointerEvents.value) {
@@ -2630,7 +2597,6 @@ export function useSortableDrag(
     }
 
     // Check if target is within any valid sortable container
-    // This follows SortableJS logic exactly: toSortable && !toSortable.el.contains(target)
     const targetSortable = state.putSortable.value || targetElement.value
 
     // Only consider it spilled if the target is not within the active sortable container
@@ -2643,7 +2609,6 @@ export function useSortableDrag(
 
   /**
    * Handle spill event - revert or remove element based on options
-   * Based on SortableJS OnSpill plugin logic
    */
   function handleSpill(evt: MouseEvent | TouchEvent | DragEvent, dragElement: HTMLElement): boolean {
     const currentRevertOnSpill = toValue(revertOnSpill)
@@ -2653,7 +2618,7 @@ export function useSortableDrag(
     if (!currentRevertOnSpill && !currentRemoveOnSpill) {
       return false
     }
-    // Handle revert on spill (prioritized in SortableJS)
+
     if (currentRevertOnSpill) {
       const originalParent = state.parentEl.value
       const originalNextSibling = state.nextEl.value
@@ -2677,7 +2642,7 @@ export function useSortableDrag(
           onAnimationTrigger()
         }
 
-        // Dispatch revert event (added to match SortableJS)
+        // Dispatch revert event
         dispatchEvent('revert', {
           item: dragElement,
           oldIndex: startIndex.value,
@@ -2710,7 +2675,7 @@ export function useSortableDrag(
           onAnimationTrigger()
         }
 
-        // Dispatch remove event (added to match SortableJS)
+        // Dispatch remove event
         dispatchEvent('remove', {
           item: dragElement,
           oldIndex: startIndex.value,

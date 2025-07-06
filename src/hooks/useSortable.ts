@@ -85,16 +85,7 @@ export interface UseSortableOptions<T = any> extends SortableEventCallbacks {
    * @default 'sortable-drag'
    */
   dragClass?: MaybeRefOrGetter<string>
-  /**
-   * Invert swap with reactive support
-   * @default false
-   */
-  invertSwap?: MaybeRefOrGetter<boolean>
-  /**
-   * Threshold of the inverted swap zone with reactive support
-   * @default swapThreshold
-   */
-  invertedSwapThreshold?: MaybeRefOrGetter<number>
+
   /**
    * Animation duration with reactive support
    * @default 150
@@ -131,10 +122,21 @@ export interface UseSortableOptions<T = any> extends SortableEventCallbacks {
    */
   bubbleScroll?: MaybeRefOrGetter<boolean>
   /**
-   * Swap threshold with reactive support
+   * Swap threshold percentage with range from 0 to 1
    * @default 1
    */
   swapThreshold?: MaybeRefOrGetter<number>
+  /**
+   * Invert swap with reactive support
+   * @default false
+   */
+  invertSwap?: MaybeRefOrGetter<boolean>
+  /**
+   * Threshold of the inverted swap zone with reactive support
+   * if not set, will use swapThreshold
+   * @default swapThreshold
+   */
+  invertedSwapThreshold?: MaybeRefOrGetter<number>
   /**
    * Sort direction with reactive support
    * @default 'vertical'
@@ -487,7 +489,9 @@ export function useSortable<T>(
     onAnimationTrigger: () => {
       // Trigger animation after DOM changes (like SortableJS completed())
       if (options.animation) {
-        animation.animateAll()
+        nextTick(() => {
+          animation.animateAll()
+        })
       }
     },
   })
