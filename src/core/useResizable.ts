@@ -113,6 +113,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | null | undef
   const publicState = usePublicState()
 
   const {
+    id,
     initialSize = { width: 'auto', height: 'auto' },
     initialPosition = { x: 0, y: 0 },
     positionType = 'absolute',
@@ -135,7 +136,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | null | undef
     onResizeStart,
     onResize,
     onResizeEnd,
-    elementId,
   } = options
 
   const {
@@ -145,7 +145,7 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | null | undef
     pointerTypesValue,
     preventDefaultValue,
     stopPropagationValue,
-  } = useInteractive(target, { ...options, elementId })
+  } = useInteractive(target, { ...options, id })
 
   // --- Start of logic from useResizeHandles ---
 

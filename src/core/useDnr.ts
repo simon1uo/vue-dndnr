@@ -1,7 +1,7 @@
 import type { UseDraggableOptions, UseResizableOptions } from '@/core'
 import type { MaybeRefOrGetter } from 'vue'
 import { useDraggable, useResizable } from '@/core'
-import { nanoid } from 'nanoid'
+import { useUniqueId } from '@/stores'
 import { computed, toValue } from 'vue'
 
 export interface UseDnrOptions extends UseDraggableOptions, UseResizableOptions {
@@ -26,7 +26,7 @@ export function useDnr(
     disableDrag = false,
     disableResize = false,
     disabled = false,
-    elementId: commonElementId = nanoid(8),
+    id: sharedId = useUniqueId(),
     ...restOptions
   } = options
 
@@ -43,7 +43,7 @@ export function useDnr(
     setActive,
   } = useDraggable(target, {
     ...restOptions,
-    elementId: commonElementId,
+    id: sharedId,
     disabled: isDraggableDisabled,
   })
 
@@ -56,7 +56,7 @@ export function useDnr(
     isResizing,
   } = useResizable(target, {
     ...restOptions,
-    elementId: commonElementId,
+    id: sharedId,
     disabled: isResizableDisabled,
   })
 
@@ -70,6 +70,7 @@ export function useDnr(
   })
 
   return {
+    id: sharedId,
     position,
     size,
     isDragging,

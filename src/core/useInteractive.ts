@@ -1,8 +1,7 @@
 import type { InternalState, PointerType } from '@/types'
 import type { MaybeRefOrGetter } from 'vue'
-import { usePublicState } from '@/stores'
+import { usePublicState, useUniqueId } from '@/stores'
 import { defaultWindow, isClient, useEventListener } from '@vueuse/core'
-import { nanoid } from 'nanoid'
 import { computed, nextTick, onMounted, toValue } from 'vue'
 
 export function useInteractive(
@@ -12,7 +11,7 @@ export function useInteractive(
   const publicState = usePublicState()
 
   const {
-    elementId = nanoid(8),
+    id = useUniqueId(),
     initialActive = false,
     activeOn = 'none',
     disabled = false,
@@ -24,7 +23,7 @@ export function useInteractive(
     onActiveChange,
   } = options
 
-  const elementIdValue = computed(() => toValue(elementId))
+  const elementIdValue = computed(() => toValue(id))
   const disabledValue = computed(() => toValue(disabled))
   const activeOnValue = computed(() => toValue(activeOn))
   const preventDeactivationValue = computed(() => toValue(preventDeactivation))
@@ -32,7 +31,7 @@ export function useInteractive(
   const preventDefaultValue = computed(() => toValue(preventDefault))
   const stopPropagationValue = computed(() => toValue(stopPropagation))
 
-  const isActive = computed(() => publicState.state.activeElementId === elementIdValue.value)
+  const isActive = computed(() => publicState.state.activeId === elementIdValue.value)
 
   /**
    * Set the active state and trigger callback
@@ -53,7 +52,7 @@ export function useInteractive(
     }
     else {
       // Deactivate only if this element is currently active
-      if (publicState.state.activeElementId === elementIdValue.value)
+      if (publicState.state.activeId === elementIdValue.value)
         publicState.setActiveElement(null, null)
     }
   }

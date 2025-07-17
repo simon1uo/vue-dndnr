@@ -102,7 +102,7 @@ export function useDraggable(
   const publicState = usePublicState()
 
   const {
-    elementId,
+    id,
     initialPosition = { x: 0, y: 0 },
     handle: draggingHandle = target,
     draggingElement = defaultWindow,
@@ -128,7 +128,7 @@ export function useDraggable(
     preventDefaultValue,
     stopPropagationValue,
     activeOnValue,
-  } = useInteractive(target, { ...options, elementId })
+  } = useInteractive(target, { ...options, id })
 
   const position = shallowRef<Position>({ ...initialPosition })
   const startEvent = shallowRef<PointerEvent | null>(null)

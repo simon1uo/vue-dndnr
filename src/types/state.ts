@@ -62,7 +62,7 @@ export interface PublicState {
   /**
    * The ID of the active element
    */
-  activeElementId: string | null
+  activeId: string | null
   /**
    * The active element
    */
@@ -93,6 +93,8 @@ export interface PublicState {
   hoverHandle: ResizeHandle | null
 }
 
+export type UniqueId = string
+
 /**
  * Internal state of the element
  */
@@ -101,7 +103,7 @@ export interface InternalState {
    * A unique identifier for the element
    * If not provided, a random ID will be generated.
    */
-  elementId?: MaybeRefOrGetter<string>
+  id?: MaybeRefOrGetter<UniqueId>
   /**
    * Whether the action is disabled
    * @default false

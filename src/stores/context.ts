@@ -4,7 +4,7 @@ import { reactive } from 'vue'
 
 export const usePublicState = createGlobalState(() => {
   const state = reactive<PublicState>({
-    activeElementId: null,
+    activeId: null,
     activeElement: null,
     isDragging: false,
     dragPosition: { x: 0, y: 0 },
@@ -15,7 +15,7 @@ export const usePublicState = createGlobalState(() => {
   })
 
   const setActiveElement = (element: HTMLElement | null, id: string | null = null) => {
-    if (state.activeElement === element && state.activeElementId === id)
+    if (state.activeElement === element && state.activeId === id)
       return
 
     if (state.activeElement !== element) {
@@ -25,7 +25,7 @@ export const usePublicState = createGlobalState(() => {
       state.hoverHandle = null
     }
     state.activeElement = element
-    state.activeElementId = id
+    state.activeId = id
   }
 
   const setDragging = (isDragging: boolean) => {
