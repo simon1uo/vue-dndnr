@@ -1,19 +1,23 @@
-# useDnR
+# useDnr
 
-The `useDnR` hook combines both drag and resize functionality into a single composable hook, allowing you to create elements that can be both moved and resized.
+The `useDnr` hook combines both drag and resize functionality into a single composable hook, allowing you to create elements that can be both moved and resized.
 
 ## Demo
 
 <script setup>
 import { ref } from 'vue'
-import { useDnR } from 'vue-dndnr'
+import { useDnr } from 'vue-dndnr'
 
 const elementRef = ref(null)
-const { position, size, style, active } = useDnR(elementRef, {
-  initialPosition: { x: 0, y: 0 },
+const { position, size, style, isActive, isDragging, isResizing } = useDnr(elementRef, {
+  initialPosition: { x: 100, y: 100 },
   initialSize: { width: 200, height: 150 },
+  initialActive: false,
+  activeOn: 'click',
+  preventDeactivation: false,
   minWidth: 200,
-  minHeight: 150
+  minHeight: 150,
+  positionType: 'absolute'
 })
 </script>
 
@@ -26,6 +30,9 @@ const { position, size, style, active } = useDnR(elementRef, {
     👋 Drag & ↔️ Resize me!
     <div class="text-sm mt-2">Position: {{ position.x }}, {{ position.y }}</div>
     <div class="text-sm mt-1">Size: {{ size.width }} x {{ size.height }}</div>
+    <div class="text-sm mt-1">isActive: {{ isActive }}</div>
+    <div class="text-sm mt-1">isDragging: {{ isDragging }}</div>
+    <div class="text-sm mt-1">isResizing: {{ isResizing }}</div>
   </div>
 </DemoContainer>
 
@@ -34,10 +41,10 @@ const { position, size, style, active } = useDnR(elementRef, {
 ```vue
 <script setup>
 import { ref } from 'vue'
-import { useDnR } from 'vue-dndnr'
+import { useDnr } from 'vue-dndnr'
 
 const elementRef = ref(null)
-const { position, size, style } = useDnR(elementRef, {
+const { position, size, style } = useDnr(elementRef, {
   initialPosition: { x: 50, y: 50 },
   initialSize: { width: 200, height: 150 },
   minWidth: 100,
@@ -58,25 +65,25 @@ const { position, size, style } = useDnR(elementRef, {
 
 :::details Component Usage
 
-The `DnR` component provides a convenient wrapper around the `useDnR` hook, making it easier to create draggable and resizable elements without manually setting up refs and styles.
+The `Dnr` component provides a convenient wrapper around the `useDnr` hook, making it easier to create draggable and resizable elements without manually setting up refs and styles.
 
 ```vue
 <script setup>
 import { ref } from 'vue'
-import { DnR } from 'vue-dndnr'
+import { Dnr } from 'vue-dndnr'
 
 const position = ref({ x: 50, y: 50 })
 const size = ref({ width: 200, height: 150 })
 </script>
 
 <template>
-  <DnR v-model:position="position" v-model:size="size" :min-width="100" :min-height="100">
+  <Dnr v-model:position="position" v-model:size="size" :min-width="100" :min-height="100">
     <div :style="{ width: `${size.width}px`, height: `${size.height}px` }">
       Drag and resize me!
       <div>Position: {{ position.x }}, {{ position.y }}</div>
       <div>Size: {{ size.width }} x {{ size.height }}</div>
     </div>
-  </DnR>
+  </Dnr>
 </template>
 ```
 
@@ -176,7 +183,7 @@ The `DnROptions` interface provides a comprehensive set of configuration options
 
 ### Component Props
 
-The `DnR` component accepts all options from the `useDnR` hook as props, plus the following:
+The `Dnr` component accepts all options from the `useDnr` hook as props, plus the following:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|

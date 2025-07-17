@@ -101,7 +101,7 @@ export default defineConfig({
     ],
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2023-present Simon Luo',
+      copyright: 'Copyright © 2025-present Vue DnDnR',
     },
   },
   head: [

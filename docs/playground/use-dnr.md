@@ -3,11 +3,11 @@ outline: false
 aside: false
 ---
 
-# useDnR Playground
+# useDnr Playground
 
 <script setup>
 import { ref, computed, shallowRef, watch } from 'vue'
-import { useDnR } from 'vue-dndnr'
+import { useDnr } from 'vue-dndnr'
 
 // Element references
 const elementRef = ref(null)
@@ -57,7 +57,7 @@ const enableMaxWidth = ref(true)
 const enableMaxHeight = ref(true)
 
 // Activation settings
-const activeOn = ref('none')
+const activeOn = ref('click')
 const preventDeactivation = ref(false)
 
 // Advanced settings
@@ -90,7 +90,7 @@ const computedMinHeight = computed(() => enableMinHeight.value ? minHeight.value
 const computedMaxWidth = computed(() => enableMaxWidth.value ? maxWidth.value : undefined)
 const computedMaxHeight = computed(() => enableMaxHeight.value ? maxHeight.value : undefined)
 
-// Using the useDnR hook
+// Using the useDnr hook
 const {
   position,
   size,
@@ -102,7 +102,7 @@ const {
   hoverHandle,
   registerHandle,
   unregisterHandle
-} = useDnR(elementRef, {
+} = useDnr(elementRef, {
   // Basic options
   initialPosition: initialPosition.value,
   initialSize: initialSize.value,
@@ -143,7 +143,7 @@ const {
 
 </script>
 
-<PlaygroundContainer title="useDnR Hook" description="Combined drag and resize functionality">
+<PlaygroundContainer title="useDnr Hook" description="Combined drag and resize functionality">
   <template #demo>
     <div ref="containerRef" class="relative w-full h-full bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
       <div
@@ -391,4 +391,4 @@ const {
 
 ## API Reference
 
-For complete API documentation of the useDnR hook, please refer to the [useDnR API Documentation](/api/use-dnr).
+For complete API documentation of the useDnr hook, please refer to the [useDnr API Documentation](/api/use-dnr).
