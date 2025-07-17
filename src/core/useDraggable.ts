@@ -6,7 +6,7 @@ import {
   getElementPosition,
   getElementSize,
 } from '@/utils'
-import { defaultWindow, isClient, tryOnUnmounted, useEventListener, useThrottleFn } from '@vueuse/core'
+import { defaultWindow, isClient, tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, onMounted, shallowRef, toValue, watch } from 'vue'
 import { useInteractive } from './useInteractive'
 
@@ -110,7 +110,6 @@ export function useDraggable(
     axis = 'both',
     grid,
     containerElement,
-    throttleDelay = 16,
     stateStyles = {},
     positionType = 'absolute',
     zIndex = 'auto',
@@ -141,7 +140,6 @@ export function useDraggable(
   const axisValue = computed(() => toValue(axis))
   const gridValue = computed(() => toValue(grid))
   const containerElementValue = computed(() => toValue(containerElement))
-  const throttleDelayValue = computed(() => toValue(throttleDelay))
   const stateStylesValue = computed(() => toValue(stateStyles))
   const positionTypeValue = computed(() => toValue(positionType))
   const zIndexValue = computed(() => toValue(zIndex))
@@ -208,10 +206,10 @@ export function useDraggable(
   }
 
   /**
-   * Update element position during drag
-   * @param event - The pointer event containing new position information
+   * Handle element drag event
+   * @param event - The pointer event from drag movement
    */
-  const updateDragPosition = (event: PointerEvent) => {
+  const handleDrag = (event: PointerEvent) => {
     if (!isDragging.value || !startEvent.value)
       return
 
@@ -278,17 +276,6 @@ export function useDraggable(
     publicState.setPosition(position.value)
 
     handleEvent(event)
-  }
-
-  // Create a throttled version of the updateDragPosition function
-  const throttledUpdateDragPosition = useThrottleFn(updateDragPosition, throttleDelayValue, true, true)
-
-  /**
-   * Handle drag movement with throttling
-   * @param event - The pointer event from drag movement
-   */
-  const handleDrag = (event: PointerEvent) => {
-    throttledUpdateDragPosition(event)
   }
 
   /**

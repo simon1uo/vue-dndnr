@@ -6,7 +6,7 @@ import {
   getElementPosition,
   getElementSize,
 } from '@/utils'
-import { defaultWindow, isClient, tryOnUnmounted, useEventListener, useThrottleFn } from '@vueuse/core'
+import { defaultWindow, isClient, tryOnUnmounted, useEventListener } from '@vueuse/core'
 import { computed, onMounted, shallowRef, toValue, watch } from 'vue'
 import { useInteractive } from './useInteractive'
 
@@ -131,7 +131,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | null | undef
     grid,
     containerElement,
     stateStyles = {},
-    throttleDelay = 16,
 
     onResizeStart,
     onResize,
@@ -743,10 +742,10 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | null | undef
   }
 
   /**
-   * Update element size during resize
-   * @param event - The pointer event containing new size information
+   * Handle resize movement
+   * @param event - The pointer event from resize movement
    */
-  const updateSize = (event: PointerEvent) => {
+  const handleResize = (event: PointerEvent) => {
     if (!isResizing.value || !activeHandle.value || !startEvent.value)
       return
 
@@ -968,16 +967,6 @@ export function useResizable(target: MaybeRefOrGetter<HTMLElement | null | undef
 
     // Update the global store
     publicState.setSize(newSize)
-  }
-
-  const throttledUpdateSize = useThrottleFn(updateSize, toValue(throttleDelay), true, true)
-
-  /**
-   * Handle resize movement with throttling
-   * @param event - The pointer event from resize movement
-   */
-  const handleResize = (event: PointerEvent) => {
-    throttledUpdateSize(event)
   }
 
   /**
