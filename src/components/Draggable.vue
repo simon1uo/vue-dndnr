@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import type { DnROptions, Position } from '@/types'
-import { useDnR } from '@/hooks'
-import { computed, ref, toValue, watch } from 'vue'
+import type { UseDraggableOptions } from '@/core/useDraggable'
+import type { Position } from '@/types'
+import { useDraggable } from '@/core/useDraggable'
+import { computed, ref, watch } from 'vue'
 
-interface DraggableProps extends DnROptions {
+export interface DraggableProps extends UseDraggableOptions {
   position?: Position
   modelValue?: Position
   active?: boolean
   className?: string
   draggingClassName?: string
   activeClassName?: string
+  onDragStart?: (position: Position, event: PointerEvent) => void | boolean
+  onDrag?: (position: Position, event: PointerEvent) => void | boolean
+  onDragEnd?: (position: Position, event: PointerEvent) => void | boolean
+  onActiveChange?: (active: boolean) => void | boolean
 }
 
 const props = withDefaults(defineProps<DraggableProps>(), {
@@ -27,7 +32,6 @@ const props = withDefaults(defineProps<DraggableProps>(), {
   throttleDelay: 16,
   draggingClassName: 'dragging',
   activeClassName: 'active',
-  disableResize: true,
 })
 
 const emit = defineEmits<{
@@ -40,21 +44,7 @@ const emit = defineEmits<{
   'activeChange': [active: boolean]
 }>()
 
-const targetRef = ref<HTMLElement | SVGElement | null | undefined>(null)
-const containerElement = computed(() => toValue(props.containerElement))
-const handle = computed(() => toValue(props.handle) ?? targetRef.value)
-const grid = computed(() => toValue(props.grid))
-const axis = computed(() => toValue(props.axis))
-const scale = computed(() => toValue(props.scale))
-const disabled = computed(() => toValue(props.disabled))
-const pointerTypes = computed(() => toValue(props.pointerTypes))
-const preventDefault = computed(() => toValue(props.preventDefault))
-const stopPropagation = computed(() => toValue(props.stopPropagation))
-const capture = computed(() => toValue(props.capture))
-const throttleDelay = computed(() => toValue(props.throttleDelay))
-const activeOn = computed(() => toValue(props.activeOn))
-const preventDeactivation = computed(() => toValue(props.preventDeactivation))
-const disableResize = computed(() => toValue(props.disableResize))
+const targetRef = ref<HTMLElement | null | undefined>(null)
 
 const {
   position,
@@ -63,24 +53,10 @@ const {
   style: draggableStyle,
   setPosition,
   setActive,
-} = useDnR(targetRef, {
+} = useDraggable(targetRef, {
   ...props,
   initialPosition: props.position || props.modelValue || { x: 0, y: 0 },
   initialActive: props.active,
-  containerElement,
-  handle,
-  grid,
-  axis,
-  scale,
-  disabled,
-  pointerTypes,
-  preventDefault,
-  stopPropagation,
-  capture,
-  throttleDelay,
-  activeOn,
-  preventDeactivation,
-  disableResize,
   onDragStart: (position, event) => {
     emit('dragStart', position, event)
     if (props.onDragStart)

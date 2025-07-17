@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import type { DnROptions, Position, ResizeHandle, ResizeHandleType, Size } from '@/types'
-import { useDnR } from '@/hooks'
+import type { UseResizableOptions } from '@/core/useResizable'
+import type { Position, ResizeHandle, ResizeHandleType, Size } from '@/types'
+import { useResizable } from '@/core/useResizable'
 import { getCursorStyle } from '@/utils/cursor'
 import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 
-interface ResizableProps extends DnROptions {
+interface ResizableProps extends Omit<UseResizableOptions, 'initialSize' | 'initialPosition' | 'customHandles' | 'onResizeStart' | 'onResize' | 'onResizeEnd' | 'onActiveChange'> {
   size?: Size
   modelValue?: Size
   position?: Position
   active?: boolean
   activeClassName?: string
+
+  onResizeStart?: (size: Size, event: PointerEvent) => void | boolean
+  onResize?: (size: Size, event: PointerEvent) => void | boolean
+  onResizeEnd?: (size: Size, event: PointerEvent) => void | boolean
+  onActiveChange?: (active: boolean) => void | boolean
 }
 
 const props = withDefaults(defineProps<ResizableProps>(), {
@@ -27,9 +33,7 @@ const props = withDefaults(defineProps<ResizableProps>(), {
   stopPropagation: false,
   capture: true,
   throttleDelay: 16,
-
   activeClassName: 'active',
-  disableDrag: true,
 })
 
 const emit = defineEmits<{
@@ -46,20 +50,10 @@ const emit = defineEmits<{
 
 const targetRef = ref<HTMLElement | null>(null)
 const handleRefs = ref<Map<ResizeHandle, HTMLElement>>(new Map())
-const grid = computed(() => toValue(props.grid))
-const lockAspectRatio = computed(() => toValue(props.lockAspectRatio))
-const positionType = computed(() => toValue(props.positionType))
+
 const handleType = computed<ResizeHandleType>(() => toValue(props.handleType) ?? 'borders')
 const handles = computed<ResizeHandle[]>(() => toValue(props.handles) ?? ['t', 'b', 'r', 'l', 'tr', 'tl', 'br', 'bl'])
-const containerElement = computed(() => toValue(props.containerElement))
-const disabled = computed(() => toValue(props.disabled))
-const pointerTypes = computed(() => toValue(props.pointerTypes))
-const preventDefault = computed(() => toValue(props.preventDefault))
-const stopPropagation = computed(() => toValue(props.stopPropagation))
-const capture = computed(() => toValue(props.capture))
-const throttleDelay = computed(() => toValue(props.throttleDelay))
-const handleStyles = computed(() => toValue(props.handleStyles) || {})
-const preventDeactivation = computed(() => toValue(props.preventDeactivation))
+const activeOn = computed(() => toValue(props.activeOn))
 
 const {
   size: currentSize,
@@ -71,51 +65,27 @@ const {
   setActive,
   activeHandle,
   hoverHandle,
-  registerHandle,
-  unregisterHandle,
-  setupHandleElements,
   style,
-} = useDnR(targetRef, {
+} = useResizable(targetRef, {
   ...props,
   initialSize: props.size || props.modelValue || { width: 'auto', height: 'auto' },
   initialPosition: props.position || { x: 0, y: 0 },
   initialActive: props.active,
-
   customHandles: handleRefs,
-  positionType,
-  grid,
-  lockAspectRatio,
-  handleType,
-  handles,
-  containerElement,
-  disabled,
-  pointerTypes,
-  preventDefault,
-  stopPropagation,
-  capture,
-  throttleDelay,
-  handleStyles,
-  preventDeactivation,
   onResizeStart: (size, event) => {
-    if (activeHandle.value) {
-      emit('resizeStart', size, event)
-      if (props.onResizeStart)
-        props.onResizeStart(size, event)
-    }
+    emit('resizeStart', size, event)
+    if (props.onResizeStart)
+      props.onResizeStart(size, event)
   },
   onResize: (size, event) => {
-    if (activeHandle.value) {
-      emit('resize', size, event)
-      if (props.onResize)
-        props.onResize(size, event)
-    }
+    emit('resize', size, event)
+    if (props.onResize)
+      props.onResize(size, event)
   },
   onResizeEnd: (size, event) => {
-    if (activeHandle.value) {
-      emit('resizeEnd', size, event)
-      if (props.onResizeEnd)
-        props.onResizeEnd(size, event)
-    }
+    emit('resizeEnd', size, event)
+    if (props.onResizeEnd)
+      props.onResizeEnd(size, event)
   },
   onActiveChange: (active) => {
     emit('activeChange', active)
@@ -199,9 +169,6 @@ const combinedClass = computed(() => {
 })
 
 function registerHandleElements() {
-  handleRefs.value.forEach((_, handle) => {
-    unregisterHandle(handle)
-  })
   handleRefs.value.clear()
 
   if (handleType.value !== 'custom') {
@@ -221,20 +188,12 @@ function registerHandleElements() {
 
       if (handleEl) {
         handleRefs.value.set(handle, handleEl)
-        registerHandle(handle, handleEl)
       }
     })
-
-    if (targetRef.value) {
-      setupHandleElements(targetRef.value)
-    }
   })
 }
 
 function cleanupHandleElements() {
-  handleRefs.value.forEach((_, handle) => {
-    unregisterHandle(handle)
-  })
   handleRefs.value.clear()
 }
 
